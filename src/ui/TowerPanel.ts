@@ -15,7 +15,7 @@ const PX   = GRID_COLS * TILE_SIZE;          // 720
 const PW   = GAME_WIDTH - PX;               // 560
 const CX   = PX + PW / 2;
 const PAD  = 16;
-const ROW_H = 48;
+const ROW_H = 50;
 const FONT = FONT_FAMILY;
 const TOP_H = 44; // HUD bar height
 
@@ -89,7 +89,11 @@ export class TowerPanel {
   private _buildPanelBackground(): void {
     const g = this._scene.add.graphics().setDepth(DEPTH.PANEL);
     g.fillStyle(COLORS.bgPanel, 1); g.fillRect(PX, 0, PW, GAME_HEIGHT);
-    g.lineStyle(2, COLORS.amberDeep, 0.45); g.beginPath(); g.moveTo(PX, 0); g.lineTo(PX, GAME_HEIGHT); g.strokePath();
+    g.fillStyle(COLORS.bgDark, 0.35); g.fillRect(PX + 6, 0, 8, GAME_HEIGHT);
+    g.lineStyle(4, COLORS.walnutDark, 0.95); g.strokeRect(PX, 0, PW, GAME_HEIGHT);
+    g.lineStyle(2, COLORS.amberDeep, 0.75); g.strokeRect(PX + 4, 4, PW - 8, GAME_HEIGHT - 8);
+    g.lineStyle(3, COLORS.walnutDark, 0.9); g.beginPath(); g.moveTo(PX, 0); g.lineTo(PX, GAME_HEIGHT); g.strokePath();
+    g.lineStyle(1, COLORS.amberDeep, 0.85); g.beginPath(); g.moveTo(PX + 2, 0); g.lineTo(PX + 2, GAME_HEIGHT); g.strokePath();
   }
 
   // ── Build panel ───────────────────────────────────────────────────────────
@@ -100,14 +104,14 @@ export class TowerPanel {
     // Title
     const titleY = TOP_H + 16;
     const title = s.add.text(PX + PAD, titleY, 'ОБОРОНА', {
-      fontFamily: FONT, fontSize: '13px', color: COLORS.textPrimary_css,
+      fontFamily: FONT, fontSize: '13px', color: COLORS.textGold_css,
       fontStyle: 'bold', letterSpacing: 2,
     }).setDepth(DEPTH.PANEL + 1);
     this._buildRoot.add(title);
 
     // Divider
     const divG = s.add.graphics().setDepth(DEPTH.PANEL + 1);
-    divG.lineStyle(1, COLORS.amberDeep, 0.20);
+    divG.lineStyle(2, COLORS.amberDeep, 0.35);
     divG.beginPath(); divG.moveTo(PX+PAD, titleY+22); divG.lineTo(PX+PW-PAD, titleY+22); divG.strokePath();
     this._buildRoot.add(divG);
 
@@ -121,44 +125,47 @@ export class TowerPanel {
       // Row hover background (full width)
       const rowBg = s.add.graphics().setDepth(DEPTH.PANEL + 1);
       rowBg.setVisible(false); // only shown on hover
-      rowBg.fillStyle(COLORS.bgPanelHover, 1); rowBg.fillRect(rx+2, ry, PW-4, ROW_H-2);
+      rowBg.fillStyle(COLORS.bgPanelHover, 0.95); rowBg.fillRoundedRect(rx+6, ry+3, PW-12, ROW_H-6, 6);
+      rowBg.lineStyle(1, COLORS.amberDeep, 0.55); rowBg.strokeRoundedRect(rx+6, ry+3, PW-12, ROW_H-6, 6);
       this._buildRoot.add(rowBg); this._rowBgs.push(rowBg);
 
       // Selected bar (3px left stripe)
       const selBar = s.add.graphics().setDepth(DEPTH.PANEL + 2);
       selBar.setVisible(false);
-      selBar.fillStyle(COLORS.amberWarm, 1); selBar.fillRect(PX+2, ry+4, 3, ROW_H-10);
+      selBar.fillStyle(COLORS.amberWarm, 1); selBar.fillRoundedRect(PX+8, ry+6, 5, ROW_H-12, 2);
       this._buildRoot.add(selBar); this._selBars.push(selBar);
 
       // Hotkey box
       const hkG = s.add.graphics().setDepth(DEPTH.PANEL + 2);
-      hkG.lineStyle(1, COLORS.walnutLight, 0.5); hkG.strokeRect(PX+PAD, ry+13, 22, 22);
+      hkG.fillStyle(COLORS.bgDark, 0.5); hkG.fillRoundedRect(PX+PAD, ry+14, 22, 22, 3);
+      hkG.lineStyle(1, COLORS.walnutLight, 0.7); hkG.strokeRoundedRect(PX+PAD, ry+14, 22, 22, 3);
       this._buildRoot.add(hkG);
       const hkLbl = s.add.text(PX+PAD+11, ry+24, `${i+1}`, {
-        fontFamily: FONT, fontSize: '12px', color: COLORS.walnut_css,
+        fontFamily: FONT, fontSize: '12px', color: COLORS.textSecondary_css,
       }).setOrigin(0.5).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(hkLbl);
 
       // Color swatch
       const swG = s.add.graphics().setDepth(DEPTH.PANEL + 2);
-      swG.fillStyle(data.color, 0.9); swG.fillRect(PX+PAD+30, ry+18, 12, 12);
+      swG.fillStyle(COLORS.walnutDark, 0.9); swG.fillRoundedRect(PX+PAD+30, ry+18, 14, 14, 2);
+      swG.fillStyle(data.color, 0.95); swG.fillRoundedRect(PX+PAD+32, ry+20, 10, 10, 2);
       this._buildRoot.add(swG);
 
       // Name
       const nameTxt = s.add.text(PX+PAD+50, ry+12, data.name, {
-        fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css,
+        fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css, fontStyle: 'bold',
       }).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(nameTxt); this._rowNameTxts.push(nameTxt);
 
       // Subtitle
       const sub = s.add.text(PX+PAD+50, ry+30, data.description, {
-        fontFamily: FONT, fontSize: '11px', color: COLORS.textSecondary_css,
+        fontFamily: FONT, fontSize: '11px', color: COLORS.textMuted_css,
       }).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(sub);
 
       // Cost
       const costTxt = s.add.text(PX+PW-PAD, ry+18, `${data.cost}◆`, {
-        fontFamily: FONT, fontSize: '14px', color: COLORS.textGold_css, align: 'right',
+        fontFamily: FONT, fontSize: '14px', color: COLORS.textGold_css, align: 'right', fontStyle: 'bold',
       }).setOrigin(1, 0).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(costTxt); this._rowCostTxts.push(costTxt);
 
@@ -247,7 +254,7 @@ export class TowerPanel {
         fontFamily: FONT, fontSize: '11px', color: COLORS.textMuted_css,
       }).setDepth(DEPTH.PANEL+2);
       const valTxt = s.add.text(PX+PAD+120, y, '0', {
-        fontFamily: FONT, fontSize: '11px', color: COLORS.textSecondary_css,
+        fontFamily: FONT, fontSize: '11px', color: COLORS.textMuted_css,
       }).setDepth(DEPTH.PANEL+2);
       this._infoRoot.add(lblTxt); this._infoRoot.add(valTxt);
       this._liveStatLines.push(valTxt);
@@ -305,7 +312,7 @@ export class TowerPanel {
       fontFamily: FONT, fontSize: '13px', color: COLORS.dangerSoft_css, align:'center',
     }).setOrigin(0.5).setDepth(DEPTH.PANEL+3);
     this._sellZone = s.add.zone(PX+PAD, sellY, sellW, 36).setOrigin(0).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+4);
-    this._sellZone.on('pointerover',  () => { this._sellGfx.clear(); this._sellGfx.fillStyle(COLORS.dangerSoft,0.20); this._sellGfx.fillRoundedRect(PX+PAD,sellY,sellW,36,6); this._sellGfx.lineStyle(1,COLORS.dangerSoft,0.8); this._sellGfx.strokeRoundedRect(PX+PAD,sellY,sellW,36,6); });
+    this._sellZone.on('pointerover',  () => { this._sellGfx.clear(); this._sellGfx.fillStyle(COLORS.danger,0.24); this._sellGfx.fillRoundedRect(PX+PAD,sellY,sellW,36,6); this._sellGfx.lineStyle(2,COLORS.dangerSoft,0.95); this._sellGfx.strokeRoundedRect(PX+PAD,sellY,sellW,36,6); });
     this._sellZone.on('pointerout',   () => this._redrawSellBtn(this._tower));
     this._sellZone.on('pointerdown',  () => this._build.sellSelected());
     this._infoRoot.add(this._sellGfx); this._infoRoot.add(this._sellLbl); this._infoRoot.add(this._sellZone);
@@ -377,7 +384,8 @@ export class TowerPanel {
     const sellY = GAME_HEIGHT - 80 - 44;
     const sellW = PW - PAD*2;
     this._sellGfx.clear();
-    this._sellGfx.lineStyle(1, COLORS.dangerSoft, 0.55); this._sellGfx.strokeRoundedRect(PX+PAD, sellY, sellW, 36, 6);
+    this._sellGfx.fillStyle(COLORS.bgDark, 0.45); this._sellGfx.fillRoundedRect(PX+PAD, sellY, sellW, 36, 6);
+    this._sellGfx.lineStyle(2, COLORS.dangerSoft, 0.75); this._sellGfx.strokeRoundedRect(PX+PAD, sellY, sellW, 36, 6);
     this._sellLbl.setText(`✕ Продать  ${tower.sellValue}◆`);
   }
 
@@ -408,8 +416,9 @@ export class TowerPanel {
       const data = TOWER_DEFS[id];
       const TW=220, TH=144, tx=panelX-TW-8, ty=Math.min(rowY, GAME_HEIGHT-TH-8);
       this._ttBg.clear();
-      this._ttBg.fillStyle(COLORS.bgDark, 0.96); this._ttBg.fillRoundedRect(tx,ty,TW,TH,6);
-      this._ttBg.lineStyle(1,COLORS.amberDeep,0.4); this._ttBg.strokeRoundedRect(tx,ty,TW,TH,6);
+      this._ttBg.fillStyle(COLORS.bgDark, 0.97); this._ttBg.fillRoundedRect(tx,ty,TW,TH,6);
+      this._ttBg.lineStyle(2,COLORS.walnutLight,0.75); this._ttBg.strokeRoundedRect(tx,ty,TW,TH,6);
+      this._ttBg.lineStyle(1,COLORS.amberDeep,0.9); this._ttBg.strokeRoundedRect(tx+3,ty+3,TW-6,TH-6,4);
       const lines = [
         { text: data.name, color: COLORS.amberWarm_css, size:'13px' },
         { text: `Урон: ${data.damage}   DPS: ${(data.damage*data.attackSpeed).toFixed(1)}`, color: COLORS.bgPrimary_css },

@@ -19,38 +19,38 @@ export const ENEMY_SPAWN_INTERVAL = 800;
 export const STARTING_GOLD  = 150;
 export const STARTING_LIVES = 20;
 
-// ── Baltic Amber Palette ──────────────────────────────────────────────────────
+// ── Baltic RTS Palette (dark stone + amber accents) ─────────────────────────
 export const COLORS = {
   // Backgrounds
-  bgPrimary:    0xF0EEE9,
-  bgGameField:  0xE8E2D6,
-  bgPanel:      0xE6DFD3,
-  bgPanelHover: 0xDDD5C5,
-  bgDark:       0x3E2723,
+  bgPrimary:    0x1C1917,
+  bgGameField:  0x2A2622,
+  bgPanel:      0x2D2823,
+  bgPanelHover: 0x3A342D,
+  bgDark:       0x130F0C,
 
   // Amber — primary accent
-  amberBright:  0xFFBF00,
-  amberWarm:    0xF5A623,
-  amberDeep:    0xC68E17,
-  amberGlow:    0xFFD700,
-  amberPale:    0xF2D98B,
+  amberBright:  0xFFC95B,
+  amberWarm:    0xE3A63A,
+  amberDeep:    0xAD731E,
+  amberGlow:    0xFFD682,
+  amberPale:    0xE8C483,
 
   // Walnut browns
-  walnut:       0x5D4037,
-  walnutLight:  0x8D6E63,
-  walnutDark:   0x2E1A12,
+  walnut:       0x5A4332,
+  walnutLight:  0x806049,
+  walnutDark:   0x221811,
 
   // Functional
-  danger:       0xC0392B,
-  dangerSoft:   0xD4726A,
-  success:      0x6B8E6B,
-  successSoft:  0xA8C5A0,
+  danger:       0xB34838,
+  dangerSoft:   0xCF7C6E,
+  success:      0x7C9C5A,
+  successSoft:  0xA7C07D,
 
   // Baltic sea
-  seaMuted:     0x5F8A8B,
-  seaLight:     0x8FB8B0,
-  seaLight_css: '#8FB8B0',
-  seaDark:      0x3D6B6C,
+  seaMuted:     0x5F766F,
+  seaLight:     0x8EA39A,
+  seaLight_css: '#8EA39A',
+  seaDark:      0x304842,
 
   // Enemies (dark silhouettes against warm bg)
   enemyDefault: 0x4A3728,
@@ -60,44 +60,44 @@ export const COLORS = {
   enemyBoss:    0x1A0A05,
 
   // Path
-  pathMain:     0xC9B896,
-  pathBorder:   0xB0A07A,
+  pathMain:     0x8D7654,
+  pathBorder:   0x675539,
 
   // Grid
-  gridLine:     0xD8D0C2,
-  gridHighlight:0xF5A623,
+  gridLine:     0x4B433A,
+  gridHighlight:0xE3A63A,
 
   // Text
-  textPrimary:  0x2E1A12,
-  textSecondary:0x8D6E63,
-  textGold:     0xC68E17,
-  textDanger:   0xC0392B,
-  textMuted:    0xA89B8C,
+  textPrimary:  0xE6DCCB,
+  textSecondary:0xBCAC94,
+  textGold:     0xE3B15A,
+  textDanger:   0xE08172,
+  textMuted:    0x8E826F,
 
   // CSS string versions
-  bgPrimary_css:    '#F0EEE9',
-  bgPanel_css:      '#E6DFD3',
-  bgPanelHover_css: '#DDD5C5',
-  bgDark_css:       '#3E2723',
-  amberBright_css:  '#FFBF00',
-  amberWarm_css:    '#F5A623',
-  amberDeep_css:    '#C68E17',
-  amberGlow_css:    '#FFD700',
-  amberPale_css:    '#F2D98B',
-  walnut_css:       '#5D4037',
-  walnutLight_css:  '#8D6E63',
-  walnutDark_css:   '#2E1A12',
-  danger_css:       '#C0392B',
-  dangerSoft_css:   '#D4726A',
-  success_css:      '#6B8E6B',
-  successSoft_css:  '#A8C5A0',
-  seaMuted_css:     '#5F8A8B',
-  textPrimary_css:  '#2E1A12',
-  textSecondary_css:'#8D6E63',
-  textGold_css:     '#C68E17',
-  textDanger_css:   '#C0392B',
-  textMuted_css:    '#A89B8C',
-  pathMain_css:     '#C9B896',
+  bgPrimary_css:    '#1C1917',
+  bgPanel_css:      '#2D2823',
+  bgPanelHover_css: '#3A342D',
+  bgDark_css:       '#130F0C',
+  amberBright_css:  '#FFC95B',
+  amberWarm_css:    '#E3A63A',
+  amberDeep_css:    '#AD731E',
+  amberGlow_css:    '#FFD682',
+  amberPale_css:    '#E8C483',
+  walnut_css:       '#5A4332',
+  walnutLight_css:  '#806049',
+  walnutDark_css:   '#221811',
+  danger_css:       '#B34838',
+  dangerSoft_css:   '#CF7C6E',
+  success_css:      '#7C9C5A',
+  successSoft_css:  '#A7C07D',
+  seaMuted_css:     '#5F766F',
+  textPrimary_css:  '#E6DCCB',
+  textSecondary_css:'#BCAC94',
+  textGold_css:     '#E3B15A',
+  textDanger_css:   '#E08172',
+  textMuted_css:    '#8E826F',
+  pathMain_css:     '#8D7654',
   enemyFlying_css:  '#3B3456',
 } as const;
 
