@@ -37,11 +37,15 @@ export class GameOverScene extends Phaser.Scene {
     const cy = GAME_HEIGHT / 2;
 
     // ── Background card ───────────────────────────────────────────────────
-    const CW = 340; const CH = 360;
+    const CW = 360; const CH = 380;
     const bg = this.add.graphics();
-    bg.fillStyle(COLORS.bgPanel, 1);
+    bg.fillStyle(COLORS.bgPanel, 0.96);
+    bg.fillStyle(COLORS.bgDark, 0.25);
+    bg.fillRoundedRect(cx - CW / 2 + 8, cy - CH / 2 + 8, CW - 16, CH - 16, 10);
     bg.fillRoundedRect(cx - CW / 2, cy - CH / 2, CW, CH, 12);
-    bg.lineStyle(2, victory ? COLORS.amberDeep : COLORS.danger, 0.7);
+    bg.lineStyle(4, COLORS.walnutDark, 0.95);
+    bg.strokeRoundedRect(cx - CW / 2, cy - CH / 2, CW, CH, 12);
+    bg.lineStyle(2, victory ? COLORS.amberDeep : COLORS.danger, 0.85);
     bg.strokeRoundedRect(cx - CW / 2, cy - CH / 2, CW, CH, 12);
 
     // ── Title ─────────────────────────────────────────────────────────────
@@ -50,7 +54,7 @@ export class GameOverScene extends Phaser.Scene {
 
     this.add.text(cx, cy - 130, titleText, {
       fontFamily: FONT_MAIN,
-      fontSize:   '36px',
+      fontSize:   '38px',
       fontStyle:  'bold',
       color:      titleColor,
       stroke:     COLORS.walnutDark_css,
@@ -63,13 +67,13 @@ export class GameOverScene extends Phaser.Scene {
 
     this.add.text(cx, cy - 78, subText, {
       fontFamily: FONT_MAIN,
-      fontSize:   '13px',
+      fontSize:   '14px',
       color:      COLORS.textSecondary_css,
     }).setOrigin(0.5);
 
     // ── Divider ───────────────────────────────────────────────────────────
     const dg = this.add.graphics();
-    dg.lineStyle(1, COLORS.amberDeep, 0.3);
+    dg.lineStyle(2, COLORS.amberDeep, 0.5);
     dg.beginPath();
     dg.moveTo(cx - 120, cy - 52);
     dg.lineTo(cx + 120, cy - 52);
