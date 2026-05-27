@@ -34,6 +34,13 @@ export const GameEvents = {
   HERO_SKILL_Q:        'hero:skill_q',       // payload: x, y, radius, hitCount
   HERO_SKILL_W:        'hero:skill_w',       // payload: x, y, radius, buffCount
 
+  // Economy — Phase 2
+  LUMBER_CHANGED:      'lumber:changed',     // payload: number (new total)
+  INTEREST_AWARDED:    'interest:awarded',   // payload: number (gold amount)
+  WAVE_BONUS_AWARDED:  'wavebonus:awarded',  // payload: number (gold amount)
+  BUILD_PHASE_START:   'build:phase:start',  // no payload — enables 100% sell
+  BUILD_PHASE_END:     'build:phase:end',    // no payload — reverts to 70% sell
+
   // Game state
   GAME_OVER:           'game:over',          // payload: { victory: boolean }
   GAME_PAUSED:         'game:paused',

@@ -24,7 +24,6 @@ import { EventBus, GameEvents } from '../utils/EventBus';
 export type WaveState = 'idle' | 'countdown' | 'spawning' | 'fighting' | 'victory';
 
 const BETWEEN_WAVE_SECS = 20;
-const EARLY_BONUS_MULT  = 1.2;
 
 interface SpawnContext {
   enemyType:  EnemyId;
@@ -45,7 +44,6 @@ export class WaveManager {
   private _totalCount       = 0;
   private _spawnedCount     = 0;
   private _enemiesRemaining = 0;
-  private _earlyBonus       = false;
 
   // Spawn accumulator — replaces delayedCall
   private _spawnAcc      = 0;
@@ -72,7 +70,6 @@ export class WaveManager {
 
   skipCountdown(): void {
     if (this.state !== 'countdown') return;
-    this._earlyBonus    = true;
     this._countdownSecs = 0;
   }
 
@@ -120,7 +117,6 @@ export class WaveManager {
   private _beginCountdown(): void {
     this.state          = 'countdown';
     this._countdownSecs = BETWEEN_WAVE_SECS;
-    this._earlyBonus    = false;
     this.onCountdownTick?.(BETWEEN_WAVE_SECS);
   }
 
@@ -147,6 +143,7 @@ export class WaveManager {
     this._spawnAcc         = wave.interval;
 
     this.onWaveStart?.(wave);
+    EventBus.emit(GameEvents.BUILD_PHASE_END);    // combat begins → 70% sell
     EventBus.emit(GameEvents.WAVE_STARTED, this._waveIndex + 1);
   }
 
@@ -176,12 +173,16 @@ export class WaveManager {
   private _waveComplete(): void {
     if (this.state === 'victory') return;
     const wave  = WAVES[this._waveIndex];
-    const bonus = this._earlyBonus
-      ? Math.round(wave.bonusGold * EARLY_BONUS_MULT)
-      : wave.bonusGold;
 
-    this.onWaveComplete?.(wave, bonus);
-    EventBus.emit(GameEvents.WAVE_COMPLETED, this._waveIndex + 1);
+    // NOTE: InterestSystem now handles bonusGold calculation from WaveData.
+    // The old local bonus/earlyBonus logic is removed — InterestSystem takes
+    // EARLY_BONUS via the earlyBonus flag emitted below if needed.
+    this.onWaveComplete?.(wave, wave.bonusGold);
+    // Pass waveNumber (1-based) AND WaveData so InterestSystem can read bonusGold
+    EventBus.emit(GameEvents.WAVE_COMPLETED, this._waveIndex + 1, wave);
+    // Build phase begins — no enemies on field → 100% sell refund
+    EventBus.emit(GameEvents.BUILD_PHASE_START);
+
     this._waveIndex++;
 
     if (this._waveIndex >= WAVES.length) {

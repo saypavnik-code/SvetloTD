@@ -5,13 +5,14 @@
 import type { DamageType } from '../data/towers';
 import type { ArmorType }  from '../data/enemies';
 import { DAMAGE_MATRIX }   from '../data/damageMatrix';
+import { DAMAGE_CONFIG }   from '../config/damage';
 
 export class DamageCalculator {
   /**
    * @param baseDamage     Raw damage from tower
    * @param damageType     Tower's damage type
    * @param armorType      Enemy's armor type
-   * @param armorReduction Stacked armor_reduce debuff total (each unit = +5% damage)
+   * @param armorReduction Stacked armor_reduce debuff total
    */
   calculate(
     baseDamage:     number,
@@ -20,9 +21,8 @@ export class DamageCalculator {
     armorReduction  = 0,
   ): number {
     const row = DAMAGE_MATRIX[damageType];
-    // Fall back to unarmored if armor type somehow not in matrix
     const mult = row[armorType] ?? row['unarmored'];
-    const armorBonus = 1 + armorReduction * 0.05;
+    const armorBonus = 1 + armorReduction * DAMAGE_CONFIG.armorReducePerStack;
     return Math.max(1, Math.round(baseDamage * mult * armorBonus));
   }
 }

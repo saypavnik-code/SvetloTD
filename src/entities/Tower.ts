@@ -38,8 +38,10 @@ export class Tower {
   totalDamageDealt = 0;
   totalKills       = 0;
 
-  // Active buffs (from hero skill W)
-  private _buffs: TowerBuff[] = [];
+  // Active buffs (from hero skill W or aura towers)
+  private _buffs:    TowerBuff[] = [];
+  // Aura bonus — set/cleared by AuraSystem each second (not a timed buff)
+  private _auraBuff  = 0;
 
   // Spawn bounce animation
   private _spawnTimer = 0.25;
@@ -117,7 +119,7 @@ export class Tower {
     const gd = GameSpeed.adjust(delta);
     this._targetTick   += gd;
     this._fireCooldown -= gd;
-    if (this.towerId === 'slow_t1') this._bladesAngle += gd * 0.003;
+    if (this.towerId === 'slow_t1' || this.towerId === 'slow_t2') this._bladesAngle += gd * 0.003;
     if (this._spawnTimer > 0) this._spawnTimer = Math.max(0, this._spawnTimer - gd / 1000);
 
     // Tick active buffs (dt in seconds)
@@ -143,7 +145,18 @@ export class Tower {
     }
   }
 
-  get isBuffed(): boolean { return this._buffs.length > 0; }
+  /** Called by AuraSystem before each scan to reset stale bonus */
+  clearAuraBuff(): void { this._auraBuff = 0; }
+
+  /** Called by AuraSystem when this tower is within an aura source's radius */
+  applyAuraBuff(bonus: number): void {
+    // Take the highest aura bonus if multiple aura towers overlap
+    this._auraBuff = Math.max(this._auraBuff, bonus);
+  }
+
+  get isAuraBoosted(): boolean { return this._auraBuff > 0; }
+
+  get isBuffed(): boolean { return this._buffs.length > 0 || this._auraBuff > 0; }
 
   private _tickBuffs(dtSecs: number): void {
     for (let i = this._buffs.length - 1; i >= 0; i--) {
@@ -157,17 +170,24 @@ export class Tower {
     for (const b of this._buffs) {
       if (b.type === 'attack_speed') speed *= (1 + b.value);
     }
+    // Aura bonus stacks additively with hero buff
+    if (this._auraBuff > 0) speed *= (1 + this._auraBuff);
     return speed;
   }
 
   private _findTarget(): void {
+    // Aura towers don't attack
+    if (this.data.auraRadius > 0) { this._target = null; return; }
+
     const r2 = this.data.range * this.data.range;
     const candidates = this._activeEnemiesFn().filter(e => {
-      if (!e.isActive||e.isDead) return false;
-      if (e.def.isFlying&&!this.data.canTargetAir)   return false;
-      if (!e.def.isFlying&&!this.data.canTargetGround) return false;
-      const dx=e.x-this.x, dy=e.y-this.y;
-      return dx*dx+dy*dy<=r2;
+      if (!e.isActive || e.isDead) return false;
+      if (e.def.isFlying  && !this.data.canTargetAir)    return false;
+      if (!e.def.isFlying && !this.data.canTargetGround)  return false;
+      // Phase 3: invisible enemies require canDetectInvisible
+      if (e.def.isInvisible && !this.data.canDetectInvisible) return false;
+      const dx = e.x - this.x, dy = e.y - this.y;
+      return dx * dx + dy * dy <= r2;
     });
     if (candidates.length===0) { this._target=null; return; }
     if (this._target?.isActive&&!this._target.isDead&&candidates.includes(this._target)) return;
@@ -193,13 +213,23 @@ export class Tower {
 
     // Track damage + kills; also apply status effects
     proj.onEnemyHit = (e: Enemy) => {
-      // Damage dealt is calculated inside Enemy.takeDamage; we approximate from base
-      // For splash, this fires per-enemy hit — accurate aggregate tracking
       this.totalDamageDealt += this.data.damage;
       if (e.isDead) this.totalKills++;
 
       for (const sp of specials) {
-        e.applyEffect({ type: sp.type, value: sp.value, duration: sp.duration, sourceId: id });
+        if (sp.type === 'aoe_slow') {
+          // Apply slow to all enemies within radius of hit target
+          const aoeR2 = (sp.radius ?? 50) * (sp.radius ?? 50);
+          for (const ae of this._activeEnemiesFn()) {
+            if (!ae.isActive || ae.isDead) continue;
+            const dx = ae.x - e.x, dy = ae.y - e.y;
+            if (dx * dx + dy * dy <= aoeR2) {
+              ae.applyEffect({ type: 'slow', value: sp.value, duration: sp.duration, sourceId: id + '_aoe' });
+            }
+          }
+        } else {
+          e.applyEffect({ type: sp.type as any, value: sp.value, duration: sp.duration, sourceId: id });
+        }
       }
     };
 
@@ -210,71 +240,140 @@ export class Tower {
 
   // ── Batch draw ─────────────────────────────────────────────────────────────
   drawTo(g: Phaser.GameObjects.Graphics): void {
-    const cx=this.x, cy=this.y, c=this.data.color;
+    const cx = this.x, cy = this.y, c = this.data.color;
 
-    // Spawn bounce — scale coordinates around tower center
     const bounce = this._spawnTimer > 0
       ? 1 + 0.18 * Math.sin((this._spawnTimer / 0.25) * Math.PI)
       : 1;
     const h = (BODY_SIZE / 2) * bounce;
 
-    // Amber base plate
-    g.fillStyle(COLORS.amberDeep, 0.20); g.fillRect(cx-h-2, cy-h-2, (BODY_SIZE+4)*bounce, (BODY_SIZE+4)*bounce);
+    // ── Foundation plate — every tower gets a stone base ─────────────────
+    g.fillStyle(0x1A1410, 0.75);
+    g.fillRoundedRect(cx - h - 3, cy - h - 3, (h + 3) * 2, (h + 3) * 2, 3);
+    g.lineStyle(1, 0x2E2418, 0.6);
+    g.strokeRoundedRect(cx - h - 3, cy - h - 3, (h + 3) * 2, (h + 3) * 2, 3);
 
-    // Buff glow — amber ring when hero W is active
-    if (this.isBuffed) {
-      g.lineStyle(2, COLORS.amberGlow, 0.70);
-      g.strokeRect(cx - h - 4, cy - h - 4, h*2 + 8, h*2 + 8);
+    // Aura buff glow ring
+    if (this.isAuraBoosted) {
+      g.lineStyle(2, COLORS.amberGlow, 0.55);
+      g.strokeCircle(cx, cy, h + 7);
+    }
+    // Hero buff ring
+    if (this.isBuffed && !this.isAuraBoosted) {
+      g.lineStyle(2, COLORS.amberBright, 0.70);
+      g.strokeRoundedRect(cx - h - 5, cy - h - 5, (h + 5) * 2, (h + 5) * 2, 4);
     }
 
     switch (this.towerId) {
-      case 'arrow_t1': case 'arrow_t2':
-        g.fillStyle(c,0.9); g.fillRect(cx-h,cy-h,h*2,h*2);
-        g.fillStyle(COLORS.walnutDark,0.45); g.fillRect(cx-h+4,cy-h+4,h*2-8,h*2-8);
-        [[-h,-h],[h,-h],[-h,h],[h,h]].forEach(([dx,dy])=>{g.fillStyle(c,1);g.fillRect(cx+dx-3,cy+dy-3,6,6);});
-        g.fillStyle(COLORS.walnutDark,0.8); g.fillRect(cx-2,cy-h-4,4,8);
-        break;
-      case 'cannon_t1': case 'cannon_t2':
-        g.fillStyle(c,0.85); g.fillRect(cx-h,cy-h,h*2,h*2);
-        g.fillStyle(COLORS.walnutDark,0.4); g.fillCircle(cx,cy,h-4);
-        g.lineStyle(2,COLORS.walnutDark,0.7); g.strokeRect(cx-h,cy-h,h*2,h*2);
-        g.fillStyle(COLORS.walnutDark,1); g.fillRect(cx-3,cy-h-6,6,10);
-        break;
-      case 'magic_t1': case 'magic_t2': {
-        const pts:Phaser.Types.Math.Vector2Like[]=[];
-        for(let i=0;i<6;i++){const a=Phaser.Math.DegToRad(i*60);pts.push({x:cx+Math.cos(a)*h,y:cy+Math.sin(a)*h});}
-        g.fillStyle(c,0.9); g.fillPoints(pts,true);
-        g.lineStyle(1.5,COLORS.amberBright,0.6); g.strokePoints(pts,true);
-        g.fillStyle(COLORS.amberGlow,0.9); g.fillCircle(cx,cy,5);
-        break;
-      }
-      case 'slow_t1':
-        g.fillStyle(c,0.7); g.fillCircle(cx,cy,h);
-        g.lineStyle(1.5,COLORS.seaDark,0.8); g.strokeCircle(cx,cy,h);
-        for(let i=0;i<4;i++){
-          const a=this._bladesAngle+Phaser.Math.DegToRad(i*90);
-          const bx=cx+Math.cos(a)*12, by=cy+Math.sin(a)*12;
-          const pa=a+Math.PI/2;
-          const pts=[{x:bx+Math.cos(pa)*2,y:by+Math.sin(pa)*2},{x:bx+Math.cos(a)*6,y:by+Math.sin(a)*6},{x:bx-Math.cos(pa)*2,y:by-Math.sin(pa)*2},{x:bx-Math.cos(a)*3,y:by-Math.sin(a)*3}] as Phaser.Types.Math.Vector2Like[];
-          g.fillStyle(COLORS.seaLight,0.9); g.fillPoints(pts,true);
+
+      // ── Arrow T1 / T2 — fortified tower with arrow slits ────────────────
+      case 'arrow_t1': case 'arrow_t2': {
+        const isT2 = this.towerId === 'arrow_t2';
+        // Tower body
+        g.fillStyle(c, 0.92); g.fillRoundedRect(cx - h, cy - h, h * 2, h * 2, 3);
+        // Inner dark chamber
+        g.fillStyle(0x0A0806, 0.35); g.fillRect(cx - h + 4, cy - h + 4, h * 2 - 8, h * 2 - 8);
+        // Top-left sheen
+        g.fillStyle(0xFFFFFF, 0.06); g.fillRoundedRect(cx - h + 1, cy - h + 1, h * 2 - 2, h - 2, 2);
+        // Border
+        g.lineStyle(isT2 ? 2 : 1.5, isT2 ? COLORS.amberBright : COLORS.amberWarm, 0.80);
+        g.strokeRoundedRect(cx - h, cy - h, h * 2, h * 2, 3);
+        // Corner battlements
+        const bs = 4;
+        for (const [dx, dy] of [[-h, -h], [h - bs, -h], [-h, h - bs], [h - bs, h - bs]]) {
+          g.fillStyle(c, 1); g.fillRect(cx + dx, cy + dy, bs, bs);
+          g.lineStyle(1, isT2 ? COLORS.amberBright : COLORS.amberDeep, 0.7);
+          g.strokeRect(cx + dx, cy + dy, bs, bs);
         }
-        g.fillStyle(COLORS.seaDark,1); g.fillCircle(cx,cy,4);
-        break;
-      case 'acid_t1': {
-        const pts:Phaser.Types.Math.Vector2Like[]=[{x:cx,y:cy-h},{x:cx+h,y:cy},{x:cx,y:cy+h},{x:cx-h,y:cy}];
-        g.fillStyle(c,0.85); g.fillPoints(pts,true);
-        g.lineStyle(1.5,COLORS.success,0.6); g.strokePoints(pts,true);
-        g.fillStyle(COLORS.successSoft,0.8); g.fillCircle(cx,cy-h+5,4);
+        // Barrel
+        const barLen = isT2 ? h + 7 : h + 5;
+        g.fillStyle(COLORS.walnutDark, 0.90); g.fillRect(cx - 2, cy - h - barLen + 2, 4, barLen);
+        g.lineStyle(1, COLORS.amberDeep, 0.55); g.strokeRect(cx - 2, cy - h - barLen + 2, 4, barLen);
+        // Muzzle flash ring when recently fired (reuse _spawnTimer approach — simplified)
+        if (isT2) { g.fillStyle(COLORS.amberGlow, 0.20); g.fillCircle(cx, cy, h - 2); }
         break;
       }
-      default:
-        g.fillStyle(c,0.88); g.fillRect(cx-h,cy-h,h*2,h*2);
+
+      // ── Cannon T1 / T2 — squat siege tower ──────────────────────────────
+      case 'cannon_t1': case 'cannon_t2': {
+        const isT2 = this.towerId === 'cannon_t2';
+        // Octagonal base
+        const pts: Phaser.Types.Math.Vector2Like[] = [];
+        for (let i = 0; i < 8; i++) { const a = Phaser.Math.DegToRad(22.5 + i * 45); pts.push({ x: cx + Math.cos(a) * h, y: cy + Math.sin(a) * h }); }
+        g.fillStyle(c, 0.90); g.fillPoints(pts, true);
+        // Inner ring
+        const pts2: Phaser.Types.Math.Vector2Like[] = [];
+        for (let i = 0; i < 8; i++) { const a = Phaser.Math.DegToRad(22.5 + i * 45); pts2.push({ x: cx + Math.cos(a) * (h - 4), y: cy + Math.sin(a) * (h - 4) }); }
+        g.fillStyle(0x0A0806, 0.30); g.fillPoints(pts2, true);
+        // Border
+        g.lineStyle(isT2 ? 2 : 1.5, isT2 ? COLORS.dangerSoft : COLORS.walnutLight, 0.75); g.strokePoints(pts, true);
+        // Centre dome
+        g.fillStyle(isT2 ? COLORS.dangerSoft : COLORS.walnutLight, 0.5); g.fillCircle(cx, cy, 5);
+        // Barrel
+        g.fillStyle(COLORS.walnutDark, 1); g.fillRect(cx - 3, cy - h - 7, 6, 10);
+        g.lineStyle(1, COLORS.walnutLight, 0.5); g.strokeRect(cx - 3, cy - h - 7, 6, 10);
+        if (isT2) { g.lineStyle(1.5, COLORS.dangerSoft, 0.40); g.strokeCircle(cx, cy, h + 4); }
+        break;
+      }
+
+      // ── Magic T1 / T2 — arcane crystal spire ────────────────────────────
+      case 'magic_t1': case 'magic_t2': {
+        const isT2 = this.towerId === 'magic_t2';
+        const pts: Phaser.Types.Math.Vector2Like[] = [];
+        for (let i = 0; i < 6; i++) { const a = Phaser.Math.DegToRad(i * 60); pts.push({ x: cx + Math.cos(a) * h, y: cy + Math.sin(a) * h }); }
+        g.fillStyle(c, 0.88); g.fillPoints(pts, true);
+        g.fillStyle(0xFFFFFF, 0.07); // top facet sheen
+        const sheen = pts.slice(0, 3);
+        g.fillPoints(sheen, true);
+        g.lineStyle(isT2 ? 2 : 1.5, isT2 ? COLORS.amberBright : COLORS.amberGlow, 0.80); g.strokePoints(pts, true);
+        // Floating crystal core
+        const coreR = isT2 ? 6 : 4;
+        g.fillStyle(isT2 ? COLORS.amberGlow : COLORS.amberWarm, 0.95); g.fillCircle(cx, cy, coreR);
+        g.fillStyle(0xFFFFFF, 0.35); g.fillCircle(cx - 1, cy - 1, coreR * 0.4);
+        // Glow halo
+        g.lineStyle(isT2 ? 3 : 2, c, 0.25); g.strokeCircle(cx, cy, h + 3);
+        break;
+      }
+
+      // ── Slow T1 / T2 — cryo windmill ────────────────────────────────────
+      case 'slow_t1': case 'slow_t2': {
+        const isT2 = this.towerId === 'slow_t2';
+        // Base disc
+        g.fillStyle(c, isT2 ? 0.85 : 0.72); g.fillCircle(cx, cy, h);
+        // Inner ring detail
+        g.fillStyle(0x7EC8E3, 0.12); g.fillCircle(cx, cy, h - 3);
+        g.lineStyle(isT2 ? 2.5 : 1.5, COLORS.seaDark, 0.85); g.strokeCircle(cx, cy, h);
+        // Blades — 4 swept arcs
+        for (let i = 0; i < 4; i++) {
+          const a  = this._bladesAngle + Phaser.Math.DegToRad(i * 90);
+          const bx2 = cx + Math.cos(a) * (h - 2);
+          const by2 = cy + Math.sin(a) * (h - 2);
+          const pa = a + Math.PI / 2;
+          const bladeW = isT2 ? 2.5 : 2;
+          const bladeL = isT2 ? 7 : 5.5;
+          const pts = [
+            { x: bx2 + Math.cos(pa) * bladeW, y: by2 + Math.sin(pa) * bladeW },
+            { x: bx2 + Math.cos(a) * bladeL,  y: by2 + Math.sin(a) * bladeL  },
+            { x: bx2 - Math.cos(pa) * bladeW, y: by2 - Math.sin(pa) * bladeW },
+            { x: bx2 - Math.cos(a) * (bladeL * 0.5), y: by2 - Math.sin(a) * (bladeL * 0.5) },
+          ] as Phaser.Types.Math.Vector2Like[];
+          g.fillStyle(isT2 ? 0xAADDFF : COLORS.seaLight, 0.92); g.fillPoints(pts, true);
+          g.lineStyle(1, isT2 ? 0x88BBDD : COLORS.seaDark, 0.6); g.strokePoints(pts, true);
+        }
+        // Hub
+        g.fillStyle(COLORS.seaDark, 1); g.fillCircle(cx, cy, isT2 ? 5 : 4);
+        g.fillStyle(0xBBEEFF, 0.6); g.fillCircle(cx, cy, isT2 ? 2.5 : 2);
+        if (isT2) { g.lineStyle(1, 0x7EC8E3, 0.30); g.strokeCircle(cx, cy, h + 5); }
+        break;
+      }
     }
+
+    // Note: range circle is drawn by the dedicated _rangeCircle Phaser Graphics object
   }
 
   destroy(): void {
     this._rangeCircle.destroy();
   }
 
-  get sellValue(): number { return Math.floor(this.totalInvested * 0.7); }
+  sellValue(refundRate: number): number { return Math.floor(this.totalInvested * refundRate); }
 }

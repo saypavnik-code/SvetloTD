@@ -99,6 +99,9 @@ export const COLORS = {
   textMuted_css:    '#8E826F',
   pathMain_css:     '#8D7654',
   enemyFlying_css:  '#3B3456',
+  // Phase 5 — genuinely new
+  seaDark_css:      '#304842',
+  amberGlow2_css:   '#FFDF90',
 } as const;
 
 // ── Depth / Z-order ───────────────────────────────────────────────────────────

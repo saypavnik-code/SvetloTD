@@ -120,7 +120,8 @@ export class BuildSystem {
 
   sellSelected(): void {
     if (!this._selectedTower) return;
-    const refund=this._selectedTower.sellValue;
+    const rate   = this._economy.sellRefundRate;
+    const refund = this._selectedTower.sellValue(rate);
     this._removeTower(this._selectedTower);
     this._economy.addGold(refund);
     EventBus.emit(GameEvents.TOWER_SOLD, { refund });

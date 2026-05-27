@@ -1,4 +1,4 @@
-// GameScene.ts — Stage 8. Batch rendering + full UI + pause + game-over overlay.
+// GameScene.ts — Stage 10. Phase 4: extracted SkillBar, TutorialOverlay, PauseOverlay.
 
 import Phaser from 'phaser';
 import {
@@ -13,12 +13,20 @@ import { Hero }           from '../entities/Hero';
 import { WaveManager }    from '../systems/WaveManager';
 import { BuildSystem }    from '../systems/BuildSystem';
 import { EconomyManager } from '../systems/EconomyManager';
+import { LumberManager }  from '../systems/LumberManager';
+import { InterestSystem } from '../systems/InterestSystem';
+import { AuraSystem }     from '../systems/AuraSystem';
 import { ObjectPool }     from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { TowerPanel }     from '../ui/TowerPanel';
 import { WaveInfo }       from '../ui/WaveInfo';
 import { HUD }            from '../ui/HUD';
 import { FloatingTextPool } from '../ui/FloatingTextPool';
+import { SkillBar }        from '../ui/SkillBar';
+import { TutorialOverlay } from '../ui/TutorialOverlay';
+import { PauseOverlay }    from '../ui/PauseOverlay';
+import { WaveTransition }  from '../ui/WaveTransition';
+import { ParticleSystem }  from '../systems/ParticleSystem';
 import { GameSpeed }      from '../systems/GameSpeed';
 import { AudioManager }   from '../systems/AudioManager';
 import { AmbientMusic }   from '../systems/AmbientMusic';
@@ -31,6 +39,9 @@ const FONT            = FONT_MAIN;
 
 export class GameScene extends Phaser.Scene {
   private _economy!:      EconomyManager;
+  private _lumber!:       LumberManager;
+  private _interest!:     InterestSystem;
+  private _aura!:         AuraSystem;
   private _waveManager!:  WaveManager;
   private _buildSystem!:  BuildSystem;
   private _enemyPool!:    ObjectPool<Enemy>;
@@ -61,30 +72,24 @@ export class GameScene extends Phaser.Scene {
     type: 'expand_circle' | 'pulse_ring';
   }> = [];
 
+  // Extracted UI components (Phase 4)
+  private _skillBar!:      SkillBar;
+  private _tutorial!:      TutorialOverlay;
+  private _pauseUI!:       PauseOverlay;
+  private _waveTransition!: WaveTransition;
+
+  // Phase 5: particles
+  private _particles!:     ParticleSystem;
+
   // Boss warning
   private _bossWarning!: Phaser.GameObjects.Text;
 
-  // Tutorial
-  private _tutorialActive   = false;
-  private _tutorialRoot!:   Phaser.GameObjects.Container;
-
-  // Skill UI
-  private _skillSlots: Array<{
-    bg:   Phaser.GameObjects.Graphics;
-    key:  Phaser.GameObjects.Text;
-    cd:   Phaser.GameObjects.Text;
-  }> = [];
-  private _skillUiTimer = 0;
-
   // Base pulse
-  private _baseGlow!:    Phaser.GameObjects.Graphics;
-  private _basePulseT  = 0;
+  private _baseGlow!:   Phaser.GameObjects.Graphics;
+  private _basePulseT   = 0;
 
-  // Pause overlay
-  private _pauseRoot!:   Phaser.GameObjects.Container;
-  private _isPaused      = false;
-
-  // Game-over overlay
+  // Pause / game-over state
+  private _isPaused     = false;
   private _gameOverRoot!: Phaser.GameObjects.Container;
   private _gameOver       = false;
 
@@ -113,8 +118,12 @@ export class GameScene extends Phaser.Scene {
     this._heroGfx = this.add.graphics().setDepth(DEPTH.HERO);
     this._vfxGfx  = this.add.graphics().setDepth(DEPTH.VFX);
 
-    // Skill UI slots (Q and W) — bottom-left above the wave bar
-    this._buildSkillUI();
+    // Skill bar, tutorial, pause — Phase 4 extracted components
+    this._skillBar       = new SkillBar(this, this._hero);
+    this._tutorial       = new TutorialOverlay(this);
+    this._pauseUI        = new PauseOverlay(this);
+    this._waveTransition = new WaveTransition(this);
+    this._particles      = new ParticleSystem();
 
     // Boss warning text (hidden until a boss wave starts)
     const fw = GRID_COLS * TILE_SIZE;
@@ -125,19 +134,26 @@ export class GameScene extends Phaser.Scene {
       stroke: COLORS.walnutDark_css, strokeThickness: 4,
     }).setOrigin(0.5).setDepth(DEPTH.OVERLAY_UI).setVisible(false);
 
-    // Tutorial — shown once on first launch
-    this._buildTutorial();
-    if (!localStorage.getItem('tutorial_done')) {
-      this._showTutorialStep(0);
-    }
+    this._tutorial.showIfNeeded();
 
     this._hud          = new HUD(this, this._economy, this._waveManager);
     this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy);
     this._towerPanel.bindHotkeys(this);
     this._waveInfo     = new WaveInfo(this, this._waveManager, this._economy);
+
+    // Wire countdown progress to HUD progress bar
+    this._waveManager.onCountdownTick = (secsLeft: number) => {
+      const BETWEEN = 20; // must match BETWEEN_WAVE_SECS in WaveManager
+      this._hud.setCountdownProgress(secsLeft / BETWEEN);
+    };
+    // Wire wave start to HUD wave label
+    this._waveManager.onWaveStart = (wave) => {
+      this._hud.setWave(wave.wave, wave.isBoss ?? false);
+      this._hud.setCountdownProgress(0);
+    };
     this._floatingText = new FloatingTextPool(this);
 
-    this._buildPauseOverlay();
+    this._pauseUI   = new PauseOverlay(this);
     this._buildGameOverOverlay();
     this._bindEvents();
     this._bindInput();
@@ -172,16 +188,13 @@ export class GameScene extends Phaser.Scene {
     for (const v of this._vfxList) v.elapsed += dt;
     this._vfxList = this._vfxList.filter(v => v.elapsed < v.duration);
 
-    // Skill UI — throttled to 100 ms
-    this._skillUiTimer -= dt;
-    if (this._skillUiTimer <= 0) {
-      this._skillUiTimer = 0.1;
-      this._updateSkillUI();
-    }
-
+    this._particles.update(dt);
+    this._waveTransition.update(clampedDelta);
+    this._skillBar.update(dt);
     this._buildSystem.update(clampedDelta);
     this._updateProjectiles(clampedDelta);
     this._animateBase(clampedDelta);
+    this._aura.update(clampedDelta);
     this._waveInfo.update(clampedDelta);
     this._hud.update(clampedDelta);
     this._towerPanel.update(clampedDelta);
@@ -195,11 +208,17 @@ export class GameScene extends Phaser.Scene {
     this._ambientMusic = null;
     this._sfx          = null;
     this._waveManager.destroy();
+    this._interest.destroy();
+    this._waveTransition.destroy();
+    this._economy.destroy();
     EventBus.off(GameEvents.ENEMY_KILLED,      this._onEnemyKilled,      this);
     EventBus.off(GameEvents.ENEMY_REACHED_END, this._onEnemyLeaked,      this);
     EventBus.off(GameEvents.LIVES_CHANGED,     this._onLivesChanged,     this);
     EventBus.off(GameEvents.GOLD_CHANGED,      this._onGoldChanged,      this);
     EventBus.off(GameEvents.GAME_OVER,         this._onGameOver,         this);
+    EventBus.off(GameEvents.LUMBER_CHANGED,    this._onLumberChanged,    this);
+    EventBus.off(GameEvents.INTEREST_AWARDED,  this._onInterestAwarded,  this);
+    EventBus.off(GameEvents.WAVE_BONUS_AWARDED,this._onWaveBonusAwarded, this);
     EventBus.off(GameEvents.TOWER_PLACED,      this._onTowerPlacedSfx,   this);
     EventBus.off(GameEvents.TOWER_SOLD,        this._onTowerSoldSfx,     this);
     EventBus.off(GameEvents.TOWER_UPGRADED,    this._onTowerUpgradedSfx, this);
@@ -214,11 +233,14 @@ export class GameScene extends Phaser.Scene {
   // ── Systems ────────────────────────────────────────────────────────────────
   private _buildSystems(): void {
     this._economy   = new EconomyManager();
+    this._lumber    = new LumberManager();
+    this._interest  = new InterestSystem(this._economy, this._lumber);
     this._enemyPool = new ObjectPool<Enemy>(() => new Enemy(), ENEMY_POOL_SIZE);
     this._projPool  = new ObjectPool<Projectile>(() => new Projectile(), PROJ_POOL_SIZE);
     this._waveManager = new WaveManager(this, this._enemyPool);
     this._buildSystem = new BuildSystem(this, this._economy, this._projPool,
       () => this._waveManager.activeEnemies);
+    this._aura = new AuraSystem(() => this._buildSystem.towers);
   }
 
   private _buildBatchGraphics(): void {
@@ -270,6 +292,9 @@ export class GameScene extends Phaser.Scene {
     this._heroGfx.clear();
     this._hero.drawTo(this._heroGfx);
 
+    // Phase 5: death particles — drawn above everything except HUD
+    this._particles.drawTo(this._effectGfx);
+
     // VFX rings (skill Q expand, skill W pulse)
     this._drawVFX();
   }
@@ -294,96 +319,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // ── Tutorial ───────────────────────────────────────────────────────────────
-  private _buildTutorial(): void {
-    this._tutorialRoot = this.add.container(0, 0)
-      .setDepth(DEPTH.OVERLAY + 10)
-      .setVisible(false);
-  }
-
-  private _showTutorialStep(step: number): void {
-    this._tutorialActive = true;
-    const root = this._tutorialRoot;
-    root.removeAll(true);
-    root.setVisible(true);
-
-    const messages = [
-      'Ставьте башни вдоль путей\n(клавиши 1–5).\nРазные башни эффективны\nпротив разной брони.',
-      'Кликните на башню для\nинформации. Улучшайте\nбашни кнопкой U.',
-      'Управляйте героем правой\nкнопкой мыши.\nQ — ударная волна,\nW — щит башням.',
-    ];
-    const btnLabels = ['Понятно →', 'Далее →', 'Начать игру!'];
-
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
-    const pw = 340, ph = 220;
-
-    // Dim backdrop
-    const dim = this.add.graphics();
-    dim.fillStyle(COLORS.walnutDark, 0.60);
-    dim.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    root.add(dim);
-
-    // Panel
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.bgPanel, 1);
-    panel.fillRoundedRect(cx - pw/2, cy - ph/2, pw, ph, 12);
-    panel.lineStyle(2, COLORS.amberDeep, 0.6);
-    panel.strokeRoundedRect(cx - pw/2, cy - ph/2, pw, ph, 12);
-    root.add(panel);
-
-    // Step indicator dots
-    for (let i = 0; i < 3; i++) {
-      const dot = this.add.graphics();
-      dot.fillStyle(i === step ? COLORS.amberWarm : COLORS.walnutLight, i === step ? 1 : 0.4);
-      dot.fillCircle(cx - 16 + i * 16, cy - ph/2 + 20, 5);
-      root.add(dot);
-    }
-
-    // Message
-    const msg = this.add.text(cx, cy - 30, messages[step], {
-      fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css,
-      align: 'center', lineSpacing: 6,
-    }).setOrigin(0.5);
-    root.add(msg);
-
-    // Button
-    const bw = 160, bh = 40;
-    const btnG = this.add.graphics();
-    btnG.fillStyle(COLORS.amberWarm, 1);
-    btnG.fillRoundedRect(cx - bw/2, cy + ph/2 - bh - 16, bw, bh, 8);
-    root.add(btnG);
-
-    const btnTxt = this.add.text(cx, cy + ph/2 - bh/2 - 16, btnLabels[step], {
-      fontFamily: FONT, fontSize: '14px',
-      color: COLORS.walnutDark_css, fontStyle: 'bold',
-    }).setOrigin(0.5);
-    root.add(btnTxt);
-
-    const zone = this.add.zone(cx - bw/2, cy + ph/2 - bh - 16, bw, bh)
-      .setOrigin(0).setInteractive({ useHandCursor: true });
-    zone.on('pointerdown', () => {
-      this._sfx?.uiClick();
-      if (step < 2) this._showTutorialStep(step + 1);
-      else          this._closeTutorial();
-    });
-    root.add(zone);
-
-    // Animate in
-    root.setAlpha(0);
-    this.tweens.add({ targets: root, alpha: 1, duration: 200 });
-  }
-
-  private _closeTutorial(): void {
-    this._tutorialActive = false;
-    this.tweens.add({
-      targets: this._tutorialRoot, alpha: 0, duration: 200,
-      onComplete: () => this._tutorialRoot.setVisible(false),
-    });
-    try { localStorage.setItem('tutorial_done', 'true'); } catch { /* private browse */ }
-  }
-
-  // ── Save / load result ─────────────────────────────────────────────────────
+  // ── Map ─────────────────────────────────────────────────────────────────────
   private _saveResult(isVictory: boolean): void {
     // Find best tower by damage dealt
     let bestName   = '—';
@@ -417,100 +353,110 @@ export class GameScene extends Phaser.Scene {
     } catch { /* storage unavailable */ }
   }
 
-  // ── Skill UI ──────────────────────────────────────────────────────────────
-  private _buildSkillUI(): void {
-    const SLOT  = 42;
-    const PAD   = 8;
-    const baseY = GAME_HEIGHT - 52 - PAD;   // above wave bar (52px tall)
-    const baseX = PAD;
-    const keys  = ['Q', 'W'] as const;
-
-    keys.forEach((key, i) => {
-      const sx = baseX + i * (SLOT + PAD);
-      const sy = baseY;
-
-      const bg = this.add.graphics().setDepth(DEPTH.HUD);
-      bg.lineStyle(1, COLORS.walnutLight, 0.6);
-      bg.fillStyle(COLORS.walnutDark, 0.20);
-      bg.fillRoundedRect(sx, sy, SLOT, SLOT, 6);
-      bg.strokeRoundedRect(sx, sy, SLOT, SLOT, 6);
-
-      const keyTxt = this.add.text(sx + 5, sy + 4, key, {
-        fontFamily: FONT, fontSize: '12px', color: COLORS.textSecondary_css,
-        fontStyle: 'bold',
-      }).setDepth(DEPTH.HUD + 1);
-
-      const cdTxt = this.add.text(sx + SLOT / 2, sy + SLOT / 2 + 4, '✓', {
-        fontFamily: FONT, fontSize: '15px', color: COLORS.amberWarm_css,
-        fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(DEPTH.HUD + 1);
-
-      this._skillSlots.push({ bg, key: keyTxt, cd: cdTxt });
-    });
-  }
-
-  private _updateSkillUI(): void {
-    const cds   = [this._hero.skillQCooldown, this._hero.skillWCooldown];
-    const maxCds = [this._hero.SKILL_Q_MAX_CD, this._hero.SKILL_W_MAX_CD];
-    const SLOT   = 42;
-    const PAD    = 8;
-    const baseX  = PAD;
-    const baseY  = GAME_HEIGHT - 52 - PAD;
-
-    this._skillSlots.forEach((slot, i) => {
-      const sx   = baseX + i * (SLOT + PAD);
-      const sy   = baseY;
-      const cd   = cds[i];
-      const ready = cd <= 0;
-
-      // Redraw background — bright when ready, dimmed on cooldown
-      slot.bg.clear();
-      if (ready) {
-        slot.bg.lineStyle(2, COLORS.amberWarm, 0.90);
-        slot.bg.fillStyle(COLORS.amberDeep, 0.25);
-      } else {
-        // Fill shows remaining fraction as dark overlay
-        slot.bg.lineStyle(1, COLORS.walnutLight, 0.45);
-        slot.bg.fillStyle(COLORS.walnutDark, 0.50);
-      }
-      slot.bg.fillRoundedRect(sx, sy, SLOT, SLOT, 6);
-      slot.bg.strokeRoundedRect(sx, sy, SLOT, SLOT, 6);
-
-      // Cooldown fill (draining bar from bottom)
-      if (!ready) {
-        const frac    = cd / maxCds[i];
-        const fillH   = Math.round(SLOT * frac);
-        slot.bg.fillStyle(COLORS.walnutDark, 0.55);
-        slot.bg.fillRoundedRect(sx, sy + SLOT - fillH, SLOT, fillH, 6);
-      }
-
-      slot.cd.setText(ready ? '✓' : String(Math.ceil(cd)));
-      slot.cd.setColor(ready ? COLORS.amberWarm_css : COLORS.textMuted_css);
-    });
-  }
-
   // ── Map ─────────────────────────────────────────────────────────────────────
   private _buildMap(): void {
+    const GW = GRID_COLS * TILE_SIZE;
+    const GH = GRID_ROWS * TILE_SIZE;
+
+    // ── Layer 0: Multi-stop gradient background ──────────────────────────────
     const bg = this.add.graphics().setDepth(DEPTH.BACKGROUND);
-    bg.fillStyle(COLORS.bgGameField, 1); bg.fillRect(0, 0, GRID_COLS*TILE_SIZE, GRID_ROWS*TILE_SIZE);
+    // Draw horizontal gradient strips (Phaser Graphics has no native gradient)
+    for (let row = 0; row < GRID_ROWS; row++) {
+      const t   = row / GRID_ROWS;
+      // Interpolate #13100C → #1E1A12 from top to bottom
+      const r   = Math.round(0x13 + t * (0x1E - 0x13));
+      const g2  = Math.round(0x10 + t * (0x1A - 0x10));
+      const b   = Math.round(0x0C + t * (0x12 - 0x0C));
+      const col = (r << 16) | (g2 << 8) | b;
+      bg.fillStyle(col, 1);
+      bg.fillRect(0, row * TILE_SIZE, GW, TILE_SIZE);
+    }
 
-    const grid = this.add.graphics().setDepth(DEPTH.GRID);
-    grid.lineStyle(1, COLORS.gridLine, 0.18);
-    for (let r=0; r<=GRID_ROWS; r++) { grid.beginPath(); grid.moveTo(0,r*TILE_SIZE); grid.lineTo(GRID_COLS*TILE_SIZE,r*TILE_SIZE); grid.strokePath(); }
-    for (let c=0; c<=GRID_COLS; c++) { grid.beginPath(); grid.moveTo(c*TILE_SIZE,0); grid.lineTo(c*TILE_SIZE,GRID_ROWS*TILE_SIZE); grid.strokePath(); }
-
-    const g = this.add.graphics().setDepth(DEPTH.PATH);
-    const deco = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
-    for (let row=0; row<GRID_ROWS; row++) for (let col=0; col<GRID_COLS; col++) {
-      const cell=MAP_DATA[row][col]; const px=col*TILE_SIZE, py=row*TILE_SIZE;
-      if (cell==='P'||cell==='B') {
-        g.fillStyle(COLORS.pathMain,1); g.fillRect(px,py,TILE_SIZE,TILE_SIZE);
-        g.fillStyle(COLORS.pathBorder,0.30); g.fillRect(px,py,TILE_SIZE,2); g.fillRect(px,py,2,TILE_SIZE);
-        const seed=(row*31+col*17)%100;
-        if (seed<28) { deco.fillStyle(COLORS.pathBorder,0.40); deco.fillCircle(px+(seed%28)+5,py+((seed*7)%28)+5,1.5); }
+    // ── Layer 1: Buildable cell stone texture ──────────────────────────────
+    const stone = this.add.graphics().setDepth(DEPTH.GRID);
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        if (MAP_DATA[row][col] !== 'B' && MAP_DATA[row][col] !== 'P') {
+          const px = col * TILE_SIZE, py = row * TILE_SIZE;
+          const T  = TILE_SIZE;
+          // Base cell — slightly lighter than bg
+          stone.fillStyle(0x1C1812, 1);
+          stone.fillRect(px, py, T, T);
+          // Top/left highlight edge (beveled look)
+          stone.lineStyle(1, 0x2E2820, 0.6);
+          stone.beginPath(); stone.moveTo(px, py + T); stone.lineTo(px, py); stone.lineTo(px + T, py); stone.strokePath();
+          // Bottom/right shadow edge
+          stone.lineStyle(1, 0x0D0A06, 0.8);
+          stone.beginPath(); stone.moveTo(px + T, py); stone.lineTo(px + T, py + T); stone.lineTo(px, py + T); stone.strokePath();
+          // Interior crack lines (seed-deterministic)
+          const seed = (row * 37 + col * 19) % 100;
+          if (seed < 30) {
+            stone.lineStyle(1, 0x110E08, 0.55);
+            stone.beginPath();
+            stone.moveTo(px + 4 + (seed % 8), py + 6);
+            stone.lineTo(px + 10 + (seed % 6), py + 14 + (seed % 5));
+            stone.strokePath();
+          }
+          // Moss/lichen dot in corner (low frequency)
+          if (seed > 80) {
+            stone.fillStyle(0x2A3A1E, 0.6);
+            stone.fillCircle(px + 3 + (seed % 4), py + T - 4, 1.5);
+          }
+        }
       }
     }
+
+    // ── Layer 2: Path tiles — amber stone road ─────────────────────────────
+    const path = this.add.graphics().setDepth(DEPTH.PATH);
+    const deco = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
+
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const cell = MAP_DATA[row][col];
+        if (cell !== 'P' && cell !== 'B') continue;
+        const px = col * TILE_SIZE, py = row * TILE_SIZE;
+        const T  = TILE_SIZE;
+
+        // Base amber cobblestone
+        path.fillStyle(0x4A3820, 1); path.fillRect(px, py, T, T);
+        // Inner stone block
+        path.fillStyle(0x3E2E14, 1); path.fillRect(px + 2, py + 2, T - 4, T - 4);
+        // Top/left warm highlight
+        path.lineStyle(1, 0x6A5028, 0.7);
+        path.beginPath(); path.moveTo(px + 2, py + T - 2); path.lineTo(px + 2, py + 2); path.lineTo(px + T - 2, py + 2); path.strokePath();
+        // Bottom/right shadow
+        path.lineStyle(1, 0x1E1408, 0.8);
+        path.beginPath(); path.moveTo(px + T - 2, py + 2); path.lineTo(px + T - 2, py + T - 2); path.lineTo(px + 2, py + T - 2); path.strokePath();
+
+        // Deco: surface pebbles (seed-based placement)
+        const seed = (row * 31 + col * 17) % 100;
+        if (seed < 35) {
+          deco.fillStyle(0x5A4422, 0.55);
+          deco.fillCircle(px + 5 + (seed % 12), py + 5 + ((seed * 7) % 12), 1.8);
+        }
+        if (seed > 70) {
+          deco.fillStyle(0x6A5430, 0.40);
+          deco.fillCircle(px + T - 6 - (seed % 6), py + T - 7 + (seed % 4), 1.4);
+        }
+      }
+    }
+
     this._drawPathEdges();
+
+    // ── Layer 3: Vignette — darken screen corners ──────────────────────────
+    const vig = this.add.graphics().setDepth(DEPTH.BACKGROUND + 1);
+    const VW = GW, VH = GH;
+    const steps = 18;
+    for (let i = 0; i < steps; i++) {
+      const t    = i / steps;
+      const a    = 0.28 * t * t;
+      const pad  = Math.round(Math.min(VW, VH) * 0.42 * (1 - t));
+      vig.fillStyle(0x000000, a);
+      vig.fillRect(0, 0, pad, VH);         // left
+      vig.fillRect(VW - pad, 0, pad, VH);  // right
+      vig.fillRect(pad, 0, VW - 2 * pad, pad);          // top
+      vig.fillRect(pad, VH - pad, VW - 2 * pad, pad);   // bottom
+    }
   }
 
   private _drawPathEdges(): void {
@@ -550,141 +496,6 @@ export class GameScene extends Phaser.Scene {
     const bx=BASE_TILE_COL*TILE_SIZE, by=BASE_TILE_ROW*TILE_SIZE;
     this._baseGlow.clear();
     for(let l=3;l>=0;l--){const a=(0.06+pulse*0.09)*(l+1)/4;const pad=(3+pulse*5)+l*3;this._baseGlow.fillStyle(COLORS.amberWarm,a);this._baseGlow.fillRect(bx-pad,by-pad,BASE_SIZE+pad*2,BASE_SIZE+pad*2);}
-  }
-
-  // ── Pause overlay ─────────────────────────────────────────────────────────
-  private _buildPauseOverlay(): void {
-    const s=this; const cx=GAME_WIDTH/2, cy=GAME_HEIGHT/2;
-    this._pauseRoot=this.add.container(0,0).setDepth(DEPTH.OVERLAY).setVisible(false);
-
-    const dim=s.add.graphics();
-    dim.fillStyle(COLORS.walnutDark,0.55); dim.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-    this._pauseRoot.add(dim);
-
-    // Panel — taller to fit sliders
-    const pw=300, ph=280;
-    const bg=s.add.graphics();
-    bg.fillStyle(COLORS.bgPanel,1); bg.fillRoundedRect(cx-pw/2,cy-ph/2,pw,ph,12);
-    bg.lineStyle(2,COLORS.amberDeep,0.5); bg.strokeRoundedRect(cx-pw/2,cy-ph/2,pw,ph,12);
-    this._pauseRoot.add(bg);
-
-    this._pauseRoot.add(s.add.text(cx,cy-ph/2+22,'⏸ ПАУЗА',{
-      fontFamily:FONT, fontSize:'18px', color:COLORS.walnutDark_css, fontStyle:'bold',
-    }).setOrigin(0.5));
-
-    // ── Volume sliders ──────────────────────────────────────────────────────
-    const sliderX = cx - pw/2 + 20;
-    const BAR_W   = pw - 40;
-    const BAR_H   = 6;
-
-    const makeSlider = (
-      label: string, sy: number,
-      initial: number,
-      onChange: (v: number) => void,
-    ): void => {
-      // Label
-      this._pauseRoot.add(s.add.text(sliderX, sy, label, {
-        fontFamily: FONT, fontSize: '13px', color: COLORS.textSecondary_css,
-      }));
-
-      // Track background
-      const trackBg = s.add.graphics();
-      trackBg.fillStyle(COLORS.walnutLight, 0.25);
-      trackBg.fillRoundedRect(sliderX, sy+22, BAR_W, BAR_H, 3);
-      this._pauseRoot.add(trackBg);
-
-      // Fill bar (redrawn on change)
-      const fill = s.add.graphics();
-      this._pauseRoot.add(fill);
-
-      // Percentage label
-      const pctTxt = s.add.text(sliderX+BAR_W+10, sy+16,
-        Math.round(initial*100)+'%',
-        { fontFamily: FONT, fontSize: '13px', color: COLORS.textPrimary_css });
-      this._pauseRoot.add(pctTxt);
-
-      const redraw = (v: number): void => {
-        fill.clear();
-        fill.fillStyle(COLORS.amberWarm, 1);
-        fill.fillRoundedRect(sliderX, sy+22, BAR_W*v, BAR_H, 3);
-        // Knob
-        fill.fillStyle(COLORS.amberBright, 1);
-        fill.fillCircle(sliderX + BAR_W*v, sy+22+BAR_H/2, 7);
-        pctTxt.setText(Math.round(v*100)+'%');
-      };
-      redraw(initial);
-
-      // Interactive zone (generous hit area)
-      const zone = s.add.zone(sliderX, sy+10, BAR_W, BAR_H+24).setOrigin(0)
-        .setInteractive({ useHandCursor: true });
-      this._pauseRoot.add(zone);
-
-      const handlePtr = (ptr: Phaser.Input.Pointer): void => {
-        const ratio = Math.max(0, Math.min(1, (ptr.x - sliderX) / BAR_W));
-        onChange(ratio);
-        redraw(ratio);
-        this._sfx?.uiClick();
-      };
-      zone.on('pointerdown', handlePtr);
-      zone.on('pointermove', (ptr: Phaser.Input.Pointer) => {
-        if (ptr.isDown) handlePtr(ptr);
-      });
-    };
-
-    // Music slider
-    makeSlider(
-      'Музыка',
-      cy - ph/2 + 70,
-      AudioManager.musicGain?.gain.value ?? 0.3,
-      (v) => AudioManager.setMusicVolume(v),
-    );
-
-    // SFX slider
-    makeSlider(
-      'Звуки',
-      cy - ph/2 + 130,
-      AudioManager.sfxGain?.gain.value ?? 0.5,
-      (v) => AudioManager.setSfxVolume(v),
-    );
-
-    // ── Buttons ─────────────────────────────────────────────────────────────
-    const btnY = cy + ph/2 - 90;
-
-    const r1=s.add.graphics();
-    r1.fillStyle(COLORS.amberWarm,1); r1.fillRoundedRect(cx-100,btnY,200,38,8);
-    this._pauseRoot.add(r1);
-    this._pauseRoot.add(s.add.text(cx,btnY+19,'Продолжить',{
-      fontFamily:FONT, fontSize:'14px', color:COLORS.walnutDark_css, fontStyle:'bold',
-    }).setOrigin(0.5));
-    const z1=s.add.zone(cx-100,btnY,200,38).setOrigin(0).setInteractive({useHandCursor:true});
-    z1.on('pointerdown',()=>{ this._sfx?.uiClick(); this._togglePause(); });
-    this._pauseRoot.add(z1);
-
-    const btnY2 = cy + ph/2 - 42;
-    const r2=s.add.graphics();
-    r2.lineStyle(1,COLORS.walnut,0.7); r2.strokeRoundedRect(cx-100,btnY2,200,34,8);
-    this._pauseRoot.add(r2);
-    this._pauseRoot.add(s.add.text(cx,btnY2+17,'В главное меню',{
-      fontFamily:FONT, fontSize:'13px', color:COLORS.walnut_css,
-    }).setOrigin(0.5));
-    const z2=s.add.zone(cx-100,btnY2,200,34).setOrigin(0).setInteractive({useHandCursor:true});
-    z2.on('pointerdown',()=>{
-      this._sfx?.uiClick();
-      this.cameras.main.fadeOut(300,240,238,233);
-      this.cameras.main.once('camerafadeoutcomplete',()=>this.scene.start('MenuScene'));
-    });
-    this._pauseRoot.add(z2);
-  }
-
-  private _togglePause(): void {
-    this._isPaused = !this._isPaused;
-    this._pauseRoot.setVisible(this._isPaused);
-    if (this._isPaused) {
-      EventBus.emit(GameEvents.GAME_PAUSED);
-      // update() early-returns when _isPaused — no need to stop clock
-    } else {
-      EventBus.emit(GameEvents.GAME_RESUMED);
-    }
   }
 
   // ── Game over overlay ─────────────────────────────────────────────────────
@@ -752,6 +563,11 @@ export class GameScene extends Phaser.Scene {
     EventBus.on(GameEvents.GOLD_CHANGED,      this._onGoldChanged,     this);
     EventBus.on(GameEvents.GAME_OVER,         this._onGameOver,        this);
 
+    // Phase 2 — economy extensions
+    EventBus.on(GameEvents.LUMBER_CHANGED,     this._onLumberChanged,    this);
+    EventBus.on(GameEvents.INTEREST_AWARDED,   this._onInterestAwarded,  this);
+    EventBus.on(GameEvents.WAVE_BONUS_AWARDED, this._onWaveBonusAwarded, this);
+
     // SFX — named handlers so they can be removed cleanly in shutdown()
     EventBus.on(GameEvents.TOWER_PLACED,   this._onTowerPlacedSfx,  this);
     EventBus.on(GameEvents.TOWER_SOLD,     this._onTowerSoldSfx,    this);
@@ -815,13 +631,43 @@ export class GameScene extends Phaser.Scene {
   };
 
   private _onEnemyKilled = (data: unknown): void => {
-    const {enemy,goldReward}=data as {enemy:Enemy;goldReward:number};
+    const {enemy, goldReward} = data as {enemy: Enemy; goldReward: number};
     this._economy.addGold(goldReward);
     this._totalKills++;
-    this._totalGoldEarned+=goldReward;
-    this._floatingText.show(enemy.x, enemy.y-10, `+${goldReward}◆`, COLORS.textGold_css);
+    this._totalGoldEarned += goldReward;
     this._sfx?.enemyDeath();
     this._sfx?.goldEarned();
+
+    // Phase 5: death particles — colour matches enemy
+    const burstCount = enemy.def.isBoss ? 20 : 8;
+    this._particles.burst(enemy.x, enemy.y, enemy.def.color, burstCount);
+    if (enemy.def.isBoss) this._particles.burst(enemy.x, enemy.y, 0xFFCC44, 12);
+
+    // Floating gold — larger for bosses
+    const size = enemy.def.isBoss ? 'lg' : 'md';
+    this._floatingText.show(enemy.x, enemy.y - 10, `+${goldReward}◆`, COLORS.textGold_css, size as any);
+
+    // Phase 2: lumber yield
+    const lumberYield = (enemy.def as any)?.lumberYield ?? 0;
+    if (lumberYield > 0) {
+      this._lumber.add(lumberYield);
+      this._floatingText.show(enemy.x, enemy.y - 26, `+${lumberYield}🪵`, '#7CBA5C', 'sm' as any);
+    }
+  };
+
+  private _onLumberChanged = (total: unknown): void => {
+    this._hud.setLumber(total as number);
+  };
+
+  private _onInterestAwarded = (amount: unknown): void => {
+    const n = amount as number;
+    this._floatingText.show(680, 36, `+${n} %◆`, '#F5C842', 'sm' as any);
+    this._sfx?.goldEarned();
+  };
+
+  private _onWaveBonusAwarded = (amount: unknown): void => {
+    const n = amount as number;
+    this._floatingText.show(680, 52, `+${n} бонус`, COLORS.textGold_css, 'sm' as any);
   };
 
   private _onEnemyLeaked = (enemy: unknown): void => {
@@ -863,16 +709,17 @@ export class GameScene extends Phaser.Scene {
 
     // SPACE — skip countdown
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on('down', () => {
-      if (this._tutorialActive) return;
+      if (this._tutorial.isActive) return;
       if (this._waveManager.state==='countdown') this._waveManager.skipCountdown();
     });
 
     // ESC cascade: cancel build → deselect → pause
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () => {
-      if (this._tutorialActive) return;
+      if (this._tutorial.isActive) return;
       if (this._buildSystem.isPlacing) { this._buildSystem.cancelPlacement(); return; }
       if (this._buildSystem.selectedTower) { this._buildSystem.deselect(); return; }
-      this._togglePause();
+      this._isPaused = !this._isPaused;
+      this._pauseUI.toggle();
     });
 
     // M — menu (if not game over)
