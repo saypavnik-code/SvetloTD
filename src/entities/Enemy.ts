@@ -202,10 +202,11 @@ export class Enemy implements Poolable {
   drawTo(g: Phaser.GameObjects.Graphics): void {
     // Dying animation — shrink + white flash, then hidden
     if (this._isDying) {
-      const t     = this._dyingTimer / Enemy.DYING_DURATION;
+      const t     = this._dyingTimer / Enemy.DYING_DURATION;   // 1→0
       const scale = t;
       const r     = this.radius * scale;
       if (r < 0.5) return;
+      // Alternate white/normal every 0.06 s for flash effect
       const flashOn = Math.floor(this._dyingTimer / 0.06) % 2 === 0;
       g.fillStyle(flashOn ? 0xFFFFFF : this.def.color, t * 0.9);
       g.fillCircle(this.x, this.y, r);
@@ -218,30 +219,27 @@ export class Enemy implements Poolable {
     const c   = flash ? 0xFFFFFF : this.def.color;
     const cd  = this.def.colorDark;
 
-    // Phase 3: invisible enemies render semi-transparent
-    const alpha = this.def.isInvisible ? 0.30 : 1.0;
-
     switch (this.def.id) {
       case 'grunt':
-        g.fillStyle(c, alpha); g.fillCircle(cx, cy, r);
+        g.fillStyle(c, 1); g.fillCircle(cx, cy, r);
         g.lineStyle(1.5, cd, 0.9); g.strokeCircle(cx, cy, r);
         g.lineStyle(1.5, cd, 0.7);
         for (let i=0;i<4;i++){const a=Phaser.Math.DegToRad(45+i*90); g.beginPath(); g.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r); g.lineTo(cx+Math.cos(a)*(r+4),cy+Math.sin(a)*(r+4)); g.strokePath();}
         break;
       case 'runner': {
         const pts=[{x:cx,y:cy-r*1.5},{x:cx+r,y:cy},{x:cx,y:cy+r*1.5},{x:cx-r,y:cy}] as Phaser.Types.Math.Vector2Like[];
-        g.fillStyle(c, alpha); g.fillPoints(pts,true); g.lineStyle(1,cd,0.8); g.strokePoints(pts,true);
+        g.fillStyle(c,1); g.fillPoints(pts,true); g.lineStyle(1,cd,0.8); g.strokePoints(pts,true);
         break;
       }
       case 'golem': {
-        const pts=this._hex(cx,cy,r,0); g.fillStyle(c, alpha); g.fillPoints(pts,true); g.lineStyle(2,cd,1); g.strokePoints(pts,true);
+        const pts=this._hex(cx,cy,r,0); g.fillStyle(c,1); g.fillPoints(pts,true); g.lineStyle(2,cd,1); g.strokePoints(pts,true);
         g.lineStyle(1,cd,0.35); g.strokePoints(this._hex(cx,cy,r-3,0),true);
         break;
       }
       case 'wyvern': {
         const nx=Math.cos(this._angle),ny=Math.sin(this._angle),px=-ny,py=nx;
         const pts=[{x:cx+nx*r*1.4,y:cy+ny*r*1.4},{x:cx+px*r*0.8,y:cy+py*r*0.8},{x:cx-nx*r*0.9,y:cy-ny*r*0.9},{x:cx-px*r*0.8,y:cy-py*r*0.8}] as Phaser.Types.Math.Vector2Like[];
-        g.fillStyle(c, alpha); g.fillPoints(pts,true); g.lineStyle(1,cd,0.7); g.strokePoints(pts,true);
+        g.fillStyle(c,1); g.fillPoints(pts,true); g.lineStyle(1,cd,0.7); g.strokePoints(pts,true);
         break;
       }
       case 'boss_goliath': {
@@ -252,62 +250,12 @@ export class Enemy implements Poolable {
         g.lineStyle(1,cd,0.5); g.strokePoints(this._hex(cx,cy,r-4,30),true);
         break;
       }
-
-      // ── Phase 3: New enemy shapes ──────────────────────────────────────────
-
-      case 'phantom': {
-        // Wispy pentagon with pulsing outer ring
-        const pts = this._polygon(cx, cy, r, 5, this._angle);
-        g.fillStyle(c, 0.28); g.fillPoints(pts, true);
-        g.lineStyle(1.5, c, 0.6 + 0.3 * Math.sin(this._bossGlowT * 6)); g.strokePoints(pts, true);
-        // Inner glow dot
-        g.fillStyle(0xFFFFFF, 0.18); g.fillCircle(cx, cy, r * 0.35);
-        break;
-      }
-
-      case 'nether_drake': {
-        // Large flying boss — elongated diamond + wing flanges
-        const glowA = 0.12 + 0.12 * (0.5 + Math.sin(this._bossGlowT * Math.PI * 1.5) * 0.5);
-        g.fillStyle(0x7B2FBE, glowA); g.fillCircle(cx, cy, r + 10);
-        const nx = Math.cos(this._angle), ny = Math.sin(this._angle);
-        const px = -ny, py = nx;
-        const body = [
-          {x: cx+nx*r*1.6, y: cy+ny*r*1.6},
-          {x: cx+px*r*1.0, y: cy+py*r*1.0},
-          {x: cx-nx*r*1.1, y: cy-ny*r*1.1},
-          {x: cx-px*r*1.0, y: cy-py*r*1.0},
-        ] as Phaser.Types.Math.Vector2Like[];
-        g.fillStyle(c, 1); g.fillPoints(body, true);
-        g.lineStyle(2, 0xAA55FF, 0.9); g.strokePoints(body, true);
-        // Crown spikes
-        g.lineStyle(1.5, cd, 0.6);
-        for (let i = 0; i < 3; i++) {
-          const a = this._angle + Phaser.Math.DegToRad(-30 + i * 30);
-          g.beginPath(); g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-          g.lineTo(cx + Math.cos(a) * (r + 6), cy + Math.sin(a) * (r + 6)); g.strokePath();
-        }
-        break;
-      }
-
-      case 'mountain_giant': {
-        // Huge fortified square with cracks
-        const glowA = 0.08 + 0.10 * (0.5 + Math.sin(this._bossGlowT * Math.PI) * 0.5);
-        g.fillStyle(0x8B6914, glowA); g.fillCircle(cx, cy, r + 12);
-        const pts = this._hex(cx, cy, r, 0);
-        g.fillStyle(c, 1); g.fillPoints(pts, true);
-        g.lineStyle(3, cd, 1.0); g.strokePoints(pts, true);
-        // Inner ring cracks
-        g.lineStyle(1, cd, 0.4); g.strokePoints(this._hex(cx, cy, r - 5, 30), true);
-        // Highlight
-        g.lineStyle(1.5, 0xC8A86A, 0.5); g.strokePoints(this._hex(cx, cy, r - 2, 0), true);
-        break;
-      }
     }
 
     // FX overlays
-    if (this.fx.hasSlow()) { g.lineStyle(2, COLORS.seaMuted, 0.75); g.strokeCircle(cx, cy, r+3); }
+    if (this.fx.hasSlow()) { g.lineStyle(2,COLORS.seaMuted,0.75); g.strokeCircle(cx,cy,r+3); }
     if (this.fx.hasArmorReduce()) {
-      g.lineStyle(1.5, COLORS.amberWarm, 0.85);
+      g.lineStyle(1.5,COLORS.amberWarm,0.85);
       for(let i=0;i<4;i++){const a=Phaser.Math.DegToRad(45+i*90); g.beginPath(); g.moveTo(cx+Math.cos(a)*(r+1),cy+Math.sin(a)*(r+1)); g.lineTo(cx+Math.cos(a)*(r+5),cy+Math.sin(a)*(r+5)); g.strokePath();}
     }
   }
@@ -334,13 +282,6 @@ export class Enemy implements Poolable {
   private _hex(cx:number,cy:number,r:number,rot:number): Phaser.Types.Math.Vector2Like[] {
     const pts: Phaser.Types.Math.Vector2Like[] = [];
     for(let i=0;i<6;i++){const a=Phaser.Math.DegToRad(rot+60*i); pts.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)});}
-    return pts;
-  }
-
-  /** Generic N-sided polygon with optional rotation offset */
-  private _polygon(cx:number,cy:number,r:number,sides:number,rot=0): Phaser.Types.Math.Vector2Like[] {
-    const pts: Phaser.Types.Math.Vector2Like[] = [];
-    for(let i=0;i<sides;i++){const a=rot+Math.PI*2*(i/sides); pts.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)});}
     return pts;
   }
 }

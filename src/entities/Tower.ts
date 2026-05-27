@@ -38,10 +38,8 @@ export class Tower {
   totalDamageDealt = 0;
   totalKills       = 0;
 
-  // Active buffs (from hero skill W or aura towers)
-  private _buffs:    TowerBuff[] = [];
-  // Aura bonus — set/cleared by AuraSystem each second (not a timed buff)
-  private _auraBuff  = 0;
+  // Active buffs (from hero skill W)
+  private _buffs: TowerBuff[] = [];
 
   // Spawn bounce animation
   private _spawnTimer = 0.25;
@@ -119,7 +117,7 @@ export class Tower {
     const gd = GameSpeed.adjust(delta);
     this._targetTick   += gd;
     this._fireCooldown -= gd;
-    if (this.towerId === 'slow_t1' || this.towerId === 'slow_t2') this._bladesAngle += gd * 0.003;
+    if (this.towerId === 'slow_t1') this._bladesAngle += gd * 0.003;
     if (this._spawnTimer > 0) this._spawnTimer = Math.max(0, this._spawnTimer - gd / 1000);
 
     // Tick active buffs (dt in seconds)
@@ -145,18 +143,7 @@ export class Tower {
     }
   }
 
-  /** Called by AuraSystem before each scan to reset stale bonus */
-  clearAuraBuff(): void { this._auraBuff = 0; }
-
-  /** Called by AuraSystem when this tower is within an aura source's radius */
-  applyAuraBuff(bonus: number): void {
-    // Take the highest aura bonus if multiple aura towers overlap
-    this._auraBuff = Math.max(this._auraBuff, bonus);
-  }
-
-  get isAuraBoosted(): boolean { return this._auraBuff > 0; }
-
-  get isBuffed(): boolean { return this._buffs.length > 0 || this._auraBuff > 0; }
+  get isBuffed(): boolean { return this._buffs.length > 0; }
 
   private _tickBuffs(dtSecs: number): void {
     for (let i = this._buffs.length - 1; i >= 0; i--) {
@@ -170,24 +157,17 @@ export class Tower {
     for (const b of this._buffs) {
       if (b.type === 'attack_speed') speed *= (1 + b.value);
     }
-    // Aura bonus stacks additively with hero buff
-    if (this._auraBuff > 0) speed *= (1 + this._auraBuff);
     return speed;
   }
 
   private _findTarget(): void {
-    // Aura towers don't attack
-    if (this.data.auraRadius > 0) { this._target = null; return; }
-
     const r2 = this.data.range * this.data.range;
     const candidates = this._activeEnemiesFn().filter(e => {
-      if (!e.isActive || e.isDead) return false;
-      if (e.def.isFlying  && !this.data.canTargetAir)    return false;
-      if (!e.def.isFlying && !this.data.canTargetGround)  return false;
-      // Phase 3: invisible enemies require canDetectInvisible
-      if (e.def.isInvisible && !this.data.canDetectInvisible) return false;
-      const dx = e.x - this.x, dy = e.y - this.y;
-      return dx * dx + dy * dy <= r2;
+      if (!e.isActive||e.isDead) return false;
+      if (e.def.isFlying&&!this.data.canTargetAir)   return false;
+      if (!e.def.isFlying&&!this.data.canTargetGround) return false;
+      const dx=e.x-this.x, dy=e.y-this.y;
+      return dx*dx+dy*dy<=r2;
     });
     if (candidates.length===0) { this._target=null; return; }
     if (this._target?.isActive&&!this._target.isDead&&candidates.includes(this._target)) return;
@@ -213,23 +193,13 @@ export class Tower {
 
     // Track damage + kills; also apply status effects
     proj.onEnemyHit = (e: Enemy) => {
+      // Damage dealt is calculated inside Enemy.takeDamage; we approximate from base
+      // For splash, this fires per-enemy hit — accurate aggregate tracking
       this.totalDamageDealt += this.data.damage;
       if (e.isDead) this.totalKills++;
 
       for (const sp of specials) {
-        if (sp.type === 'aoe_slow') {
-          // Apply slow to all enemies within radius of hit target
-          const aoeR2 = (sp.radius ?? 50) * (sp.radius ?? 50);
-          for (const ae of this._activeEnemiesFn()) {
-            if (!ae.isActive || ae.isDead) continue;
-            const dx = ae.x - e.x, dy = ae.y - e.y;
-            if (dx * dx + dy * dy <= aoeR2) {
-              ae.applyEffect({ type: 'slow', value: sp.value, duration: sp.duration, sourceId: id + '_aoe' });
-            }
-          }
-        } else {
-          e.applyEffect({ type: sp.type as any, value: sp.value, duration: sp.duration, sourceId: id });
-        }
+        e.applyEffect({ type: sp.type, value: sp.value, duration: sp.duration, sourceId: id });
       }
     };
 
@@ -278,35 +248,18 @@ export class Tower {
         g.fillStyle(COLORS.amberGlow,0.9); g.fillCircle(cx,cy,5);
         break;
       }
-      case 'slow_t1': case 'slow_t2':
-        g.fillStyle(c, this.towerId === 'slow_t2' ? 0.85 : 0.70); g.fillCircle(cx,cy,h);
-        g.lineStyle(this.towerId === 'slow_t2' ? 2.5 : 1.5, COLORS.seaDark, 0.8); g.strokeCircle(cx,cy,h);
+      case 'slow_t1':
+        g.fillStyle(c,0.7); g.fillCircle(cx,cy,h);
+        g.lineStyle(1.5,COLORS.seaDark,0.8); g.strokeCircle(cx,cy,h);
         for(let i=0;i<4;i++){
           const a=this._bladesAngle+Phaser.Math.DegToRad(i*90);
           const bx=cx+Math.cos(a)*12, by=cy+Math.sin(a)*12;
           const pa=a+Math.PI/2;
           const pts=[{x:bx+Math.cos(pa)*2,y:by+Math.sin(pa)*2},{x:bx+Math.cos(a)*6,y:by+Math.sin(a)*6},{x:bx-Math.cos(pa)*2,y:by-Math.sin(pa)*2},{x:bx-Math.cos(a)*3,y:by-Math.sin(a)*3}] as Phaser.Types.Math.Vector2Like[];
-          g.fillStyle(this.towerId === 'slow_t2' ? 0xAADDFF : COLORS.seaLight, 0.9); g.fillPoints(pts,true);
+          g.fillStyle(COLORS.seaLight,0.9); g.fillPoints(pts,true);
         }
-        g.fillStyle(COLORS.seaDark,1); g.fillCircle(cx,cy, this.towerId === 'slow_t2' ? 5 : 4);
-        if (this.towerId === 'slow_t2') {
-          g.lineStyle(1, 0xAADDFF, 0.35); g.strokeCircle(cx, cy, h + 6);
-        }
+        g.fillStyle(COLORS.seaDark,1); g.fillCircle(cx,cy,4);
         break;
-      case 'watchtower': {
-        // Flag pole + pulsing aura ring
-        const auraT = (Date.now() % 2000) / 2000;
-        const auraAlpha = 0.08 + 0.07 * Math.sin(auraT * Math.PI * 2);
-        g.fillStyle(this.data.auraRadius > 0 ? this.data.color : COLORS.walnutLight, auraAlpha);
-        g.fillCircle(cx, cy, this.data.auraRadius);
-        g.lineStyle(1.5, c, 0.35 + 0.2 * Math.sin(auraT * Math.PI * 2));
-        g.strokeCircle(cx, cy, this.data.auraRadius);
-        // Tower body — flag pole
-        g.fillStyle(COLORS.walnutDark, 0.9); g.fillRect(cx - 3, cy - h, 6, h * 2);
-        g.fillStyle(c, 1); g.fillRect(cx + 3, cy - h, h * 0.8, h * 0.6);
-        g.fillStyle(COLORS.bgPanel, 0.8); g.fillCircle(cx, cy, 5);
-        break;
-      }
       case 'acid_t1': {
         const pts:Phaser.Types.Math.Vector2Like[]=[{x:cx,y:cy-h},{x:cx+h,y:cy},{x:cx,y:cy+h},{x:cx-h,y:cy}];
         g.fillStyle(c,0.85); g.fillPoints(pts,true);
