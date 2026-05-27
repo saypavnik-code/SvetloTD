@@ -314,49 +314,13 @@ export class Enemy implements Poolable {
 
   drawHealthbarTo(g: Phaser.GameObjects.Graphics): void {
     if (this._isDying || this.hp >= this.maxHp) return;
-    const ratio  = Math.max(0, this.hp / this.maxHp);
-    const isBoss = this.def.isBoss ?? false;
-    const BAR_W  = this.radius * (isBoss ? 3.4 : 2.6);
-    const BAR_H  = isBoss ? 6 : 4;
-    const bx     = this.x - BAR_W / 2;
-    const by     = this.y - this.radius - (isBoss ? 14 : 10);
-    const fillW  = Math.max(1, Math.round(BAR_W * ratio));
-
-    // Dark track
-    g.fillStyle(0x0A0806, 0.85); g.fillRoundedRect(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 2);
-    g.fillStyle(0x1A1510, 0.75); g.fillRoundedRect(bx, by, BAR_W, BAR_H, 1);
-
-    // Gradient fill — green → yellow → red
-    const col = ratio > 0.60 ? 0x44BB44 : ratio > 0.30 ? 0xCCBB22 : 0xCC3322;
-    g.fillStyle(col, 0.92); g.fillRoundedRect(bx, by, fillW, BAR_H, 1);
-
-    // Top sheen on fill
-    if (fillW > 4) {
-      g.fillStyle(0xFFFFFF, 0.20); g.fillRect(bx + 1, by + 1, fillW - 2, Math.max(1, Math.floor(BAR_H / 2)));
-    }
-
-    // Boss: tick marks every 25% + pulse border
-    if (isBoss) {
-      g.lineStyle(1, 0x000000, 0.45);
-      for (let tick = 0.25; tick < 1; tick += 0.25) {
-        const tx = Math.round(bx + BAR_W * tick);
-        g.beginPath(); g.moveTo(tx, by); g.lineTo(tx, by + BAR_H); g.strokePath();
-      }
-      const pulse = 0.40 + 0.35 * Math.sin(this._bossGlowT * Math.PI * 4);
-      g.lineStyle(1.5, 0xCC3322, pulse); g.strokeRoundedRect(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 2);
-    }
-
-    // Invisible indicator (eye dot above bar)
-    if (this.def.isInvisible) {
-      g.fillStyle(0xBB99DD, 0.55); g.fillCircle(this.x, by - 6, 3);
-      g.lineStyle(1, 0xDDBBFF, 0.40); g.strokeCircle(this.x, by - 6, 3);
-    }
-
-    // Flying altitude indicator
-    if (this.def.isFlying) {
-      g.fillStyle(0x8888CC, 0.40);
-      g.fillTriangle(this.x - 4, by - 4, this.x, by - 9, this.x + 4, by - 4);
-    }
+    const ratio  = this.hp / this.maxHp;
+    const barW   = this.radius * 2.4;
+    const barX   = this.x - barW / 2;
+    const barY   = this.y - this.radius - 8;
+    g.fillStyle(COLORS.walnutDark, 0.45); g.fillRect(barX, barY, barW, 3);
+    const col = ratio>0.6 ? COLORS.success : ratio>0.3 ? COLORS.amberWarm : COLORS.danger;
+    g.fillStyle(col, 1); g.fillRect(barX, barY, barW * ratio, 3);
   }
 
   // Flying shadow (drawn under main enemy layer) — called from GameScene
