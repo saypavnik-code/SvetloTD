@@ -7,6 +7,11 @@ import { STARTING_LIVES } from '../config';
 import { GameConfig }     from '../config/difficulty';
 import { EventBus, GameEvents } from '../utils/EventBus';
 
+// Lazy access to MetaProgression (set in main.ts) to avoid circular imports
+function getMeta(): { bonusStartGold: number; bonusStartLives: number } {
+  return (globalThis as any).__MetaProgression ?? { bonusStartGold: 0, bonusStartLives: 0 };
+}
+
 export class EconomyManager {
   private _gold:  number;
   private _lives  = STARTING_LIVES;
@@ -14,7 +19,9 @@ export class EconomyManager {
   private _sellRefundRate = 0.7;
 
   constructor() {
-    this._gold = GameConfig.difficulty.startingGold;
+    const meta = getMeta();
+    this._gold  = GameConfig.difficulty.startingGold + (meta?.bonusStartGold ?? 0);
+    this._lives = STARTING_LIVES + (meta?.bonusStartLives ?? 0);
     EventBus.on(GameEvents.BUILD_PHASE_START, this._onBuildStart, this);
     EventBus.on(GameEvents.BUILD_PHASE_END,   this._onBuildEnd,   this);
   }
@@ -33,6 +40,11 @@ export class EconomyManager {
     this._gold -= amount;
     EventBus.emit(GameEvents.GOLD_CHANGED, this._gold);
     return true;
+  }
+
+  addLives(amount = 1): void {
+    this._lives += amount;
+    EventBus.emit(GameEvents.LIVES_CHANGED, this._lives);
   }
 
   loseLife(amount = 1): void {

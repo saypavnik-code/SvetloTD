@@ -19,6 +19,7 @@ import { Enemy }                from '../entities/Enemy';
 import { WAVES, type WaveData } from '../data/waves';
 import { ALL_PATHS }            from '../data/pathData';
 import { ObjectPool }           from '../utils/ObjectPool';
+import { GameConfig }             from '../config/difficulty';
 import { EventBus, GameEvents } from '../utils/EventBus';
 
 export type WaveState = 'idle' | 'countdown' | 'spawning' | 'fighting' | 'victory';
@@ -126,12 +127,21 @@ export class WaveManager {
 
     const paths = wave.paths === -1 ? ALL_PATHS : [ALL_PATHS[wave.paths]];
 
+    const diff = GameConfig.difficulty;
+    const speedMult =
+      (wave.modifier === 'fast' ? 1.5 : 1.0) *
+      (wave.speedMult ?? 1.0) *
+      diff.enemySpeedMult;
+    const hpMult = wave.hpMult
+      * diff.enemyHpMult
+      * (wave.modifier === 'armored' ? 1.5 : 1.0);
+
     this._spawnCtx = {
       enemyType:  wave.enemyType,
       paths:      paths as Waypoint[][],
-      speedMult:  wave.modifier === 'fast' ? 1.5 : 1.0,
+      speedMult,
       isHealing:  wave.modifier === 'healing',
-      hpMult:     wave.hpMult,
+      hpMult,
     };
 
     this.state             = 'spawning';

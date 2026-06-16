@@ -2,22 +2,108 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#F0EEE9" />
-  <title>Svetlogorsk TD</title>
+  <!-- Mobile-first viewport: no zoom, fill screen, handle notch -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
+                 user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A0806" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+
+  <title>Светлогорск TD</title>
+
   <style>
+    /* ── Reset ─────────────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Full-screen black background, no scroll ─────────────────────────── */
     html, body {
       width: 100%; height: 100%;
-      background: #F0EEE9;
+      background: #0A0806;
       overflow: hidden;
+      /* Disable rubber-band scroll on iOS */
+      overscroll-behavior: none;
+      touch-action: none;
+      /* Disable callout on long-press (iOS) */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
       font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     }
-    #game-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-    #game-container canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+    /* ── Game container: centre canvas, respect safe area ───────────────── */
+    #game-container {
+      display:         flex;
+      align-items:     center;
+      justify-content: center;
+      width:           100%;
+      height:          100%;
+      /* Phaser canvas must fill without white strips on notch phones */
+      padding-top:    env(safe-area-inset-top,    0px);
+      padding-right:  env(safe-area-inset-right,  0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left:   env(safe-area-inset-left,   0px);
+    }
+
+    /* ── Canvas: crisp pixels, no native touch handling ─────────────────── */
+    #game-container canvas {
+      display:          block;
+      touch-action:     none;       /* let Phaser handle all touch events */
+      -webkit-tap-highlight-color: transparent;
+      /* Crisp rendering for pixel art */
+      image-rendering:  pixelated;
+      image-rendering:  crisp-edges;
+      /* Prevent context menu on long press (Android) */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* ── Loading screen ─────────────────────────────────────────────────── */
+    #loading {
+      position:   fixed;
+      inset:      0;
+      display:    flex;
+      flex-direction: column;
+      align-items:    center;
+      justify-content: center;
+      background: #0A0806;
+      color:      #E3A63A;
+      font-size:  1.1rem;
+      letter-spacing: 0.2em;
+      pointer-events: none;
+      transition: opacity 0.4s;
+      z-index:    999;
+    }
+    #loading.hidden { opacity: 0; }
+    #loading-bar-wrap {
+      margin-top: 24px; width: 200px; height: 4px;
+      background: #2A2018; border-radius: 2px; overflow: hidden;
+    }
+    #loading-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #E3A63A, #FFD682);
+      border-radius: 2px;
+      transition: width 0.2s;
+    }
+
+    /* ── Expose safe-area CSS vars for JS ─────────────────────────────────  */
+    :root {
+      --sat: env(safe-area-inset-top,    0px);
+      --sar: env(safe-area-inset-right,  0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left,   0px);
+    }
   </style>
 </head>
 <body>
+  <!-- Loading screen (hidden once Phaser boots) -->
+  <div id="loading">
+    <span style="letter-spacing:0.25em;font-weight:bold">SVETLOGORSK TD</span>
+    <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  </div>
+
   <div id="game-container"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

@@ -34,6 +34,10 @@ export const GameEvents = {
   HERO_SKILL_Q:        'hero:skill_q',       // payload: x, y, radius, hitCount
   HERO_SKILL_W:        'hero:skill_w',       // payload: x, y, radius, buffCount
 
+  // Meta-progression (Priority 5)
+  META_UPGRADED:       'meta:upgraded',
+  STARS_EARNED:        'meta:stars_earned',
+
   // Economy — Phase 2
   LUMBER_CHANGED:      'lumber:changed',     // payload: number (new total)
   INTEREST_AWARDED:    'interest:awarded',   // payload: number (gold amount)

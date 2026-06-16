@@ -1,7 +1,9 @@
 // enemies.ts — Stage 10: added lumberYield for Phase 2 economy.
 
 export type ArmorType = 'unarmored' | 'light' | 'medium' | 'heavy' | 'fortified' | 'heroic';
-export type EnemyId   = 'grunt' | 'runner' | 'golem' | 'wyvern' | 'boss_goliath';
+export type EnemyId   =
+  | 'grunt' | 'runner' | 'golem' | 'wyvern' | 'boss_goliath'
+  | 'phantom' | 'nether_drake' | 'mountain_giant';
 
 export interface EnemyDef {
   id:          EnemyId;
@@ -50,5 +52,25 @@ export const ENEMY_DEFS: Record<EnemyId, EnemyDef> = {
     hp: 2000, speed: 25, armorType: 'fortified', bounty: 60, lumberYield: 2, livesCost: 5,
     isFlying: false, isInvisible: false,
     color: 0x1A0A05, colorDark: 0x0A0402, radius: 18, isBoss: true,
+  },
+
+  // Phase 3: New enemy types
+  phantom: {
+    id: 'phantom', name: 'Призрак',
+    hp: 120, speed: 90, armorType: 'unarmored', bounty: 10, lumberYield: 0, livesCost: 2,
+    isFlying: false, isInvisible: true,
+    color: 0xBB99DD, colorDark: 0x7755AA, radius: 7,
+  },
+  nether_drake: {
+    id: 'nether_drake', name: 'Нефритовый Дракон',
+    hp: 1800, speed: 45, armorType: 'heroic', bounty: 45, lumberYield: 1, livesCost: 4,
+    isFlying: true, isInvisible: false,
+    color: 0x2E1A52, colorDark: 0x180D2E, radius: 16, isBoss: true,
+  },
+  mountain_giant: {
+    id: 'mountain_giant', name: 'Горный Титан',
+    hp: 3000, speed: 15, armorType: 'fortified', bounty: 55, lumberYield: 2, livesCost: 6,
+    isFlying: false, isInvisible: false,
+    color: 0x5A4A3A, colorDark: 0x2E2418, radius: 20, isBoss: true,
   },
 };

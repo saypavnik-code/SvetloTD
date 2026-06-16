@@ -23,7 +23,13 @@ import { EventBus, GameEvents } from '../utils/EventBus';
 import { TowerPanel }     from '../ui/TowerPanel';
 import { WaveInfo }       from '../ui/WaveInfo';
 import { HUD }            from '../ui/HUD';
-import { FloatingTextPool } from '../ui/FloatingTextPool';
+import { FloatingTextPool }  from '../ui/FloatingTextPool';
+import { TutorialOverlay }  from '../ui/TutorialOverlay';
+import { PauseOverlay }     from '../ui/PauseOverlay';
+import { SkillBar }         from '../ui/SkillBar';
+import { AdPromptUI }        from '../ui/AdPromptUI';
+import { MobileBottomSheet } from '../ui/MobileBottomSheet';
+import { MobileAdapter }    from '../systems/MobileAdapter';
 import { GameSpeed }      from '../systems/GameSpeed';
 import { AudioManager }   from '../systems/AudioManager';
 import { AmbientMusic }   from '../systems/AmbientMusic';
@@ -74,23 +80,20 @@ export class GameScene extends Phaser.Scene {
   private _bossWarning!: Phaser.GameObjects.Text;
 
   // Tutorial
-  private _tutorialActive   = false;
-  private _tutorialRoot!:   Phaser.GameObjects.Container;
+  private _tutorial!:       TutorialOverlay;
+  private _pauseOverlay!:   PauseOverlay;
+  private _skillBar!:       SkillBar;
+  private _mobileSheet!:    MobileBottomSheet;
+  private _adPrompt!:       AdPromptUI;
 
   // Skill UI
-  private _skillSlots: Array<{
-    bg:   Phaser.GameObjects.Graphics;
-    key:  Phaser.GameObjects.Text;
-    cd:   Phaser.GameObjects.Text;
-  }> = [];
-  private _skillUiTimer = 0;
+
 
   // Base pulse
   private _baseGlow!:    Phaser.GameObjects.Graphics;
   private _basePulseT  = 0;
 
   // Pause overlay
-  private _pauseRoot!:   Phaser.GameObjects.Container;
   private _isPaused      = false;
 
   // Game-over overlay
@@ -122,8 +125,7 @@ export class GameScene extends Phaser.Scene {
     this._heroGfx = this.add.graphics().setDepth(DEPTH.HERO);
     this._vfxGfx  = this.add.graphics().setDepth(DEPTH.VFX);
 
-    // Skill UI slots (Q and W) — bottom-left above the wave bar
-    this._buildSkillUI();
+
 
     // Boss warning text (hidden until a boss wave starts)
     const fw = GRID_COLS * TILE_SIZE;
@@ -134,11 +136,8 @@ export class GameScene extends Phaser.Scene {
       stroke: COLORS.walnutDark_css, strokeThickness: 4,
     }).setOrigin(0.5).setDepth(DEPTH.OVERLAY_UI).setVisible(false);
 
-    // Tutorial — shown once on first launch
-    this._buildTutorial();
-    if (!localStorage.getItem('tutorial_done')) {
-      this._showTutorialStep(0);
-    }
+    this._tutorial = new TutorialOverlay(this);
+    this._tutorial.showIfNeeded();
 
     this._hud          = new HUD(this, this._economy, this._waveManager);
     this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy);
@@ -160,13 +159,34 @@ export class GameScene extends Phaser.Scene {
       this._hud.setCountdownProgress(0);
     };
 
-    this._buildPauseOverlay();
+    this._pauseOverlay = new PauseOverlay(this, () => this._sfx?.uiClick());
+    this._skillBar     = new SkillBar(this, this._hero);
+    this._mobileSheet  = new MobileBottomSheet(this, this._buildSystem, this._economy);
+    this._adPrompt     = new AdPromptUI(this, this._economy);
+
+    // Mobile: on-screen Q/W skill tap buttons
+    if (MobileAdapter.isMobile) this._buildMobileSkillButtons();
     this._buildGameOverOverlay();
     this._bindEvents();
     this._bindInput();
 
     this._waveManager.startGame();
     GameSpeed.reset();
+
+    // ── Dev-only FPS counter (toggle with F key) ────────────────────────────
+    if (import.meta.env.DEV) {
+      const fpsTxt = this.add.text(4, 54, '', {
+        fontFamily: FONT, fontSize: '11px', color: '#44FF44',
+        backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+      }).setDepth(DEPTH.OVERLAY_UI);
+      this.time.addEvent({
+        delay: 200, loop: true,
+        callback: () => fpsTxt.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`),
+      });
+      let fpsVisible = true;
+      this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F)
+        .on('down', () => { fpsVisible = !fpsVisible; fpsTxt.setVisible(fpsVisible); });
+    }
 
     // Audio — AudioManager was initialised in MenuScene on play click
     if (AudioManager.isReady) {
@@ -196,15 +216,12 @@ export class GameScene extends Phaser.Scene {
     this._vfxList = this._vfxList.filter(v => v.elapsed < v.duration);
 
     // Skill UI — throttled to 100 ms
-    this._skillUiTimer -= dt;
-    if (this._skillUiTimer <= 0) {
-      this._skillUiTimer = 0.1;
-      this._updateSkillUI();
-    }
+    this._skillBar.update(dt);
 
     this._buildSystem.update(clampedDelta);
     this._aura.update(clampedDelta);
     this._particles.update(dt);
+    this._mobileSheet.update();
     this._updateProjectiles(clampedDelta);
     this._animateBase(clampedDelta);
     this._waveInfo.update(clampedDelta);
@@ -331,94 +348,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // ── Tutorial ───────────────────────────────────────────────────────────────
-  private _buildTutorial(): void {
-    this._tutorialRoot = this.add.container(0, 0)
-      .setDepth(DEPTH.OVERLAY + 10)
-      .setVisible(false);
-  }
 
-  private _showTutorialStep(step: number): void {
-    this._tutorialActive = true;
-    const root = this._tutorialRoot;
-    root.removeAll(true);
-    root.setVisible(true);
-
-    const messages = [
-      'Ставьте башни вдоль путей\n(клавиши 1–5).\nРазные башни эффективны\nпротив разной брони.',
-      'Кликните на башню для\nинформации. Улучшайте\nбашни кнопкой U.',
-      'Управляйте героем правой\nкнопкой мыши.\nQ — ударная волна,\nW — щит башням.',
-    ];
-    const btnLabels = ['Понятно →', 'Далее →', 'Начать игру!'];
-
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
-    const pw = 340, ph = 220;
-
-    // Dim backdrop
-    const dim = this.add.graphics();
-    dim.fillStyle(COLORS.walnutDark, 0.60);
-    dim.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    root.add(dim);
-
-    // Panel
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.bgPanel, 1);
-    panel.fillRoundedRect(cx - pw/2, cy - ph/2, pw, ph, 12);
-    panel.lineStyle(2, COLORS.amberDeep, 0.6);
-    panel.strokeRoundedRect(cx - pw/2, cy - ph/2, pw, ph, 12);
-    root.add(panel);
-
-    // Step indicator dots
-    for (let i = 0; i < 3; i++) {
-      const dot = this.add.graphics();
-      dot.fillStyle(i === step ? COLORS.amberWarm : COLORS.walnutLight, i === step ? 1 : 0.4);
-      dot.fillCircle(cx - 16 + i * 16, cy - ph/2 + 20, 5);
-      root.add(dot);
-    }
-
-    // Message
-    const msg = this.add.text(cx, cy - 30, messages[step], {
-      fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css,
-      align: 'center', lineSpacing: 6,
-    }).setOrigin(0.5);
-    root.add(msg);
-
-    // Button
-    const bw = 160, bh = 40;
-    const btnG = this.add.graphics();
-    btnG.fillStyle(COLORS.amberWarm, 1);
-    btnG.fillRoundedRect(cx - bw/2, cy + ph/2 - bh - 16, bw, bh, 8);
-    root.add(btnG);
-
-    const btnTxt = this.add.text(cx, cy + ph/2 - bh/2 - 16, btnLabels[step], {
-      fontFamily: FONT, fontSize: '14px',
-      color: COLORS.walnutDark_css, fontStyle: 'bold',
-    }).setOrigin(0.5);
-    root.add(btnTxt);
-
-    const zone = this.add.zone(cx - bw/2, cy + ph/2 - bh - 16, bw, bh)
-      .setOrigin(0).setInteractive({ useHandCursor: true });
-    zone.on('pointerdown', () => {
-      this._sfx?.uiClick();
-      if (step < 2) this._showTutorialStep(step + 1);
-      else          this._closeTutorial();
-    });
-    root.add(zone);
-
-    // Animate in
-    root.setAlpha(0);
-    this.tweens.add({ targets: root, alpha: 1, duration: 200 });
-  }
-
-  private _closeTutorial(): void {
-    this._tutorialActive = false;
-    this.tweens.add({
-      targets: this._tutorialRoot, alpha: 0, duration: 200,
-      onComplete: () => this._tutorialRoot.setVisible(false),
-    });
-    try { localStorage.setItem('tutorial_done', 'true'); } catch { /* private browse */ }
-  }
 
   // ── Save / load result ─────────────────────────────────────────────────────
   private _saveResult(isVictory: boolean): void {
@@ -454,77 +384,6 @@ export class GameScene extends Phaser.Scene {
     } catch { /* storage unavailable */ }
   }
 
-  // ── Skill UI ──────────────────────────────────────────────────────────────
-  private _buildSkillUI(): void {
-    const SLOT  = 42;
-    const PAD   = 8;
-    const baseY = GAME_HEIGHT - 52 - PAD;   // above wave bar (52px tall)
-    const baseX = PAD;
-    const keys  = ['Q', 'W'] as const;
-
-    keys.forEach((key, i) => {
-      const sx = baseX + i * (SLOT + PAD);
-      const sy = baseY;
-
-      const bg = this.add.graphics().setDepth(DEPTH.HUD);
-      bg.lineStyle(1, COLORS.walnutLight, 0.6);
-      bg.fillStyle(COLORS.walnutDark, 0.20);
-      bg.fillRoundedRect(sx, sy, SLOT, SLOT, 6);
-      bg.strokeRoundedRect(sx, sy, SLOT, SLOT, 6);
-
-      const keyTxt = this.add.text(sx + 5, sy + 4, key, {
-        fontFamily: FONT, fontSize: '12px', color: COLORS.textSecondary_css,
-        fontStyle: 'bold',
-      }).setDepth(DEPTH.HUD + 1);
-
-      const cdTxt = this.add.text(sx + SLOT / 2, sy + SLOT / 2 + 4, '✓', {
-        fontFamily: FONT, fontSize: '15px', color: COLORS.amberWarm_css,
-        fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(DEPTH.HUD + 1);
-
-      this._skillSlots.push({ bg, key: keyTxt, cd: cdTxt });
-    });
-  }
-
-  private _updateSkillUI(): void {
-    const cds   = [this._hero.skillQCooldown, this._hero.skillWCooldown];
-    const maxCds = [this._hero.SKILL_Q_MAX_CD, this._hero.SKILL_W_MAX_CD];
-    const SLOT   = 42;
-    const PAD    = 8;
-    const baseX  = PAD;
-    const baseY  = GAME_HEIGHT - 52 - PAD;
-
-    this._skillSlots.forEach((slot, i) => {
-      const sx   = baseX + i * (SLOT + PAD);
-      const sy   = baseY;
-      const cd   = cds[i];
-      const ready = cd <= 0;
-
-      // Redraw background — bright when ready, dimmed on cooldown
-      slot.bg.clear();
-      if (ready) {
-        slot.bg.lineStyle(2, COLORS.amberWarm, 0.90);
-        slot.bg.fillStyle(COLORS.amberDeep, 0.25);
-      } else {
-        // Fill shows remaining fraction as dark overlay
-        slot.bg.lineStyle(1, COLORS.walnutLight, 0.45);
-        slot.bg.fillStyle(COLORS.walnutDark, 0.50);
-      }
-      slot.bg.fillRoundedRect(sx, sy, SLOT, SLOT, 6);
-      slot.bg.strokeRoundedRect(sx, sy, SLOT, SLOT, 6);
-
-      // Cooldown fill (draining bar from bottom)
-      if (!ready) {
-        const frac    = cd / maxCds[i];
-        const fillH   = Math.round(SLOT * frac);
-        slot.bg.fillStyle(COLORS.walnutDark, 0.55);
-        slot.bg.fillRoundedRect(sx, sy + SLOT - fillH, SLOT, fillH, 6);
-      }
-
-      slot.cd.setText(ready ? '✓' : String(Math.ceil(cd)));
-      slot.cd.setColor(ready ? COLORS.amberWarm_css : COLORS.textMuted_css);
-    });
-  }
 
   // ── Map ─────────────────────────────────────────────────────────────────────
   private _buildMap(): void {
@@ -632,139 +491,9 @@ export class GameScene extends Phaser.Scene {
     for(let l=3;l>=0;l--){const a=(0.06+pulse*0.09)*(l+1)/4;const pad=(3+pulse*5)+l*3;this._baseGlow.fillStyle(COLORS.amberWarm,a);this._baseGlow.fillRect(bx-pad,by-pad,BASE_SIZE+pad*2,BASE_SIZE+pad*2);}
   }
 
-  // ── Pause overlay ─────────────────────────────────────────────────────────
-  private _buildPauseOverlay(): void {
-    const s=this; const cx=GAME_WIDTH/2, cy=GAME_HEIGHT/2;
-    this._pauseRoot=this.add.container(0,0).setDepth(DEPTH.OVERLAY).setVisible(false);
-
-    const dim=s.add.graphics();
-    dim.fillStyle(COLORS.walnutDark,0.55); dim.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-    this._pauseRoot.add(dim);
-
-    // Panel — taller to fit sliders
-    const pw=300, ph=280;
-    const bg=s.add.graphics();
-    bg.fillStyle(COLORS.bgPanel,1); bg.fillRoundedRect(cx-pw/2,cy-ph/2,pw,ph,12);
-    bg.lineStyle(2,COLORS.amberDeep,0.5); bg.strokeRoundedRect(cx-pw/2,cy-ph/2,pw,ph,12);
-    this._pauseRoot.add(bg);
-
-    this._pauseRoot.add(s.add.text(cx,cy-ph/2+22,'⏸ ПАУЗА',{
-      fontFamily:FONT, fontSize:'18px', color:COLORS.walnutDark_css, fontStyle:'bold',
-    }).setOrigin(0.5));
-
-    // ── Volume sliders ──────────────────────────────────────────────────────
-    const sliderX = cx - pw/2 + 20;
-    const BAR_W   = pw - 40;
-    const BAR_H   = 6;
-
-    const makeSlider = (
-      label: string, sy: number,
-      initial: number,
-      onChange: (v: number) => void,
-    ): void => {
-      // Label
-      this._pauseRoot.add(s.add.text(sliderX, sy, label, {
-        fontFamily: FONT, fontSize: '13px', color: COLORS.textSecondary_css,
-      }));
-
-      // Track background
-      const trackBg = s.add.graphics();
-      trackBg.fillStyle(COLORS.walnutLight, 0.25);
-      trackBg.fillRoundedRect(sliderX, sy+22, BAR_W, BAR_H, 3);
-      this._pauseRoot.add(trackBg);
-
-      // Fill bar (redrawn on change)
-      const fill = s.add.graphics();
-      this._pauseRoot.add(fill);
-
-      // Percentage label
-      const pctTxt = s.add.text(sliderX+BAR_W+10, sy+16,
-        Math.round(initial*100)+'%',
-        { fontFamily: FONT, fontSize: '13px', color: COLORS.textPrimary_css });
-      this._pauseRoot.add(pctTxt);
-
-      const redraw = (v: number): void => {
-        fill.clear();
-        fill.fillStyle(COLORS.amberWarm, 1);
-        fill.fillRoundedRect(sliderX, sy+22, BAR_W*v, BAR_H, 3);
-        // Knob
-        fill.fillStyle(COLORS.amberBright, 1);
-        fill.fillCircle(sliderX + BAR_W*v, sy+22+BAR_H/2, 7);
-        pctTxt.setText(Math.round(v*100)+'%');
-      };
-      redraw(initial);
-
-      // Interactive zone (generous hit area)
-      const zone = s.add.zone(sliderX, sy+10, BAR_W, BAR_H+24).setOrigin(0)
-        .setInteractive({ useHandCursor: true });
-      this._pauseRoot.add(zone);
-
-      const handlePtr = (ptr: Phaser.Input.Pointer): void => {
-        const ratio = Math.max(0, Math.min(1, (ptr.x - sliderX) / BAR_W));
-        onChange(ratio);
-        redraw(ratio);
-        this._sfx?.uiClick();
-      };
-      zone.on('pointerdown', handlePtr);
-      zone.on('pointermove', (ptr: Phaser.Input.Pointer) => {
-        if (ptr.isDown) handlePtr(ptr);
-      });
-    };
-
-    // Music slider
-    makeSlider(
-      'Музыка',
-      cy - ph/2 + 70,
-      AudioManager.musicGain?.gain.value ?? 0.3,
-      (v) => AudioManager.setMusicVolume(v),
-    );
-
-    // SFX slider
-    makeSlider(
-      'Звуки',
-      cy - ph/2 + 130,
-      AudioManager.sfxGain?.gain.value ?? 0.5,
-      (v) => AudioManager.setSfxVolume(v),
-    );
-
-    // ── Buttons ─────────────────────────────────────────────────────────────
-    const btnY = cy + ph/2 - 90;
-
-    const r1=s.add.graphics();
-    r1.fillStyle(COLORS.amberWarm,1); r1.fillRoundedRect(cx-100,btnY,200,38,8);
-    this._pauseRoot.add(r1);
-    this._pauseRoot.add(s.add.text(cx,btnY+19,'Продолжить',{
-      fontFamily:FONT, fontSize:'14px', color:COLORS.walnutDark_css, fontStyle:'bold',
-    }).setOrigin(0.5));
-    const z1=s.add.zone(cx-100,btnY,200,38).setOrigin(0).setInteractive({useHandCursor:true});
-    z1.on('pointerdown',()=>{ this._sfx?.uiClick(); this._togglePause(); });
-    this._pauseRoot.add(z1);
-
-    const btnY2 = cy + ph/2 - 42;
-    const r2=s.add.graphics();
-    r2.lineStyle(1,COLORS.walnut,0.7); r2.strokeRoundedRect(cx-100,btnY2,200,34,8);
-    this._pauseRoot.add(r2);
-    this._pauseRoot.add(s.add.text(cx,btnY2+17,'В главное меню',{
-      fontFamily:FONT, fontSize:'13px', color:COLORS.walnut_css,
-    }).setOrigin(0.5));
-    const z2=s.add.zone(cx-100,btnY2,200,34).setOrigin(0).setInteractive({useHandCursor:true});
-    z2.on('pointerdown',()=>{
-      this._sfx?.uiClick();
-      this.cameras.main.fadeOut(300,240,238,233);
-      this.cameras.main.once('camerafadeoutcomplete',()=>this.scene.start('MenuScene'));
-    });
-    this._pauseRoot.add(z2);
-  }
-
   private _togglePause(): void {
     this._isPaused = !this._isPaused;
-    this._pauseRoot.setVisible(this._isPaused);
-    if (this._isPaused) {
-      EventBus.emit(GameEvents.GAME_PAUSED);
-      // update() early-returns when _isPaused — no need to stop clock
-    } else {
-      EventBus.emit(GameEvents.GAME_RESUMED);
-    }
+    this._pauseOverlay.toggle();
   }
 
   // ── Game over overlay ─────────────────────────────────────────────────────
@@ -853,7 +582,19 @@ export class GameScene extends Phaser.Scene {
   private _onTowerPlacedSfx   = (): void => { this._sfx?.build(); };
   private _onTowerSoldSfx     = (): void => { this._sfx?.sell(); };
   private _onTowerUpgradedSfx = (): void => { this._sfx?.upgrade(); };
-  private _onWaveCompletedSfx = (): void => { this._sfx?.waveComplete(); };
+  private _onWaveCompletedSfx = (...args: unknown[]): void => {
+    this._sfx?.waveComplete();
+    const waveNum = args[0] as number;
+    if (waveNum > 0 && waveNum % 5 === 0 && !this._gameOver) {
+      const bonus = 15 + waveNum * 3;
+      this.time.delayedCall(800, () => {
+        if (!this._gameOver && this._waveManager.state !== 'spawning') {
+          this._adPrompt.showDoubleGoldPrompt(bonus, () => {});
+        }
+      });
+      void AdManager.showInterstitial();
+    }
+  };
 
   private _onWaveStartedSfx = (): void => {
     const wave = this._waveManager.currentWaveData;
@@ -957,7 +698,18 @@ export class GameScene extends Phaser.Scene {
   };
 
   private _onLivesChanged = (lives: unknown): void => {
-    this._hud.setLives(lives as number);
+    const n = lives as number;
+    this._hud.setLives(n);
+    if (n === 1 && !this._gameOver) {
+      this.time.delayedCall(400, () => {
+        if (this._economy.lives <= 1 && !this._gameOver) {
+          this._adPrompt.showRevivePrompt(
+            () => this._economy.addLives(3),
+            () => {},
+          );
+        }
+      });
+    }
   };
 
   private _onGoldChanged = (gold: unknown): void => {
@@ -973,74 +725,252 @@ export class GameScene extends Phaser.Scene {
   };
 
   // ── Input ──────────────────────────────────────────────────────────────────
-  private _bindInput(): void {
-    const kbd = this.input.keyboard!;
+  /** Mobile: large Q/W skill tap buttons in bottom-left corner */
+  private _buildMobileSkillButtons(): void {
+    const s    = this;   // GameScene extends Phaser.Scene
+    const BTN  = 60;
+    const PAD  = 10;
+    const y0   = GAME_HEIGHT - BTN - PAD - 90; // above wave bar
 
-    // SPACE — skip countdown
-    kbd.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on('down', () => {
-      if (this._tutorialActive) return;
-      if (this._waveManager.state==='countdown') this._waveManager.skipCountdown();
+    const skills: Array<{key:'Q'|'W'; label:string; action:()=>void}> = [
+      { key:'Q', label:'⚡',  action: () => this._hero.useSkillQ(this._waveManager.activeEnemies) },
+      { key:'W', label:'🛡', action: () => this._hero.useSkillW(this._buildSystem.towers) },
+    ];
+
+    skills.forEach(({ key, label, action }, i) => {
+      const bx = PAD + i * (BTN + PAD);
+      const g  = s.add.graphics().setDepth(DEPTH.HUD + 3);
+
+      const draw = (active: boolean): void => {
+        g.clear();
+        g.fillStyle(active ? COLORS.amberDeep : 0x1A1510, active ? 0.70 : 0.85);
+        g.fillRoundedRect(bx, y0, BTN, BTN, 10);
+        g.fillStyle(0xFFFFFF, 0.07);
+        g.fillRoundedRect(bx + 2, y0 + 2, BTN - 4, BTN / 2 - 2, 8);
+        g.lineStyle(2, active ? COLORS.amberBright : COLORS.amberWarm, active ? 1 : 0.65);
+        g.strokeRoundedRect(bx, y0, BTN, BTN, 10);
+      };
+      draw(false);
+
+      s.add.text(bx + BTN / 2, y0 + 14, label, {
+        fontFamily: FONT, fontSize: '20px',
+      }).setOrigin(0.5).setDepth(DEPTH.HUD + 4);
+      s.add.text(bx + BTN / 2, y0 + BTN - 14, key, {
+        fontFamily: FONT, fontSize: '11px', fontStyle: 'bold',
+        color: COLORS.textSecondary_css,
+      }).setOrigin(0.5).setDepth(DEPTH.HUD + 4);
+
+      const zone = s.add.zone(bx, y0, BTN, BTN).setOrigin(0)
+        .setInteractive({ useHandCursor: true }).setDepth(DEPTH.HUD + 5);
+      zone.on('pointerover',  () => draw(true));
+      zone.on('pointerout',   () => draw(false));
+      zone.on('pointerdown',  () => { draw(true);  action(); });
+      zone.on('pointerup',    () => draw(false));
     });
 
-    // ESC cascade: cancel build → deselect → pause
+    // Build button — opens MobileBottomSheet
+    const buildBx = PAD + skills.length * (BTN + PAD);
+    const buildG  = s.add.graphics().setDepth(DEPTH.HUD + 3);
+    const drawBuild = (hover: boolean): void => {
+      buildG.clear();
+      buildG.fillStyle(hover ? COLORS.amberDeep : 0x1A1510, hover ? 0.70 : 0.85);
+      buildG.fillRoundedRect(buildBx, y0, BTN, BTN, 10);
+      buildG.fillStyle(0xFFFFFF, 0.07);
+      buildG.fillRoundedRect(buildBx + 2, y0 + 2, BTN - 4, BTN / 2 - 2, 8);
+      buildG.lineStyle(2, hover ? COLORS.amberBright : COLORS.amberWarm, hover ? 1 : 0.65);
+      buildG.strokeRoundedRect(buildBx, y0, BTN, BTN, 10);
+    };
+    drawBuild(false);
+    s.add.text(buildBx + BTN / 2, y0 + 14, '🏗', {
+      fontFamily: FONT, fontSize: '20px',
+    }).setOrigin(0.5).setDepth(DEPTH.HUD + 4);
+    s.add.text(buildBx + BTN / 2, y0 + BTN - 14, 'BUILD', {
+      fontFamily: FONT, fontSize: '9px', letterSpacing: 1,
+      color: COLORS.textSecondary_css,
+    }).setOrigin(0.5).setDepth(DEPTH.HUD + 4);
+    const buildZone = s.add.zone(buildBx, y0, BTN, BTN).setOrigin(0)
+      .setInteractive({ useHandCursor: true }).setDepth(DEPTH.HUD + 5);
+    buildZone.on('pointerover',  () => drawBuild(true));
+    buildZone.on('pointerout',   () => drawBuild(false));
+    buildZone.on('pointerdown',  () => {
+      drawBuild(true);
+      this._mobileSheet.isOpen ? this._mobileSheet.hide() : this._mobileSheet.show();
+    });
+    buildZone.on('pointerup', () => drawBuild(false));
+  }
+
+  private _bindInput(): void {
+    const kbd = this.input.keyboard!;
+    const FIELD_W = GRID_COLS * TILE_SIZE;
+    const FIELD_H = GRID_ROWS * TILE_SIZE;
+
+    // ── Keyboard shortcuts (desktop) ─────────────────────────────────────────
+    kbd.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on('down', () => {
+      if (this._tutorial.isActive) return;
+      if (this._waveManager.state === 'countdown') this._waveManager.skipCountdown();
+    });
+
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () => {
-      if (this._tutorialActive) return;
-      if (this._buildSystem.isPlacing) { this._buildSystem.cancelPlacement(); return; }
-      if (this._buildSystem.selectedTower) { this._buildSystem.deselect(); return; }
+      if (this._tutorial.isActive) return;
+      if (this._buildSystem.isPlacing)      { this._buildSystem.cancelPlacement(); return; }
+      if (this._buildSystem.selectedTower)  { this._buildSystem.deselect();        return; }
       this._togglePause();
     });
 
-    // M — menu (if not game over)
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.M).on('down', () => {
       if (this._gameOver) return;
-      this.cameras.main.fadeOut(300,240,238,233);
-      this.cameras.main.once('camerafadeoutcomplete',()=>this.scene.start('MenuScene'));
+      this.cameras.main.fadeOut(300, 240, 238, 233);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('MenuScene'));
     });
 
-    // DELETE — sell selected tower
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE).on('down', () => {
       this._buildSystem.sellSelected();
     });
 
-    // U — upgrade (first option)
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.U).on('down', () => {
-      const t=this._buildSystem.selectedTower;
-      if (t&&t.data.upgradeTo.length>0) this._buildSystem.upgradeSelected(t.data.upgradeTo[0]);
+      const t = this._buildSystem.selectedTower;
+      if (t && t.data.upgradeTo.length > 0) this._buildSystem.upgradeSelected(t.data.upgradeTo[0]);
     });
 
-    // TAB — toggle all range circles
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.TAB).on('down', () => {
       this._buildSystem.toggleAllRanges();
     });
 
-    // Q — Hero skill: Shockwave
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.Q).on('down', () => {
       this._hero.useSkillQ(this._waveManager.activeEnemies);
     });
 
-    // W — Hero skill: Amber Shield
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.W).on('down', () => {
       this._hero.useSkillW(this._buildSystem.towers);
     });
 
-    // RMB — move hero (field only; cancel build/selection first)
-    this.input.on('pointerdown', (ptr: any) => {
+    // ── RMB — move hero (desktop) ────────────────────────────────────────────
+    this.input.on('pointerdown', (rawPtr: unknown) => {
+      const ptr = rawPtr as Phaser.Input.Pointer;
       if (!ptr.rightButtonDown()) return;
-
-      const wx = ptr.worldX;
-      const wy = ptr.worldY;
-
-      if (wx < 0 || wx > 720 || wy < 0 || wy > 720) return;
-
+      const wx = ptr.worldX, wy = ptr.worldY;
+      if (wx < 0 || wx > FIELD_W || wy < 0 || wy > FIELD_H) return;
       this._hero.moveTo(wx, wy);
     });
 
-    // Chain onto WaveInfo's existing onWaveStart callback (set in WaveInfo constructor)
+    // ── Touch input (mobile) ─────────────────────────────────────────────────
+    this._bindTouchInput(FIELD_W, FIELD_H);
+
+    // ── Wave callback ────────────────────────────────────────────────────────
     const prevOnWaveStart = this._waveManager.onWaveStart;
     this._waveManager.onWaveStart = (wave) => {
       prevOnWaveStart?.(wave);
       this._wavesReached = wave.wave;
       this._hud.setWave(wave.wave, wave.isBoss);
     };
+  }
+
+  /** Touch-specific input: joystick-style hero movement + tap-to-build */
+  private _bindTouchInput(fieldW: number, fieldH: number): void {
+    // State
+    let touchStartX = 0, touchStartY = 0;
+    let touchStartTime = 0;
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    let isDraggingHero = false;
+    const LONG_PRESS_MS = 400;
+    const TAP_MOVE_PX   = 12;  // max pixel movement to count as tap not drag
+
+    // Visual long-press ring
+    const lpGfx = this.add.graphics().setDepth(DEPTH.OVERLAY_UI);
+
+    const clearLP = (): void => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      lpGfx.clear();
+      isDraggingHero = false;
+    };
+
+    this.input.on('pointerdown', (rawPtr: unknown) => {
+      const ptr = rawPtr as Phaser.Input.Pointer;
+      if (ptr.button !== 0) return;         // left / touch only
+      if (ptr.worldX > fieldW) return;      // ignore panel side
+
+      touchStartX    = ptr.worldX;
+      touchStartY    = ptr.worldY;
+      touchStartTime = Date.now();
+
+      // Long-press ring animation
+      let t = 0;
+      const interval = setInterval(() => {
+        t += 50;
+        const frac = Math.min(1, t / LONG_PRESS_MS);
+        lpGfx.clear();
+        lpGfx.lineStyle(3, COLORS.amberWarm, 0.70);
+        lpGfx.beginPath();
+        lpGfx.arc(touchStartX, touchStartY, 20, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2, false);
+        lpGfx.strokePath();
+      }, 50);
+
+      longPressTimer = setTimeout(() => {
+        clearInterval(interval);
+        lpGfx.clear();
+        // Long press = move hero
+        isDraggingHero = true;
+        this._hero.moveTo(touchStartX, touchStartY);
+        this._sfx?.uiClick?.();
+      }, LONG_PRESS_MS);
+
+      // Store interval ref for cleanup
+      (longPressTimer as any).__interval = interval;
+    });
+
+    this.input.on('pointermove', (rawPtr: unknown) => {
+      const ptr = rawPtr as Phaser.Input.Pointer;
+      if (!ptr.isDown || ptr.worldX > fieldW) return;
+      const dx = ptr.worldX - touchStartX;
+      const dy = ptr.worldY - touchStartY;
+      const moved = Math.sqrt(dx * dx + dy * dy);
+
+      // Cancel long press if finger moved too much
+      if (moved > TAP_MOVE_PX && longPressTimer) {
+        clearInterval((longPressTimer as any).__interval);
+        clearLP();
+      }
+
+      // Drag hero if already in drag mode
+      if (isDraggingHero && ptr.worldX > 0 && ptr.worldY > 0
+          && ptr.worldX < fieldW && ptr.worldY < fieldH) {
+        this._hero.moveTo(ptr.worldX, ptr.worldY);
+      }
+    });
+
+    this.input.on('pointerup', (rawPtr: unknown) => {
+      const ptr = rawPtr as Phaser.Input.Pointer;
+      if ((longPressTimer as any)?.__interval) {
+        clearInterval((longPressTimer as any).__interval);
+      }
+      const wasLongPress = isDraggingHero;
+      clearLP();
+
+      if (wasLongPress) return;  // long press handled above
+      if (ptr.worldX > fieldW)  return;  // tap on panel side — handled by TowerPanel
+
+      const elapsed = Date.now() - touchStartTime;
+      const dx = ptr.worldX - touchStartX;
+      const dy = ptr.worldY - touchStartY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Short tap on field = confirm tower placement OR select tower
+      if (elapsed < 400 && dist < TAP_MOVE_PX) {
+        if (this._buildSystem.isPlacing) {
+          // Placement handled by BuildSystem's existing pointerdown listener
+        } else {
+          // Tap on empty field = move hero (single tap)
+          this._hero.moveTo(ptr.worldX, ptr.worldY);
+        }
+      }
+    });
+
+    // Two-finger tap = pause (mobile gesture)
+    this.input.on('pointerdown', (rawPtr: unknown) => {
+      const ptr = rawPtr as Phaser.Input.Pointer;
+      if (this.input.pointer2?.isDown && ptr.id === this.input.pointer2.id) {
+        this._togglePause();
+      }
+    });
   }
 }

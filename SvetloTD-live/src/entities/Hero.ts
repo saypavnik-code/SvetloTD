@@ -26,8 +26,8 @@ export class Hero {
   // ── Movement ──────────────────────────────────────────────────────────────
   private _targetX:  number;
   private _targetY:  number;
-  private _isMoving = false;
-
+  private _isMoving  = false;
+  private _facing    = -Math.PI / 2; // radians; -π/2 = facing up by default
   private readonly MOVE_SPEED = 150;   // px/s, game-speed adjusted
 
   // ── Auto-attack ───────────────────────────────────────────────────────────
@@ -92,6 +92,7 @@ export class Hero {
         const step = Math.min(this.MOVE_SPEED * dt, dist);
         this.x += (dx / dist) * step;
         this.y += (dy / dist) * step;
+        this._facing = Math.atan2(dy, dx); // track facing direction
       }
     }
 
@@ -172,37 +173,106 @@ export class Hero {
   // ── Rendering ──────────────────────────────────────────────────────────────
 
   drawTo(g: Phaser.GameObjects.Graphics): void {
-    const cx = this.x;
-    const cy = this.y;
+    const cx = this.x, cy = this.y;
+    const pulse = 0.06 + Math.sin(this._glowT * Math.PI) * 0.03;
+    const facingX = Math.cos(this._facing);
+    const facingY = Math.sin(this._facing);
+    const perpX   = -facingY, perpY = facingX;
 
-    // Ambient glow
-    const pulse = 0.08 + Math.sin(this._glowT * Math.PI) * 0.035;
-    g.fillStyle(COLORS.amberGlow, pulse);
-    g.fillCircle(cx, cy, 20);
+    // ── Ground shadow ────────────────────────────────────────────────────────
+    g.fillStyle(0x000000, 0.25); g.fillEllipse(cx+3, cy+10, 22, 9);
 
-    // Body triangle
-    g.fillStyle(COLORS.amberGlow, 1);
-    g.fillTriangle(cx, cy - 12, cx - 8, cy + 6, cx + 8, cy + 6);
-    g.lineStyle(2, COLORS.amberDeep, 1);
-    g.strokeTriangle(cx, cy - 12, cx - 8, cy + 6, cx + 8, cy + 6);
+    // ── Ambient aura glow ────────────────────────────────────────────────────
+    g.fillStyle(COLORS.amberGlow, pulse * 2.0); g.fillCircle(cx, cy, 22);
+    g.fillStyle(COLORS.amberWarm, pulse * 1.2); g.fillCircle(cx, cy, 16);
 
-    // Attack flash line
+    // ── Cape / cloak (behind body) ───────────────────────────────────────────
+    const capeBase: Phaser.Types.Math.Vector2Like[] = [
+      {x: cx - perpX*7 - facingX*5, y: cy - perpY*7 - facingY*5},
+      {x: cx + perpX*7 - facingX*5, y: cy + perpY*7 - facingY*5},
+      {x: cx + perpX*9 + facingX*10, y: cy + perpY*9 + facingY*10},
+      {x: cx - perpX*9 + facingX*10, y: cy - perpY*9 + facingY*10},
+    ];
+    g.fillStyle(0x2A1808, 0.80); g.fillPoints(capeBase, true);
+    g.lineStyle(1, 0x4A2E12, 0.55); g.strokePoints(capeBase, true);
+
+    // ── Body — teardrop torso facing movement direction ──────────────────────
+    const shoulderW = 8, hipW = 6, torsoH = 13;
+    const bodyPts: Phaser.Types.Math.Vector2Like[] = [
+      {x: cx - facingX*torsoH/2 - perpX*shoulderW, y: cy - facingY*torsoH/2 - perpY*shoulderW},
+      {x: cx + facingX*torsoH/2 - perpX*hipW,      y: cy + facingY*torsoH/2 - perpY*hipW},
+      {x: cx + facingX*(torsoH/2+4),                y: cy + facingY*(torsoH/2+4)},
+      {x: cx + facingX*torsoH/2 + perpX*hipW,      y: cy + facingY*torsoH/2 + perpY*hipW},
+      {x: cx - facingX*torsoH/2 + perpX*shoulderW, y: cy - facingY*torsoH/2 + perpY*shoulderW},
+    ];
+    g.fillStyle(COLORS.amberDeep, 0.92); g.fillPoints(bodyPts, true);
+    // Armour sheen
+    g.fillStyle(COLORS.amberWarm, 0.18); g.fillPoints(bodyPts.slice(0, 3), true);
+    g.lineStyle(2, COLORS.amberWarm, 0.80); g.strokePoints(bodyPts, true);
+
+    // ── Head — circle with visor ─────────────────────────────────────────────
+    const headX = cx - facingX*torsoH/2 + facingX*2;
+    const headY = cy - facingY*torsoH/2 + facingY*2;
+    g.fillStyle(COLORS.amberDeep, 0.95); g.fillCircle(headX, headY, 7);
+    g.lineStyle(1.5, COLORS.amberBright, 0.70); g.strokeCircle(headX, headY, 7);
+    // Visor slit
+    g.lineStyle(2, COLORS.amberGlow, 0.85);
+    const visorX = headX + facingX*3, visorY = headY + facingY*3;
+    g.beginPath(); g.moveTo(visorX-perpX*3, visorY-perpY*3); g.lineTo(visorX+perpX*3, visorY+perpY*3); g.strokePath();
+    // Crest plume
+    g.lineStyle(1.5, 0x882222, 0.70);
+    g.beginPath(); g.moveTo(headX, headY-7); g.lineTo(headX-facingX*2, headY-7-4); g.strokePath();
+
+    // ── Shoulder pauldrons ───────────────────────────────────────────────────
+    for (const side of [-1, 1]) {
+      const px2 = cx - facingX*3 + perpX*side*9;
+      const py2 = cy - facingY*3 + perpY*side*9;
+      g.fillStyle(COLORS.amberWarm, 0.80); g.fillCircle(px2, py2, 4.5);
+      g.lineStyle(1, COLORS.amberBright, 0.60); g.strokeCircle(px2, py2, 4.5);
+    }
+
+    // ── Weapon glow (on dominant hand) ──────────────────────────────────────
+    const weapX = cx + facingX*8 - perpX*10;
+    const weapY = cy + facingY*8 - perpY*10;
+    g.fillStyle(COLORS.amberGlow, 0.75); g.fillCircle(weapX, weapY, 3.5);
+    g.fillStyle(0xFFFFFF, 0.50); g.fillCircle(weapX, weapY, 1.5);
+
+    // ── Attack flash beam ────────────────────────────────────────────────────
     if (this._flashTimer > 0 && this._attackTarget?.isActive && !this._attackTarget.isDead) {
       const alpha = this._flashTimer / 0.15;
-      g.lineStyle(1.5, COLORS.amberGlow, alpha * 0.65);
+      // Beam
+      g.lineStyle(2.5, COLORS.amberGlow, alpha * 0.80);
       g.lineBetween(cx, cy, this._attackTarget.x, this._attackTarget.y);
-      g.fillStyle(COLORS.amberBright, alpha * 0.8);
-      g.fillCircle(this._attackTarget.x, this._attackTarget.y, 4);
+      // Impact burst
+      g.lineStyle(1.5, COLORS.amberBright, alpha * 0.60);
+      for (let i=0;i<6;i++){
+        const a = Phaser.Math.DegToRad(i*60);
+        g.beginPath();
+        g.moveTo(this._attackTarget.x+Math.cos(a)*3, this._attackTarget.y+Math.sin(a)*3);
+        g.lineTo(this._attackTarget.x+Math.cos(a)*8, this._attackTarget.y+Math.sin(a)*8);
+        g.strokePath();
+      }
+      g.fillStyle(COLORS.amberBright, alpha * 0.90); g.fillCircle(this._attackTarget.x, this._attackTarget.y, 4);
     }
 
-    // Movement destination dot + line
+    // ── Movement waypoint ────────────────────────────────────────────────────
     if (this._isMoving) {
-      g.lineStyle(1, COLORS.amberPale, 0.35);
+      // Dashed line to target
+      g.lineStyle(1, COLORS.amberPale, 0.30);
       g.lineBetween(cx, cy, this._targetX, this._targetY);
-      g.fillStyle(COLORS.amberPale, 0.45);
-      g.fillCircle(this._targetX, this._targetY, 3);
+      // Chevron marker at target
+      g.lineStyle(2, COLORS.amberWarm, 0.70);
+      const dx = this._targetX - cx, dy = this._targetY - cy;
+      const len = Math.sqrt(dx*dx+dy*dy) || 1;
+      const nx2 = dx/len, ny2 = dy/len;
+      const px3 = -ny2, py3 = nx2;
+      g.beginPath(); g.moveTo(this._targetX-px3*5, this._targetY-py3*5);
+      g.lineTo(this._targetX+nx2*7, this._targetY+ny2*7);
+      g.lineTo(this._targetX+px3*5, this._targetY+py3*5); g.strokePath();
+      g.fillStyle(COLORS.amberWarm, 0.35); g.fillCircle(this._targetX, this._targetY, 5);
     }
   }
+
 
   // ── Private ────────────────────────────────────────────────────────────────
 

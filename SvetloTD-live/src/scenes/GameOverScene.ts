@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, FONT_MAIN } from '../config';
 import { PlatformManager } from '../systems/PlatformManager';
+import { MetaProgression }  from '../systems/MetaProgression';
 
 interface GameOverData {
   victory: boolean; wave?: number; kills?: number; gold?: number; lives?: number;
@@ -79,6 +80,7 @@ export class GameOverScene extends Phaser.Scene {
     // Save + leaderboard
     const score = kills * 10 + wave * 100 + (this._victory ? 5000 : 0);
     PlatformManager.submitScore(score);
+    MetaProgression.awardStars(wave, this._victory);
     PlatformManager.saveData({ isVictory: this._victory, wavesCompleted: wave, livesRemaining: lives, enemiesKilled: kills });
 
     this._emberGfx = this.add.graphics().setDepth(20);

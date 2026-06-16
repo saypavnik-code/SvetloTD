@@ -98,31 +98,104 @@ export class Projectile implements Poolable {
     }
   }
 
+  tickSplash(dt: number): void {
+    if (this._splashT < 0) return;
+    this._splashAcc += dt;
+    if (this._splashAcc >= this._splashDur) this._splashT = -1;
+  }
+
   drawTo(g: Phaser.GameObjects.Graphics): void {
     if (!this.isActive) return;
-    // Amber dot
-    g.fillStyle(this._color, 1); g.fillCircle(this.x, this.y, 3.5);
-    g.lineStyle(1.5, COLORS.amberGlow, 0.55); g.strokeCircle(this.x, this.y, 3.5);
-    // Trail dots
-    for (let i=1;i<this._trail.length;i++) {
-      const a=(i/this._trail.length)*0.45;
-      const r=1.0+(i/this._trail.length)*2.0;
-      g.fillStyle(this._color,a); g.fillCircle(this._trail[i].x,this._trail[i].y,r);
+    const cx = this.x, cy = this.y;
+
+    // ── Trail ───────────────────────────────────────────────────────────────
+    const trailLen = this._trail.length;
+    for (let i = 1; i < trailLen; i++) {
+      const frac  = i / trailLen;
+      const alpha = frac * 0.55;
+      const r     = 1.2 + frac * 2.0;
+      g.fillStyle(this._color, alpha);
+      g.fillCircle(this._trail[i].x, this._trail[i].y, r);
+    }
+
+    // ── Head — type-specific shape ──────────────────────────────────────────
+    switch (this._damageType) {
+
+      case 'piercing': {
+        // Arrow: elongated capsule with bright tip
+        const dx = this._lastX - (this._trail[0]?.x ?? cx);
+        const dy = this._lastY - (this._trail[0]?.y ?? cy);
+        const len = Math.sqrt(dx*dx+dy*dy) || 1;
+        const nx = dx/len, ny = dy/len;
+        g.fillStyle(this._color, 0.95);
+        g.fillTriangle(cx+nx*6, cy+ny*6, cx-ny*2.5, cy+nx*2.5, cx+ny*2.5, cy-nx*2.5);
+        g.fillStyle(0xFFFFFF, 0.70); g.fillCircle(cx+nx*5, cy+ny*5, 1.2);
+        break;
+      }
+
+      case 'siege': {
+        // Cannonball: heavy dark sphere with hot-iron glow ring
+        g.fillStyle(0x1A1410, 1); g.fillCircle(cx, cy, 5);
+        g.lineStyle(1.5, COLORS.danger, 0.80); g.strokeCircle(cx, cy, 5);
+        g.fillStyle(COLORS.danger, 0.35); g.fillCircle(cx, cy, 7.5);
+        g.fillStyle(0xFFCCAA, 0.55); g.fillCircle(cx-1.5, cy-1.5, 1.8);
+        break;
+      }
+
+      case 'magic': {
+        // Magic orb: pulsing circle with star sparkle
+        g.fillStyle(this._color, 0.30); g.fillCircle(cx, cy, 7);
+        g.fillStyle(this._color, 0.90); g.fillCircle(cx, cy, 4);
+        g.fillStyle(0xFFFFFF, 0.65); g.fillCircle(cx, cy, 2);
+        // Cross sparkle
+        g.lineStyle(1.5, 0xFFFFFF, 0.55);
+        for (let i=0;i<4;i++){const a=Phaser.Math.DegToRad(i*90);g.beginPath();g.moveTo(cx+Math.cos(a)*4,cy+Math.sin(a)*4);g.lineTo(cx+Math.cos(a)*8,cy+Math.sin(a)*8);g.strokePath();}
+        break;
+      }
+
+      case 'chaos': {
+        // Chaos bolt: golden star with rotating outer sparks
+        const t = Date.now() / 100;
+        g.fillStyle(COLORS.amberBright, 0.25); g.fillCircle(cx, cy, 9);
+        g.fillStyle(COLORS.amberBright, 0.90); g.fillCircle(cx, cy, 5);
+        g.fillStyle(0xFFFFFF, 0.75); g.fillCircle(cx, cy, 2.5);
+        g.lineStyle(1.5, COLORS.amberGlow, 0.60);
+        for (let i=0;i<6;i++){const a=t+Phaser.Math.DegToRad(i*60);g.beginPath();g.moveTo(cx+Math.cos(a)*5,cy+Math.sin(a)*5);g.lineTo(cx+Math.cos(a)*9,cy+Math.sin(a)*9);g.strokePath();}
+        break;
+      }
+
+      default: {
+        // Normal: clean amber dot
+        g.fillStyle(this._color, 0.95); g.fillCircle(cx, cy, 4);
+        g.lineStyle(1.5, COLORS.amberGlow, 0.50); g.strokeCircle(cx, cy, 4);
+        g.fillStyle(0xFFFFFF, 0.50); g.fillCircle(cx-1, cy-1, 1.5);
+      }
     }
   }
 
-  // Splash ring animation — called from drawEffectsTo each frame, driven by Projectile internal timer
-  tickSplash(dt: number): void {
-    if (this._splashT<0) return;
-    this._splashAcc+=dt;
-    if (this._splashAcc>=this._splashDur) this._splashT=-1;
-  }
-
   drawSplashTo(g: Phaser.GameObjects.Graphics): void {
-    if (this._splashT<0) return;
-    const t=Math.min(this._splashAcc/this._splashDur,1);
-    const r=4+t*this._splashR, a=(1-t)*0.55;
-    g.lineStyle(2, this._color, a); g.strokeCircle(this._splashX, this._splashY, r);
-    g.fillStyle(this._color, a*0.10); g.fillCircle(this._splashX, this._splashY, r);
+    if (this._splashT < 0) return;
+    const t  = Math.min(this._splashAcc / this._splashDur, 1);
+    const r  = 4 + t * this._splashR;
+    const a  = (1 - t) * 0.60;
+
+    // Outer ring
+    g.lineStyle(2.5, this._color, a); g.strokeCircle(this._splashX, this._splashY, r);
+    // Inner fill
+    g.fillStyle(this._color, a * 0.12); g.fillCircle(this._splashX, this._splashY, r);
+    // Secondary ring at half radius
+    g.lineStyle(1, this._color, a * 0.45); g.strokeCircle(this._splashX, this._splashY, r * 0.55);
+    // Debris sparks (6 outward rays)
+    if (t < 0.5) {
+      g.lineStyle(1, this._color, a * 0.70);
+      for (let i=0;i<6;i++){
+        const angle = Phaser.Math.DegToRad(i*60 + t*180);
+        const len2  = r * 0.35;
+        g.beginPath();
+        g.moveTo(this._splashX+Math.cos(angle)*(r-len2), this._splashY+Math.sin(angle)*(r-len2));
+        g.lineTo(this._splashX+Math.cos(angle)*(r+2),    this._splashY+Math.sin(angle)*(r+2));
+        g.strokePath();
+      }
+    }
   }
 }

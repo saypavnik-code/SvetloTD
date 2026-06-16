@@ -35,6 +35,7 @@ export class MenuScene extends Phaser.Scene {
     this._buildLogo();
     this._buildPlayBtn();
     this._buildFooter();
+    this._buildMetaBtn();
     this._buildEmbers();
     this.cameras.main.fadeIn(800, 10, 8, 6);
     this._logoText.setY(GAME_HEIGHT / 2 - 110).setAlpha(0);
@@ -214,6 +215,30 @@ export class MenuScene extends Phaser.Scene {
         g.lineStyle(2, COLORS.amberWarm, a); g.strokeRoundedRect(0,0,bw,bh,10);
         g.lineStyle(1, COLORS.amberDeep, a*0.45); g.strokeRoundedRect(3,3,bw-6,bh-6,8);
       },
+    });
+  }
+
+  private _buildMetaBtn(): void {
+    const cx = GAME_WIDTH/2, cy = GAME_HEIGHT/2;
+    const bw = 170, bh = 36, by = cy + 84 + 56 + 14;
+    const g = this.add.graphics().setDepth(11);
+    const draw = (h: boolean) => {
+      g.clear();
+      g.fillStyle(h ? COLORS.amberDeep : 0x1A1510, h ? 0.50 : 0.75);
+      g.fillRoundedRect(cx-bw/2, by, bw, bh, 8);
+      g.lineStyle(1.5, h ? COLORS.amberWarm : COLORS.walnutLight, h ? 0.75 : 0.28);
+      g.strokeRoundedRect(cx-bw/2, by, bw, bh, 8);
+    };
+    draw(false);
+    this.add.text(cx, by+bh/2, '★  Прокачка', {
+      fontFamily:FONT, fontSize:'13px', color:COLORS.amberPale_css,
+    }).setOrigin(0.5).setDepth(12);
+    const z = this.add.zone(cx, by+bh/2, bw, bh).setInteractive({useHandCursor:true}).setDepth(13);
+    z.on('pointerover',  () => draw(true));
+    z.on('pointerout',   () => draw(false));
+    z.on('pointerdown',  () => {
+      this.cameras.main.fadeOut(280, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('MetaScreen'));
     });
   }
 
