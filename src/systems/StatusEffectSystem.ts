@@ -10,7 +10,7 @@
 
 import type { DamageType } from '../data/towers';
 
-export type EffectType = 'slow' | 'armor_reduce' | 'poison';
+export type EffectType = 'slow' | 'armor_reduce' | 'poison' | 'aoe_slow';
 
 export interface StatusEffect {
   type:      EffectType;
