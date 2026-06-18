@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy Svetlogorsk TD to Pages
 
 on:
   push:
@@ -14,50 +14,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           
-      - name: Install Python Dependencies
-        run: pip install Pillow
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm install -g free-tex-packer-cli
+          pip install Pillow
           
-      - run: npm ci
-      
-      # Установка сборщика текстурных атласов
-      - run: npm install -g free-tex-packer-cli
-      
-      # ШАГ 1: Генерируем реальные PNG файлы прямо во время билда в облаке
-      - name: Generate Placeholder Graphics
-        run: python scripts/generate_placeholders.py
-      
-      # ШАГ 2: Упаковываем сгенерированные PNG в единый атлас для Phaser
-      - name: Pack Textures into Atlas
-        run: python scripts/pack_assets.py
-      
-      # ШАГ 3: Компилируем TypeScript и Vite
-      - run: npm run build
-      
-      # ШАГ 4: Проверяем, что билд не превышает 30 МБ для VK
-      - name: Check VK Size Limits
-        run: python scripts/check_vk_limits.py
-      
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
+      - name: Run Pipeline Stage 1 - Generate Assets
+        run: python scripts/1_generate_art.py
+        
+      - name: Run Pipeline Stage 2 - Pack Atlas
+        run: python scripts/2_pack_atlas.py
+        
+      - name: Run Pipeline Stage 3 - Build Game (Vite)
+        run: npm run build
+        
+      - name: Run Pipeline Stage 4 - VK Validation
+        run: python scripts/3_vk_validator.py
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-      - uses: actions/deploy-pages@v4
+          
+      - name: Deploy to GitHub Pages
         id: deployment
+        uses: actions/deploy-pages@v4
