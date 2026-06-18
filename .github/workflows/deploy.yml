@@ -32,19 +32,28 @@ jobs:
         with:
           python-version: '3.11'
           
+      - name: Install Python Dependencies
+        run: pip install Pillow
+          
       - run: npm ci
       
-      # Установка инструмента для упаковки текстур
+      # Установка сборщика текстурных атласов
       - run: npm install -g free-tex-packer-cli
       
-      # Запуск Python скрипта сборки ассетов
-      - run: python scripts/pack_assets.py
+      # ШАГ 1: Генерируем реальные PNG файлы прямо во время билда в облаке
+      - name: Generate Placeholder Graphics
+        run: python scripts/generate_placeholders.py
       
-      # Сборка проекта
+      # ШАГ 2: Упаковываем сгенерированные PNG в единый атлас для Phaser
+      - name: Pack Textures into Atlas
+        run: python scripts/pack_assets.py
+      
+      # ШАГ 3: Компилируем TypeScript и Vite
       - run: npm run build
       
-      # Проверка лимитов для VK
-      - run: python scripts/check_vk_limits.py
+      # ШАГ 4: Проверяем, что билд не превышает 30 МБ для VK
+      - name: Check VK Size Limits
+        run: python scripts/check_vk_limits.py
       
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
