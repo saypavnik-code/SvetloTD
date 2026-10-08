@@ -24,18 +24,20 @@ export class EconomyManager {
   get sellRefundRate(): number { return this._sellRefundRate; }
 
   addGold(amount: number): void {
+    if (!Number.isSafeInteger(amount) || amount <= 0) return;
     this._gold += amount;
     EventBus.emit(GameEvents.GOLD_CHANGED, this._gold);
   }
 
   spendGold(amount: number): boolean {
-    if (this._gold < amount) return false;
+    if (!Number.isSafeInteger(amount) || amount < 0 || this._gold < amount) return false;
     this._gold -= amount;
     EventBus.emit(GameEvents.GOLD_CHANGED, this._gold);
     return true;
   }
 
   loseLife(amount = 1): void {
+    if (!Number.isSafeInteger(amount) || amount <= 0 || this._lives === 0) return;
     this._lives = Math.max(0, this._lives - amount);
     EventBus.emit(GameEvents.LIVES_CHANGED, this._lives);
     if (this._lives <= 0) {

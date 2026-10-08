@@ -1,9 +1,9 @@
 # Svetlogorsk TD
 
 A Burbenog-inspired, original 2D tower defense prototype built with TypeScript, Phaser 3, and Vite.
-The canonical playable application lives at the repository root (`src/`). The separate
-`SvetloTD-live/` snapshot is **legacy reference only**; do not deploy or delete it
-until its mobile and meta-progression features have been compared and migrated.
+The only application source tree is the root `src/`. The former `SvetloTD-live/`
+snapshot was triaged and removed in v0.2.1; its files remain recoverable from
+Git commit `3c2983e`. See `docs/MIGRATION.md`.
 
 ## Current baseline
 
@@ -18,6 +18,7 @@ until its mobile and meta-progression features have been compared and migrated.
 ```sh
 python3 scripts/generate_art.py
 python3 scripts/validate_game.py
+npm run test:unit
 npm install
 npm run typecheck
 npm run build
@@ -46,3 +47,9 @@ against the shim is not equivalent to a browser gameplay test.
 - `docs/QA.md`: verification and release workflow.
 
 This is an independent homage. Do not redistribute Warcraft III maps or copyrighted art/sounds.
+
+## Patch lifecycle
+
+One-time scripts use unique names: `patch_svetlogorsk_td_vMAJOR_MINOR_PATCH_topic.py`.
+Read `docs/PATCH_POLICY.md` before any change. Never reuse a filename or patch
+version. No patch may commit or push if verification fails.

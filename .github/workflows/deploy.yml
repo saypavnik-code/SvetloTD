@@ -30,6 +30,7 @@ jobs:
       - run: python3 scripts/generate_art.py
       - run: git diff --exit-code -- public/assets/tiles
       - run: python3 scripts/validate_game.py
+      - run: npm run test:unit
       - run: npm run typecheck
       - run: npm run build
       - run: python3 scripts/check_bundle.py

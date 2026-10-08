@@ -4,6 +4,11 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 
 ## P0 - correctness / playable baseline
 
+- [x] v0.2.1 restart state reset, terminal event deduplication and pause/tutorial input guard.
+- [x] v0.2.1 watchtower aura and stale-buff cleanup.
+- [x] v0.2.1 negative-resource-spend and duplicate GAME_OVER guards.
+- [x] v0.2.1 one source tree and automated Node runtime regression gate.
+
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
 - [x] Correct high-speed travel across multiple enemy waypoints.
@@ -20,7 +25,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [ ] Add proper unit/integration tests (wave completions, no double reward, skill cooldowns).
 - [ ] Playtest and numerically rebalance levels 21-40 and all difficulty presets.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
-- [ ] Compare unique mobile/meta modules under `SvetloTD-live/`; migrate or archive safely.
+- [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
 - [ ] Implement explicit ownership of EventBus subscriptions in every scene/UI component.
 - [ ] Usability pass: gamefield vs 560px panel, pause, keyboard, mobile and safe areas.
 
@@ -45,3 +50,13 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 
 No public '40 levels balanced', '4-player multiplayer', or 'VK published' claims
 until the corresponding tasks are tested and accepted.
+
+## After v0.2.1 migration
+
+- [ ] Browser E2E: defeat/retry, victory/retry, modal interactions and 40-wave run.
+- [ ] Responsive, accessible touch UX (not merely user-agent detection).
+- [ ] Verify VK Play SDK contract before implementing ads, save data or leaderboards.
+- [ ] Decide whether opt-in persistent meta bonuses belong in balanced multiplayer.
+- [ ] Replace hand-written Phaser shim with official type definitions in a dedicated patch.
+- [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
+- [ ] Add benchmark and economy-simulation tests before rebalancing 21-40.

@@ -25,6 +25,8 @@ import { GameSpeed }      from '../systems/GameSpeed';
 import { AudioManager }   from '../systems/AudioManager';
 import { AmbientMusic }   from '../systems/AmbientMusic';
 import { SFX }            from '../systems/SFX';
+import { AuraSystem } from '../systems/AuraSystem';
+import { detectInputCapabilities } from '../systems/InputCapabilities';
 
 const ENEMY_POOL_SIZE = 50;
 const PROJ_POOL_SIZE  = 80;
@@ -37,6 +39,7 @@ export class GameScene extends Phaser.Scene {
   private _interest!:     InterestSystem;
   private _waveManager!:  WaveManager;
   private _buildSystem!:  BuildSystem;
+  private _auraSystem!:   AuraSystem;
   private _enemyPool!:    ObjectPool<Enemy>;
   private _projPool!:     ObjectPool<Projectile>;
   private _towerPanel!:   TowerPanel;
@@ -104,6 +107,19 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }); }
 
   create(): void {
+    // Phaser reuses the Scene instance after Game -> Menu -> Game and Retry.
+    this._vfxList = [];
+    this._skillSlots = [];
+    this._skillUiTimer = 0;
+    this._tutorialActive = false;
+    this._isPaused = false;
+    this._gameOver = false;
+    this._basePulseT = 0;
+    this._totalKills = 0;
+    this._totalGoldEarned = 0;
+    this._wavesReached = 1;
+    this._ambientMusic = null;
+    this._sfx = null;
     this.cameras.main.setBackgroundColor(COLORS.bgGameField);
     this.cameras.main.fadeIn(400, 232, 226, 214);
 
@@ -184,6 +200,7 @@ export class GameScene extends Phaser.Scene {
       this._updateSkillUI();
     }
 
+    this._auraSystem.update(GameSpeed.adjust(clampedDelta));
     this._buildSystem.update(clampedDelta);
     this._updateProjectiles(clampedDelta);
     this._animateBase(clampedDelta);
@@ -229,7 +246,9 @@ export class GameScene extends Phaser.Scene {
     this._projPool  = new ObjectPool<Projectile>(() => new Projectile(), PROJ_POOL_SIZE);
     this._waveManager = new WaveManager(this, this._enemyPool);
     this._buildSystem = new BuildSystem(this, this._economy, this._projPool,
-      () => this._waveManager.activeEnemies);
+      () => this._waveManager.activeEnemies,
+      () => !this._isPaused && !this._gameOver && !this._tutorialActive);
+    this._auraSystem = new AuraSystem(() => this._buildSystem.towers);
   }
 
   private _buildBatchGraphics(): void {
@@ -458,6 +477,16 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(DEPTH.HUD + 1);
 
       this._skillSlots.push({ bg, key: keyTxt, cd: cdTxt });
+      if (detectInputCapabilities().hasTouch) {
+        const zone = this.add.zone(sx, sy, SLOT, SLOT)
+          .setOrigin(0).setInteractive({ useHandCursor: true })
+          .setDepth(DEPTH.HUD + 2);
+        zone.on('pointerdown', () => {
+          if (this._isPaused || this._gameOver || this._tutorialActive) return;
+          if (key === 'Q') this._hero.useSkillQ(this._waveManager.activeEnemies);
+          else this._hero.useSkillW(this._buildSystem.towers);
+        });
+      }
     });
   }
 
@@ -893,6 +922,8 @@ export class GameScene extends Phaser.Scene {
   };
 
   private _onGameOver = (data: unknown): void => {
+    if (this._gameOver) return; // Reject duplicate terminal events.
+    this._gameOver = true; // Freeze simulation before the transition delay.
     const {victory}=data as {victory:boolean};
     this._ambientMusic?.stop(2000);
     this._ambientMusic = null;
@@ -906,53 +937,59 @@ export class GameScene extends Phaser.Scene {
 
     // SPACE — skip countdown
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on('down', () => {
-      if (this._tutorialActive) return;
+      if (this._tutorialActive || this._isPaused || this._gameOver) return;
       if (this._waveManager.state==='countdown') this._waveManager.skipCountdown();
     });
 
     // ESC cascade: cancel build → deselect → pause
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () => {
-      if (this._tutorialActive) return;
-      if (this._buildSystem.isPlacing) { this._buildSystem.cancelPlacement(); return; }
-      if (this._buildSystem.selectedTower) { this._buildSystem.deselect(); return; }
+      if (this._tutorialActive || this._gameOver) return;
+      if (!this._isPaused && this._buildSystem.isPlacing) { this._buildSystem.cancelPlacement(); return; }
+      if (!this._isPaused && this._buildSystem.selectedTower) { this._buildSystem.deselect(); return; }
       this._togglePause();
     });
 
     // M — menu (if not game over)
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.M).on('down', () => {
-      if (this._gameOver) return;
+      if (this._gameOver || this._tutorialActive) return;
       this.cameras.main.fadeOut(300,240,238,233);
       this.cameras.main.once('camerafadeoutcomplete',()=>this.scene.start('MenuScene'));
     });
 
     // DELETE — sell selected tower
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE).on('down', () => {
+      if (this._isPaused || this._gameOver || this._tutorialActive) return;
       this._buildSystem.sellSelected();
     });
 
     // U — upgrade (first option)
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.U).on('down', () => {
+      if (this._isPaused || this._gameOver || this._tutorialActive) return;
       const t=this._buildSystem.selectedTower;
       if (t&&t.data.upgradeTo.length>0) this._buildSystem.upgradeSelected(t.data.upgradeTo[0]);
     });
 
     // TAB — toggle all range circles
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.TAB).on('down', () => {
+      if (this._isPaused || this._gameOver || this._tutorialActive) return;
       this._buildSystem.toggleAllRanges();
     });
 
     // Q — Hero skill: Shockwave
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.Q).on('down', () => {
+      if (this._isPaused || this._gameOver || this._tutorialActive) return;
       this._hero.useSkillQ(this._waveManager.activeEnemies);
     });
 
     // W — Hero skill: Amber Shield
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.W).on('down', () => {
+      if (this._isPaused || this._gameOver || this._tutorialActive) return;
       this._hero.useSkillW(this._buildSystem.towers);
     });
 
     // RMB — move hero (field only; cancel build/selection first)
     this.input.on('pointerdown', (ptr: any) => {
+      if (this._isPaused || this._gameOver || this._tutorialActive) return;
       if (!ptr.rightButtonDown()) return;
 
       const wx = ptr.worldX;

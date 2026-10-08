@@ -13,3 +13,16 @@
 
 Current audit: source-only Repomix review. The canonical Git repository and browser
 were not available; integration/runtime results must be recorded after applying.
+
+## v0.2.1 migration regression gates
+
+`npm run test:unit` uses the built-in Node test runner and the installed TypeScript compiler (no Jest).
+It covers map symmetry, 40 waves, watchtower non-stacking/expiry,
+resource abuse, terminal event deduplication and object-pool double release.
+Static validation alone is **not** an E2E/browser test.
+
+Manual browser smoke (still pending): start -> first wave -> place & upgrade ->
+pause and try building -> resume -> sell final watchtower -> lose all lives ->
+retry -> inspect fresh Q/W HUD and restored economy -> menu -> play -> confirm
+no duplicated dust, skills or listeners; finish wave 40 and retry after victory.
+Repeat on desktop Chrome/Firefox and mobile touch devices (including tap-to-cast Q/W).

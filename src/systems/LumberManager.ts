@@ -20,14 +20,14 @@ export class LumberManager {
   get lumber(): number { return this._lumber; }
 
   add(amount: number): void {
-    if (amount <= 0) return;
+    if (!Number.isSafeInteger(amount) || amount <= 0) return;
     this._lumber += amount;
     EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber);
   }
 
   /** Returns false if not enough lumber — caller decides how to handle. */
   spend(amount: number): boolean {
-    if (this._lumber < amount) return false;
+    if (!Number.isSafeInteger(amount) || amount < 0 || this._lumber < amount) return false;
     this._lumber -= amount;
     EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber);
     return true;

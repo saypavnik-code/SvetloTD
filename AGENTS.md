@@ -12,7 +12,7 @@
 8. Never invent SDK contracts, platform limits, performance measurements, or test results.
 9. Do not expose API keys or tokens to `src/` or `dist/`; treat client code as public.
 10. Revisit docs and acceptance criteria in the same patch as behavioral changes.
-11. Do not delete the `SvetloTD-live/` reference tree until migration is explicitly verified.
+11. One canonical `src/` only; do not create shadow app trees or copy vendor SDKs.
 12. Ship only when static tests, TypeScript, production build, smoke gameplay and review pass.
 13. Keep dist/, node_modules/, Repomix exports, and release archives out of Git.
     Untrack generated content with git rm --cached; never delete local originals blindly.
@@ -22,3 +22,15 @@
 Every task: explain scope; show files changed; identify risks; report actual tests,
 including failures and untested browser scenarios; update ROADMAP.md as needed.
 No unrequested refactors, unverified fixes, or mass dependency upgrades.
+
+## Immutable patch and migration rules
+
+- Every patch has a new SemVer version, unique descriptive filename, and history entry.
+- Before edits: pin expected base commit, assert a clean Git tree and source anchors.
+- Never recycle patch files or use `git reset --hard`, `git clean -fd`, `git push --force`.
+- Commit only explicit touched paths; test before commit; push only if explicitly asked.
+- Preserve history of removed components and list deliberate deferrals in MIGRATION.md.
+- Run clean installs, automated unit tests, typecheck, asset validation and production build.
+- No deceptive emulator mocks or free ad rewards in production platform adapters.
+- Every P0 change needs a regression test and documented manual browser checklist.
+- After failures: leave the checkout recoverable, never conceal a failed gate.

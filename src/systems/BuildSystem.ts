@@ -18,6 +18,7 @@ export class BuildSystem {
   private readonly _economy:    EconomyManager;
   private readonly _projPool:   ObjectPool<Projectile>;
   private readonly _getEnemies: () => Enemy[];
+  private readonly _canInteract: () => boolean;
 
   readonly towers: Tower[] = [];
   private readonly _occupied: GridOccupancy;
@@ -33,8 +34,10 @@ export class BuildSystem {
   constructor(
     scene: Phaser.Scene, economy: EconomyManager,
     projPool: ObjectPool<Projectile>, getEnemies: () => Enemy[],
+    canInteract: () => boolean = () => true,
   ) {
     this._scene=scene; this._economy=economy; this._projPool=projPool; this._getEnemies=getEnemies;
+    this._canInteract = canInteract;
     this._occupied = Array.from({length:GRID_ROWS},(_,r)=>Array.from({length:GRID_COLS},(_,c)=>MAP_DATA[r][c]!=='E'));
     this._buildGhostGraphics();
     this._bindInput();
@@ -67,7 +70,7 @@ export class BuildSystem {
   private _bindInput(): void {
     this._scene.input.on('pointermove', (arg: unknown) => {
       const ptr = arg as Phaser.Input.Pointer;
-      if (!this._pendingId) return;
+      if (!this._canInteract() || !this._pendingId) return;
       const {col,row}=this._ptrToGrid(ptr);
       if (col<0||col>=GRID_COLS||row<0||row>=GRID_ROWS) { this._hideGhost(); return; }
       this._drawGhost(col, row, this._canPlace(col,row));
@@ -75,7 +78,7 @@ export class BuildSystem {
 
     this._scene.input.on('pointerdown', (arg: unknown) => {
       const ptr = arg as Phaser.Input.Pointer;
-      if (ptr.button!==0) return;
+      if (!this._canInteract() || ptr.button!==0) return;
       const {col,row}=this._ptrToGrid(ptr);
       const inGrid=col>=0&&col<GRID_COLS&&row>=0&&row<GRID_ROWS;
       if (this._pendingId) {
@@ -89,13 +92,14 @@ export class BuildSystem {
 
     this._scene.input.on('pointerdown', (arg: unknown) => {
       const ptr = arg as Phaser.Input.Pointer;
-      if (ptr.button!==2) return;
+      if (!this._canInteract() || ptr.button!==2) return;
       if (this._pendingId) this.cancelPlacement(); else this._selectTower(null);
     });
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
   selectTowerType(id: TowerId): void {
+    if (!this._canInteract()) return;
     this._selectTower(null);
     this._pendingId=id;
     this._scene.input.setDefaultCursor('crosshair');
@@ -107,7 +111,7 @@ export class BuildSystem {
   }
 
   upgradeSelected(toId: TowerId): void {
-    if (!this._selectedTower) return;
+    if (!this._canInteract() || !this._selectedTower) return;
     const t=this._selectedTower, cost=TOWER_DEFS[toId].cost;
     if (!t.data.upgradeTo.includes(toId)) return;
     if (!this._economy.spendGold(cost)) return;
@@ -120,7 +124,7 @@ export class BuildSystem {
   }
 
   sellSelected(): void {
-    if (!this._selectedTower) return;
+    if (!this._canInteract() || !this._selectedTower) return;
     const rate   = this._economy.sellRefundRate;
     const refund = this._selectedTower.sellValue(rate);
     this._removeTower(this._selectedTower);

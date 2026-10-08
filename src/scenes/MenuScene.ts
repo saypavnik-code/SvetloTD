@@ -20,6 +20,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    this._dust = [];
+    this._glowT = 0;
     this.cameras.main.setBackgroundColor(COLORS.bgDark);
 
     this._buildBackdrop();

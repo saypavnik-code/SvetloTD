@@ -353,3 +353,11 @@ RANDOM_EVENT_START    // RandomEvents → HUD banner
 - Avoid copying WarCraft art, names, maps, music or Blizzard characters.
 
 Reference `docs/GAME_DESIGN.md`, `ARCHITECTURE.md`, and `ROADMAP.md` for scope.
+
+## v0.2.1 UI state invariants
+
+- Modal dialogs disable world construction, selection, upgrades, hero actions and selling.
+- Retry/return to menu must rebuild skill HUD exactly once, with no stale sprites.
+- `InputCapabilities` enables tap-to-cast Q/W but **does not** claim mobile-ready controls.
+- The fixed 1280x720 canvas and 560px right panel need a future responsive design pass.
+- Preserve the current amber/walnut palette while addressing touch targets and contrast.

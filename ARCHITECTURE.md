@@ -28,10 +28,19 @@ combat entities in `src/entities/`; services in `src/systems/`; HUD in `src/ui/`
 - Vite builds client-only static assets; no secrets or server-only SDK in this bundle.
 - `deploy/vibecode/server.mjs` is a standalone, minimal static HTTP server.
 - Platform SDK APIs are added behind a boundary only after the exact target is selected.
-- `SvetloTD-live/` is an unmerged branch snapshot; preserve unique code until reviewed.
+- No second application tree; rejected legacy experiments are recoverable at Git `3c2983e`.
 
 ## Known risk
 
 The legacy `src/types/phaser.d.ts` shim is incomplete by design and needs replacement
 with the dependency-provided Phaser declarations after a full Node+browser audit.
 Do not mistake a shim-only typecheck for runtime verification.
+
+## v0.2.1 lifecycle and feature boundaries
+
+- `GameScene.create()` resets reusable Scene state; terminal GAME_OVER freezes immediately.
+- `BuildSystem` uses an interaction guard to reject building/upgrade/sell during modals.
+- `AuraSystem` recalculates non-stacking watchtower effects, clearing absent emitters.
+- `EconomyManager` and `LumberManager` reject negative and non-finite inputs.
+- `InputCapabilities` is a pure browser boundary; existing Q/W slots are touch buttons on touch devices.
+- VK reward ads, persistent meta bonuses and touch-only overlay are deferred by design.
