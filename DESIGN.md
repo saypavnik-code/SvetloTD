@@ -336,3 +336,20 @@ RANDOM_EVENT_START    // RandomEvents → HUD banner
 ---
 
 *End of DESIGN.md — ~200 lines*
+
+---
+## 2026-10 update: verified gamefield geometry and prototype art
+
+- Center must be mathematically exact: 18x18 tiles, 40px each, 2x2 base.
+- 2-tile-wide north/south/east/west roads must mirror both axes.
+- Color contrast: dark green terrain, sandstone lanes, amber citadel, readable silhouettes.
+- Ship three deterministic terrain PNGs and twelve readable 40px tower/enemy/hero sprite concepts.
+- Sprite concept PNGs are included as assets, but gameplay retains the existing vector models until atlas/animation integration passes visual QA.
+- Towers/enemies/hero retain the existing Phaser-drawn vector silhouettes;
+  they are **2D models**, not production sprite sheets or 3D meshes.
+- Preserve UI information hierarchy: wave / lives / resources / tower action / upgrades.
+- Keep selectable towers and upgrade/sell pricing visible; use descriptive counter hints.
+- Mobile UI should be a separate review, not a desktop panel reduced to phone width.
+- Avoid copying WarCraft art, names, maps, music or Blizzard characters.
+
+Reference `docs/GAME_DESIGN.md`, `ARCHITECTURE.md`, and `ROADMAP.md` for scope.

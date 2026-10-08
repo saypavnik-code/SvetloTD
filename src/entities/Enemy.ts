@@ -140,15 +140,26 @@ export class Enemy implements Poolable {
   }
 
   private _moveAlongPath(dt: number): void {
-    if (this._wpIndex>=this._waypoints.length) { this._leak(); return; }
-    const tgt=this._waypoints[this._wpIndex];
-    const dx=tgt.x-this.x, dy=tgt.y-this.y;
-    const dist=Math.sqrt(dx*dx+dy*dy), step=this._speed*dt;
-    if (dist<=step) {
-      this.x=tgt.x; this.y=tgt.y;
+    let remainingDistance = this._speed * dt;
+    // Consume multiple waypoints in one frame at high simulation speeds.
+    while (this._wpIndex < this._waypoints.length) {
+      const target = this._waypoints[this._wpIndex];
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > remainingDistance) {
+        if (distance > 0) {
+          this.x += dx / distance * remainingDistance;
+          this.y += dy / distance * remainingDistance;
+        }
+        return;
+      }
+      this.x = target.x;
+      this.y = target.y;
+      remainingDistance -= distance;
       this._wpIndex++;
-      if (this._wpIndex>=this._waypoints.length) this._leak();
-    } else { this.x+=dx/dist*step; this.y+=dy/dist*step; }
+    }
+    this._leak();
   }
 
   // ── Damage — Fix C guard ───────────────────────────────────────────────────

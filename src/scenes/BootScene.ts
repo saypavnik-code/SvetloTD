@@ -11,6 +11,12 @@ export class BootScene extends Phaser.Scene {
     super({ key: 'BootScene' });
   }
 
+  preload(): void {
+    this.load.image('tile_grass', 'assets/tiles/grass.png');
+    this.load.image('tile_path', 'assets/tiles/path.png');
+    this.load.image('tile_base', 'assets/tiles/base.png');
+  }
+
   create(): void {
     // Crisp pixels — no bilinear blur for procedural geometry
 

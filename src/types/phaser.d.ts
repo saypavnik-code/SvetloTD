@@ -8,11 +8,11 @@ declare module 'phaser' {
   namespace Textures { const FilterMode: { NEAREST: 0; LINEAR: 1 }; }
   namespace Scale { const FIT = 1; const CENTER_BOTH = 1; }
   namespace Input {
-    class Pointer { x: number; y: number; button: number; }
+    class Pointer { x: number; y: number; button: number; isDown: boolean; }
     namespace Keyboard {
       const KeyCodes: {
         ONE:number; TWO:number; THREE:number; FOUR:number; FIVE:number;
-        ESC:number; SPACE:number; DELETE:number; U:number; TAB:number; M:number;
+        ESC:number; SPACE:number; DELETE:number; U:number; TAB:number; M:number; Q:number; W:number;
       };
       interface Key {
         on(event:string, cb:()=>void): this;
@@ -31,6 +31,7 @@ declare module 'phaser' {
   }
   namespace Math {
     function DegToRad(deg:number): number;
+    function Between(min:number,max:number): number;
   }
   namespace Events {
     class EventEmitter {
@@ -51,6 +52,9 @@ declare module 'phaser' {
       fillRect(x:number,y:number,w:number,h:number): void;
       fillRoundedRect(x:number,y:number,w:number,h:number,r:number): void;
       fillCircle(x:number,y:number,r:number): void;
+      fillTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number): void;
+      strokeTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number): void;
+      lineBetween(x1:number,y1:number,x2:number,y2:number): void;
       fillEllipse(x:number,y:number,w:number,h:number): void;
       fillPoints(pts:Types.Math.Vector2Like[],close?:boolean): void;
       lineStyle(w:number,c:number,a?:number): void;
@@ -61,6 +65,9 @@ declare module 'phaser' {
       beginPath(): void; moveTo(x:number,y:number): void;
       lineTo(x:number,y:number): void; strokePath(): void;
       destroy(): void;
+    }
+    class Image {
+      setDepth(d:number): this;
     }
     class Text {
       x:number; y:number; width:number; height:number;
@@ -77,7 +84,7 @@ declare module 'phaser' {
       setSize(w:number,h:number): this;
       setOrigin(x:number,y?:number): this; setInteractive(cfg?:unknown): this;
       setVisible(v:boolean): this;
-      on(event:string, cb:()=>void): this;
+      on(event:string, cb:(...args:any[])=>void): this;
       removeAllListeners(e?:string): this;
       scaleX:number; scaleY:number;
     }
@@ -90,6 +97,7 @@ declare module 'phaser' {
     }
     interface GameObjectFactory {
       graphics(cfg?:unknown): Graphics;
+      image(x:number,y:number,key:string): Image;
       text(x:number,y:number,t:string,style?:unknown): Text;
       container(x:number,y:number): Container;
       zone(x:number,y:number,w:number,h:number): Zone;
@@ -111,12 +119,15 @@ declare module 'phaser' {
   }
   interface Camera {
     setBackgroundColor(c:number|string): void;
+    shake(duration:number,intensity?:number): void;
     fadeIn(d:number,...a:unknown[]): void;
     fadeOut(d:number,...a:unknown[]): void;
     once(e:string,cb:()=>void): void;
   }
   class Scene {
     readonly add:    GameObjects.GameObjectFactory;
+    readonly events: Events.EventEmitter;
+    readonly load: { image(key:string,url:string): void };
     readonly cameras:{ main: Camera };
     readonly input:  Input.InputPlugin;
     readonly tweens: Tweens.TweenManager;
@@ -127,7 +138,10 @@ declare module 'phaser' {
     constructor(config: { key: string });
   }
   const AUTO: number;
-  class Game { constructor(config: Types.Core.GameConfig) {} }
+  class Game {
+    constructor(config: Types.Core.GameConfig);
+    scene: { getScene(key:string): { scene: { isActive():boolean; isPaused():boolean; pause():void; resume():void } } };
+  }
 }
 
 // Vite's import.meta.env

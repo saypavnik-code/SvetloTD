@@ -107,6 +107,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.bgGameField);
     this.cameras.main.fadeIn(400, 232, 226, 214);
 
+    this.events.once('shutdown', this.shutdown, this);
     this._buildSystems();
     this._buildBatchGraphics();
     this._buildMap();
@@ -217,7 +218,6 @@ export class GameScene extends Phaser.Scene {
     EventBus.off(GameEvents.TOWER_SHOT,        this._onTowerShotSfx,     this);
     EventBus.off(GameEvents.HERO_SKILL_Q,      this._onHeroSkillQ,       this);
     EventBus.off(GameEvents.HERO_SKILL_W,      this._onHeroSkillW,       this);
-    EventBus.removeAllListeners();
   }
 
   // ── Systems ────────────────────────────────────────────────────────────────
@@ -244,9 +244,11 @@ export class GameScene extends Phaser.Scene {
   private _updateProjectiles(delta: number): void {
     // activeItems from pool = currently checked-out projectiles
     const active = this._projPool.activeItems;
-    for (const p of active) {
-      p.update(delta);
-      p.tickSplash(delta / 1000);
+    for (let i = active.length - 1; i >= 0; i--) {
+      const projectile = active[i];
+      projectile.update(delta);
+      projectile.tickSplash(GameSpeed.adjust(delta) / 1000);
+      if (projectile.isFinished) this._projPool.release(projectile);
     }
   }
 
@@ -272,8 +274,7 @@ export class GameScene extends Phaser.Scene {
 
     // Projectiles + splash
     for (const p of this._projPool.activeItems) {
-      if (!p.isActive) continue;
-      p.drawTo(this._projGfx);
+      if (p.isActive) p.drawTo(this._projGfx);
       p.drawSplashTo(this._effectGfx);
     }
 
@@ -514,8 +515,11 @@ export class GameScene extends Phaser.Scene {
     const deco = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
     for (let row=0; row<GRID_ROWS; row++) for (let col=0; col<GRID_COLS; col++) {
       const cell=MAP_DATA[row][col]; const px=col*TILE_SIZE, py=row*TILE_SIZE;
+      this.add.image(px + TILE_SIZE/2, py + TILE_SIZE/2,
+        cell === 'E' ? 'tile_grass' : cell === 'B' ? 'tile_base' : 'tile_path')
+        .setDepth(DEPTH.BACKGROUND);
       if (cell==='P'||cell==='B') {
-        g.fillStyle(COLORS.pathMain,1); g.fillRect(px,py,TILE_SIZE,TILE_SIZE);
+        g.fillStyle(COLORS.pathMain,0.18); g.fillRect(px,py,TILE_SIZE,TILE_SIZE);
         g.fillStyle(COLORS.pathBorder,0.30); g.fillRect(px,py,TILE_SIZE,2); g.fillRect(px,py,2,TILE_SIZE);
         const seed=(row*31+col*17)%100;
         if (seed<28) { deco.fillStyle(COLORS.pathBorder,0.40); deco.fillCircle(px+(seed%28)+5,py+((seed*7)%28)+5,1.5); }

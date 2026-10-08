@@ -19,7 +19,7 @@ export interface WaveData {
   preview:    string;   // shown in wave-incoming banner
 }
 
-export const WAVES: WaveData[] = [
+const EARLY_WAVES: WaveData[] = [
   // ── Phase 1: Tutorial ─────────────────────────────────────────────────────
   { wave:1,  enemyType:'grunt',        count:8,  interval:1.0, hpMult:1.0, paths:-1, isBoss:false, modifier:null,      bonusGold:20,  preview:'Гоблины-разведчики' },
   { wave:2,  enemyType:'grunt',        count:10, interval:0.9, hpMult:1.2, paths:-1, isBoss:false, modifier:null,      bonusGold:25,  preview:'Больше гоблинов' },
@@ -48,3 +48,25 @@ export const WAVES: WaveData[] = [
   { wave:19, enemyType:'runner',       count:40, interval:0.2, hpMult:3.0, paths:-1, isBoss:false, modifier:'fast',    bonusGold:90,  preview:'Последний рой' },
   { wave:20, enemyType:'boss_goliath', count:1,  interval:0,   hpMult:8.0, paths:2,  isBoss:true,  modifier:'healing', bonusGold:200, preview:'💀 ФИНАЛ: Руиновейл' },
 ];
+
+// Prototype second half. Four bosses, alternating air/ground lanes, no hidden RNG.
+// Balance MUST be measured with deterministic simulations and playtests.
+const LATE_ENEMIES: EnemyId[] = ['grunt', 'runner', 'wyvern', 'golem'];
+const LATE_WAVES: WaveData[] = Array.from({ length: 20 }, (_, index) => {
+  const wave = index + 21;
+  const isBoss = wave % 5 === 0;
+  const enemyType: EnemyId = isBoss ? 'boss_goliath' : LATE_ENEMIES[index % LATE_ENEMIES.length];
+  return {
+    wave,
+    enemyType,
+    count: isBoss ? 1 : Math.min(45, 18 + index * 2),
+    interval: isBoss ? 0.5 : Math.max(0.28, 0.75 - index * 0.015),
+    hpMult: isBoss ? 7 + index * 1.0 : 4 + index * 0.65,
+    paths: isBoss ? (index / 5 | 0) % 4 : -1,
+    isBoss,
+    modifier: isBoss ? 'healing' : (index % 3 === 1 ? 'fast' : null),
+    bonusGold: 110 + index * 12,
+    preview: isBoss ? `Citadel guardian ${wave}` : `Reinforcements ${wave}`,
+  };
+});
+export const WAVES: WaveData[] = [...EARLY_WAVES, ...LATE_WAVES];

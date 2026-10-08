@@ -1,0 +1,15 @@
+
+# Generated outputs and secrets
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.vite/
+.env
+.env.*
+!.env.example
+*.log
+vibecode-bundle.tar.gz
+raw_assets/
+repomix-output.xml
+SvetloTD-commercial-final.zip

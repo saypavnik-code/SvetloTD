@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "typecheck": "tsc --noEmit",
+    "validate": "python3 scripts/validate_game.py"
   },
   "dependencies": {
     "phaser": "^3.87.0"

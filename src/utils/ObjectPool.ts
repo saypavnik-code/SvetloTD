@@ -22,9 +22,10 @@ export class ObjectPool<T extends Poolable> {
   }
 
   release(obj: T): void {
-    obj.reset();
     const i = this._active.indexOf(obj);
-    if (i !== -1) this._active.splice(i, 1);
+    if (i === -1) return; // Reject double releases instead of duplicating references.
+    this._active.splice(i, 1);
+    obj.reset();
     this._pool.push(obj);
   }
 

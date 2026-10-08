@@ -76,11 +76,14 @@ export class Projectile implements Poolable {
         this._dealDamage();
         if (this._splashRadius>0) { this._splashT=0; this._splashX=this.x; this._splashY=this.y; this._splashR=this._splashRadius; this._splashAcc=0; }
       }
-      this.reset();
+      // Keep the object checked out until its splash animation finishes.
+      this.isActive = false;
     } else {
       this.x+=dx/dist*step; this.y+=dy/dist*step;
     }
   }
+
+  get isFinished(): boolean { return !this.isActive && this._splashT < 0; }
 
   private _dealDamage(): void {
     if (this._splashRadius>0) {

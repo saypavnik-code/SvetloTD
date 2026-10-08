@@ -109,6 +109,7 @@ export class BuildSystem {
   upgradeSelected(toId: TowerId): void {
     if (!this._selectedTower) return;
     const t=this._selectedTower, cost=TOWER_DEFS[toId].cost;
+    if (!t.data.upgradeTo.includes(toId)) return;
     if (!this._economy.spendGold(cost)) return;
     const col=t.gridCol, row=t.gridRow, invested=t.totalInvested+cost;
     this._removeTower(t);

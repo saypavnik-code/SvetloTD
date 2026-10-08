@@ -18,6 +18,7 @@ import type { Waypoint } from '../data/pathData';
 import { Enemy }                from '../entities/Enemy';
 import { WAVES, type WaveData } from '../data/waves';
 import { ALL_PATHS }            from '../data/pathData';
+import { GameConfig } from '../config/difficulty';
 import { ObjectPool }           from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
 
@@ -129,9 +130,9 @@ export class WaveManager {
     this._spawnCtx = {
       enemyType:  wave.enemyType,
       paths:      paths as Waypoint[][],
-      speedMult:  wave.modifier === 'fast' ? 1.5 : 1.0,
+      speedMult:  (wave.modifier === 'fast' ? 1.5 : 1.0) * GameConfig.difficulty.enemySpeedMult,
       isHealing:  wave.modifier === 'healing',
-      hpMult:     wave.hpMult,
+      hpMult:     wave.hpMult * GameConfig.difficulty.enemyHpMult,
     };
 
     this.state             = 'spawning';
