@@ -15,3 +15,6 @@ repomix-output.xml
 SvetloTD-commercial-final.zip
 
 .DS_Store
+
+# Generated VibeCode deployment bundle
+/vibecode-bundle.tar.gz
