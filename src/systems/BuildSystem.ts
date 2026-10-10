@@ -118,6 +118,7 @@ export class BuildSystem {
     const col=t.gridCol, row=t.gridRow, invested=t.totalInvested+cost;
     this._removeTower(t);
     const nt=new Tower(this._scene,toId,col,row,this._projPool,this._getEnemies,invested);
+    nt.setTargetPriority(t.targetPriority); // an upgrade keeps the player's targeting choice
     this.towers.push(nt); this._occupied[row][col]=true;
     EventBus.emit(GameEvents.TOWER_UPGRADED, nt);
     this._selectTower(nt);

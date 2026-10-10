@@ -43,6 +43,25 @@ Repeat on desktop Chrome/Firefox and mobile touch devices (including tap-to-cast
 - consistency of wave, enemy, tower and damage-matrix data.
 
 Limits: logic tests on the real TypeScript sources with Phaser stubbed. They do not execute
-rendering, input, tweens, audio or the Phaser scene lifecycle. Tower targeting, projectile flight,
-hero skills, build/upgrade/sell and the HUD are not covered yet. The browser smoke above was not
-run for v0.3.0.
+rendering, input, tweens, audio or the Phaser scene lifecycle. Combat coverage added in v0.4.0 is
+listed below. The browser smoke above was not run for v0.3.0.
+
+## v0.4.0 combat gates
+
+`tests/combat.test.mjs` runs entities and the build system against a chainable stand-in for the Phaser
+scene (no rendering). It covers:
+
+- tower fire rate equals attackSpeed at 4-100 ms frames and at x3 game speed; idle towers cannot bank shots;
+- a target dying between target ticks does not waste the shot;
+- target priority rules (first, last, strongest, weakest, nearest), immediate re-targeting on change,
+  sticky targets, range boundary, air/ground capabilities;
+- projectile hit exactly once at any step size, target lost in flight, splash radius and ring lifetime,
+  reset leaks nothing, flight time scales with game speed once;
+- hero Shockwave (radius, damage, slow, cooldown) and Amber Shield (radius, +25%, 6 s, no stacking);
+- placing, upgrading (validation, price, kept priority, accumulated investment) and selling
+  (floor(invested x phase rate), once, cell freed);
+- static guards: no method interpolated into a template string; priority only changed via the setter.
+
+Limits: input handlers, rendering, HUD/panel layout, pause/resume and the scene lifecycle are not
+executed; `_place`, `_selectTower` and `_target` are read or driven directly where the real input path
+needs a browser. The browser smoke was not run for v0.4.0.

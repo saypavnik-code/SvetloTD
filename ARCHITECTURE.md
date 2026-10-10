@@ -57,3 +57,13 @@ Do not mistake a shim-only typecheck for runtime verification.
 - `StatusEffectSystem` carries fractional poison damage between frames. `EffectType` has no `aoe_slow`:
   the area slow is applied to each enemy as a plain `slow`.
 - Tests load the real TypeScript through `tests/support/load-source.mjs` (one loader, Phaser stubbed).
+
+## v0.4.0 tower timing model
+
+- `Tower.update()` advances a game-time cooldown. A ready tower with a stale target re-acquires at once;
+  firing adds the interval to the cooldown (the overshoot of the frame is carried), and an idle tower's
+  cooldown is clamped at zero so shots cannot be banked.
+- `Tower.setTargetPriority()` is the only way to change the rule; it resets the target. Upgrades copy the
+  priority to the new tower in `BuildSystem.upgradeSelected()`.
+- `tests/combat.test.mjs` drives entities with a chainable Phaser stand-in; it reads private state
+  (`_target`, `_place`) only where the real path needs pointer input.

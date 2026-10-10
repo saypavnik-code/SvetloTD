@@ -126,11 +126,19 @@ export class Tower {
     this._tickBuffs(gd / 1000);
 
     if (this._targetTick >= TARGET_TICK) { this._targetTick = 0; this._findTarget(); }
-    if (this._fireCooldown <= 0 && this._target) {
-      // Use effective attack speed so buff applies
-      this._fireCooldown = 1000 / this._effectiveAttackSpeed();
-      this._fire();
+    if (this._fireCooldown <= 0) {
+      // The target may have died or left since the last target tick: re-acquire now,
+      // otherwise the shot (and its whole cooldown) would be wasted on a stale target.
+      if (this._target && !(this._target.isActive && !this._target.isDead)) this._findTarget();
+      if (this._target) {
+        // Carry this frame's overshoot (cooldown <= 0) into the next interval so the fire
+        // rate does not depend on the frame length. Effective speed makes buffs apply.
+        this._fireCooldown += 1000 / this._effectiveAttackSpeed();
+        this._fire();
+      }
     }
+    // An idle tower cannot bank shots.
+    if (this._fireCooldown < 0) this._fireCooldown = 0;
   }
 
   // ── Buff API (called by Hero.useSkillW) ────────────────────────────────────
@@ -166,6 +174,13 @@ export class Tower {
     }
     if (this._auraBuff > 0) speed *= (1 + this._auraBuff);
     return speed;
+  }
+
+  /** Change the targeting rule; the tower re-evaluates its target on the next update. */
+  setTargetPriority(priority: TargetPriority): void {
+    this.targetPriority = priority;
+    this._target = null;
+    this._targetTick = TARGET_TICK;
   }
 
   private _findTarget(): void {
@@ -483,5 +498,6 @@ export class Tower {
     this._rangeCircle.destroy();
   }
 
-  sellValue(refundRate: number): number { return Math.floor(this.totalInvested * refundRate); }
+  // The epsilon absorbs floating-point error: floor(170 * 0.7) is 118 although 70% of 170 is 119.
+  sellValue(refundRate: number): number { return Math.floor(this.totalInvested * refundRate + 1e-9); }
 }

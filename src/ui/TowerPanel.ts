@@ -386,14 +386,19 @@ export class TowerPanel {
     this._sellGfx.clear();
     this._sellGfx.fillStyle(COLORS.bgDark, 0.45); this._sellGfx.fillRoundedRect(PX+PAD, sellY, sellW, 36, 6);
     this._sellGfx.lineStyle(2, COLORS.dangerSoft, 0.75); this._sellGfx.strokeRoundedRect(PX+PAD, sellY, sellW, 36, 6);
-    this._sellLbl.setText(`✕ Продать  ${tower.sellValue}◆`);
+    this._sellLbl.setText(this._sellLabel(tower));
+  }
+
+  /** Refund for the current phase (100% between waves, 70% in combat). */
+  private _sellLabel(tower: Tower): string {
+    return `✕ Продать  ${tower.sellValue(this._economy.sellRefundRate)}◆`;
   }
 
   private _cyclePriority(dir: 1 | -1): void {
     if (!this._tower) return;
     const cur = PRIORITY_ORDER.indexOf(this._tower.targetPriority);
     const next = (cur + dir + PRIORITY_ORDER.length) % PRIORITY_ORDER.length;
-    this._tower.targetPriority = PRIORITY_ORDER[next];
+    this._tower.setTargetPriority(PRIORITY_ORDER[next]);
     this._prioLabel.setText(PRIORITY_LABELS[this._tower.targetPriority]);
   }
 
@@ -471,6 +476,8 @@ export class TowerPanel {
 
     // Refresh live damage/kill stats ~once per second
     if (this._tower && this._infoRoot.visible) {
+      // The refund rate changes with the build phase; keep the label truthful.
+      this._sellLbl.setText(this._sellLabel(this._tower));
       this._statsTimer += _delta;
       if (this._statsTimer >= 1000) {
         this._statsTimer = 0;

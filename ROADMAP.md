@@ -13,6 +13,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.3.0 the countdown before wave 1 is a build phase with a 100% sell refund, like every other countdown.
 - [x] v0.3.0 defeat takes precedence over a same-tick wave clear or victory (last life lost to the last enemy).
 - [x] v0.3.0 headless wave-lifecycle simulation (40-wave victory, defeat, precedence) and data-consistency tests.
+- [x] v0.4.0 tower fire rate no longer depends on frame length or game speed (up to 11% fewer shots before).
+- [x] v0.4.0 a tower whose target dies between target ticks re-acquires at once instead of losing its whole cooldown.
+- [x] v0.4.0 changing the target priority re-targets immediately; upgrading keeps the chosen priority.
+- [x] v0.4.0 the sell button shows the real refund for the current phase (it printed the method's source code).
+- [x] v0.4.0 selling at 70% no longer loses a gold to floating-point rounding (an upgraded Wachturm refunded 118 instead of 119).
+- [x] v0.4.0 regression tests for towers, projectiles, hero skills and build/upgrade/sell economy.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -27,7 +33,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 ## P1 - product/quality gate
 
 - [ ] Replace legacy Phaser type shim with official package declarations.
-- [ ] Remaining unit/integration tests: hero skill cooldowns, tower targeting and priority, build/upgrade/sell flows, projectile lifecycle (wave completion and no double reward: v0.3.0).
+- [ ] Remaining tests: HUD/panel/scene flows, pause/resume and restart lifecycle, audio, persistence (covered so far: waves v0.3.0; towers, projectiles, hero skills, build/upgrade/sell v0.4.0).
 - [ ] Playtest and numerically rebalance levels 21-40 and all difficulty presets.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
@@ -66,10 +72,10 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [ ] Add benchmark and economy-simulation tests before rebalancing 21-40.
 
-## Next sprint (recommended): v0.4.0 combat and economy simulation harness
+## Next sprint (recommended): economy and wave-pressure simulation (after v0.4.0)
 
 - Objective: measure, do not guess, before any rebalancing. Priority: P0/P1.
-- Scope: deterministic headless simulation of tower targeting, projectile flight, damage and gold income over waves 1-40 for a few representative builds; hero skill cooldown and build/upgrade/sell tests.
+- Scope: deterministic headless simulation of gold income and wave pressure over waves 1-40 for a few representative builds (tower, projectile and economy primitives are covered by `tests/combat.test.mjs` since v0.4.0).
 - Dependencies: v0.3.0 shared test loader and wave simulation helpers (`tests/support/load-source.mjs`, `tests/simulation.test.mjs`).
 - Acceptance: reproducible report of leaks and gold per wave for each build; failing tests for every defect found; no balance changes in the same patch.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed in v0.3.0).

@@ -45,3 +45,17 @@ cooperative authority model and player-count scaling after measured playtests.
   (or of wave 40); no wave bonus or victory is awarded in that case.
 - Wave completion is evaluated once per simulation tick after that tick's kill and leak events, so a
   clear can be recognised up to one tick after the last enemy dies.
+
+## Tower targeting and fire rate (v0.4.0)
+
+- A tower keeps its current target until it dies or leaves range (sticky targets); a new target is
+  chosen by the tower's priority: first (closest to the base), last, strongest, weakest, nearest.
+- Changing the priority re-targets on the next update; upgrading a tower keeps the chosen priority.
+- A tower whose target dies between target ticks (every 200 ms of game time) re-acquires at once; the
+  shot is not lost.
+- Fire rate equals attackSpeed shots per second of game time regardless of frame length. Game speed
+  scales time once. An idle tower cannot bank shots.
+- Amber Shield: +25% attack speed for 6 s to towers within 130 px of the hero; refreshing does not stack.
+  The Watchtower aura multiplies with it.
+- The tower panel sell button shows the refund for the current phase (100% between waves, 70% in combat).
+- Open design question (not changed): cannon splash also damages flying enemies caught in the blast.
