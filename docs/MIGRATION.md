@@ -16,3 +16,9 @@ All legacy files remain in Git history; `git show 3c2983e:SvetloTD-live/<path>` 
 | Legacy `config/`, `data/`, `entities/`, `scenes/`, `ui/` and build config | Removed as redundant | Root code is the sole functional implementation |
 
 This is a **source-tree migration and feature triage**, not an assertion that unreleased SDK, meta-progression or complete touch UI functionality has shipped.
+
+## Closure status (v0.5.0)
+
+- The consolidation is complete: the preflight of every patch since v0.3.0 refuses to run when a `SvetloTD-live/` directory exists.
+- Deferred items (meta progression, platform SDK adapters, mobile bottom sheet) are tracked in `ROADMAP.md`.
+- Keep this record until the owner confirms it can be archived.

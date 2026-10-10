@@ -73,9 +73,10 @@ This replaces / augments the existing `WaveData.bonusGold` field (keep that for 
 | mountain_giant (new) | — | 55 | Melee boss, +2 Lumber |
 
 #### Sell Refund Rules
-- **Build phase** (no active enemies on map): 100% refund of `tower.totalInvested`
-- **Combat phase**: 70% refund (existing behavior)
-- `BuildSystem` checks `waveManager.activeEnemies.length === 0 && waveManager.state !== 'spawning'`
+- **Build phase** (every countdown between waves, including the one before wave 1): 100% refund of `tower.totalInvested`
+- **Combat phase**: 70% refund, rounded down as `floor(invested x rate)` without floating-point loss
+- `EconomyManager.sellRefundRate` follows `BUILD_PHASE_START` / `BUILD_PHASE_END`, emitted by `WaveManager`;
+  `BuildSystem.sellSelected()` and the tower panel read that rate (implemented in v0.3.0-v0.4.0)
 
 #### Lumber (Secondary Resource)
 - Starting amount: **0**
@@ -296,8 +297,8 @@ src/
 LUMBER_CHANGED        // LumberManager → HUD
 INTEREST_AWARDED      // InterestSystem → HUD floating text
 WAVE_BONUS_AWARDED    // InterestSystem → HUD floating text
-BUILD_PHASE_START     // WaveManager → BuildSystem (enable 100% sell)
-BUILD_PHASE_END       // WaveManager → BuildSystem (revert to 70%)
+BUILD_PHASE_START     // WaveManager → EconomyManager (enable 100% sell)
+BUILD_PHASE_END       // WaveManager → EconomyManager (revert to 70%)
 GOVERNOR_SELECTED     // GovernorSelect → GameScene (set tower pool)
 RANDOM_EVENT_START    // RandomEvents → HUD banner
 ```
@@ -361,3 +362,9 @@ Reference `docs/GAME_DESIGN.md`, `ARCHITECTURE.md`, and `ROADMAP.md` for scope.
 - `InputCapabilities` enables tap-to-cast Q/W but **does not** claim mobile-ready controls.
 - The fixed 1280x720 canvas and 560px right panel need a future responsive design pass.
 - Preserve the current amber/walnut palette while addressing touch targets and contrast.
+
+## v0.4.0 tower panel behavior
+
+- The sell button shows the refund for the current phase and refreshes when the phase changes while a tower is selected.
+- The priority control applies immediately (the tower re-targets); upgrading keeps the chosen priority.
+- Label format is unchanged: `✕ Продать  <gold>◆`.

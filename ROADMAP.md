@@ -2,6 +2,15 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
+## Current state (v0.5.0)
+
+- Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
+- Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
+  a browser is still open, including the two P0 items below.
+- v0.3.0 and v0.4.0 fixed the confirmed defects listed in the P0 section; the defect classes are catalogued in
+  `AGENTS.md` so they are checked in future changes.
+- Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
+
 ## P0 - correctness / playable baseline
 
 - [x] v0.2.1 restart state reset, terminal event deduplication and pause/tutorial input guard.
@@ -13,6 +22,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.3.0 the countdown before wave 1 is a build phase with a 100% sell refund, like every other countdown.
 - [x] v0.3.0 defeat takes precedence over a same-tick wave clear or victory (last life lost to the last enemy).
 - [x] v0.3.0 headless wave-lifecycle simulation (40-wave victory, defeat, precedence) and data-consistency tests.
+- [x] v0.3.0 an enemy killed by poison no longer heals or moves for the rest of that tick.
 - [x] v0.4.0 tower fire rate no longer depends on frame length or game speed (up to 11% fewer shots before).
 - [x] v0.4.0 a tower whose target dies between target ticks re-acquires at once instead of losing its whole cooldown.
 - [x] v0.4.0 changing the target priority re-targets immediately; upgrading keeps the chosen priority.
@@ -72,10 +82,14 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [ ] Add benchmark and economy-simulation tests before rebalancing 21-40.
 
-## Next sprint (recommended): economy and wave-pressure simulation (after v0.4.0)
+## Next sprint (recommended): v0.6.0 economy and wave-pressure simulation
 
 - Objective: measure, do not guess, before any rebalancing. Priority: P0/P1.
 - Scope: deterministic headless simulation of gold income and wave pressure over waves 1-40 for a few representative builds (tower, projectile and economy primitives are covered by `tests/combat.test.mjs` since v0.4.0).
-- Dependencies: v0.3.0 shared test loader and wave simulation helpers (`tests/support/load-source.mjs`, `tests/simulation.test.mjs`).
+- Dependencies: the shared test loader and helpers (`tests/support/load-source.mjs`, `tests/simulation.test.mjs`, `tests/combat.test.mjs`).
 - Acceptance: reproducible report of leaks and gold per wave for each build; failing tests for every defect found; no balance changes in the same patch.
-- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed in v0.3.0).
+- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed in v0.3.0-v0.5.0); record it in the `docs/QA.md` smoke log.
+- Secondary candidates, in order: explicit EventBus subscription ownership in UI components; official Phaser type
+  declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
+  structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
+  the deprecated `baseUrl` and TS5011 for `rootDir`; the project pins ^5.7.2 and is unaffected today).

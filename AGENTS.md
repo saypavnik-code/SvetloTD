@@ -26,7 +26,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 ## Immutable patch and migration rules
 
 - Every patch has a new SemVer version, unique descriptive filename, and history entry.
-- Before edits: pin expected base commit, assert a clean Git tree and source anchors.
+- Before edits: assert branch, remote, a clean Git tree (other pending patch files excepted), the previous
+  version row in `docs/PATCH_HISTORY.md` and exact source anchors. The actual base commit is recorded in the
+  new history row, because chained patches cannot know it in advance.
 - Never recycle patch files or use `git reset --hard`, `git clean -fd`, `git push --force`.
 - Commit only explicit touched paths; test before commit; push only if explicitly asked.
 - Preserve history of removed components and list deliberate deferrals in MIGRATION.md.
@@ -34,3 +36,36 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 - No deceptive emulator mocks or free ad rewards in production platform adapters.
 - Every P0 change needs a regression test and documented manual browser checklist.
 - After failures: leave the checkout recoverable, never conceal a failed gate.
+
+## Test harness conventions (since v0.3.0)
+
+- `npm run test:unit` runs `node --test tests/*.test.mjs`. Every file loads the real TypeScript through
+  `tests/support/load-source.mjs` (one loader; Phaser is stubbed; imports outside the repository are rejected).
+- Entities that only create graphics, tweens or input hooks run against a chainable stand-in for the scene
+  (see `tests/combat.test.mjs`). Rendering, input events and the Phaser scene lifecycle stay untested until
+  a browser run is recorded in `docs/QA.md`.
+- Drive time with explicit steps and compare several frame lengths (4-100 ms, and x3 game speed). Simulate
+  waves headlessly through `WaveManager.update(dt)` as in `tests/simulation.test.mjs`.
+- Read private state only where the real path needs pointer input, and say so in a comment.
+- A regression test must fail on the unfixed code; confirm that before calling a defect fixed.
+
+## Review checklist: defect classes already found here
+
+1. Frame-length dependence: a per-frame `floor`, a cooldown reset that drops the overshoot, or a state
+   machine advanced inside an event handler. Test at several step sizes.
+2. Event ordering: listeners run in registration order. One subscriber must not finish a state machine
+   before another has reacted to the same event (defeat vs wave clear).
+3. Data-only mechanics: a field in `src/data/` that no system reads (the Ice Bastion area slow).
+   `tests/data.test.mjs` checks shape; behavior needs a system test.
+4. Stale references: a target, tower or projectile used after it died, was sold or was recycled.
+5. Floating point in money: `Math.floor(170 * 0.7)` is 118, not 119. Use an epsilon or integers.
+6. A method interpolated into a string prints its source (`${tower.sellValue}`); a static guard in
+   `tests/combat.test.mjs` scans `src/`.
+7. State changed by assigning a field from the UI skips the owner's logic (target priority). Change state
+   through the entity's method.
+
+## Resuming in a new session
+
+Read `README.md`, `ARCHITECTURE.md`, `DESIGN.md`, `ROADMAP.md`, `docs/GAME_DESIGN.md`, `docs/QA.md`,
+`docs/PATCH_POLICY.md` and `docs/PATCH_HISTORY.md`. Take the baseline from the last history row and `git log`,
+not from an old chat or snapshot, and start from the "Next sprint" section of `ROADMAP.md`.

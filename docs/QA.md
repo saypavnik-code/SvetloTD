@@ -1,7 +1,7 @@
 # QA and release checklist
 
 1. Regenerate textures; compare output deterministically to committed assets.
-2. Run `python3 scripts/validate_game.py` and `npm run typecheck`.
+2. Run `npm run test:unit`, `python3 scripts/validate_game.py` (`python` on Windows) and `npm run typecheck`.
 3. Run `npm run build`, `python3 scripts/check_bundle.py`; inspect output changes.
 4. Manually play: choose each tower, upgrade, sell in/out of combat, hero Q/W,
    flying/ground enemies, splash, leaks, boss, win, lose, restart.
@@ -11,8 +11,9 @@
 8. Test embed on target platform separately. Record exact SDK/version/date.
 9. Never approve a release solely on static assertions or a successful build.
 
-Current audit: source-only Repomix review. The canonical Git repository and browser
-were not available; integration/runtime results must be recorded after applying.
+Audit status: v0.3.0 to v0.5.0 were authored from a Repomix snapshot of v0.2.1 and verified headlessly
+(unit tests, typecheck, game validation, production build, bundle budget). No browser run has been recorded
+since v0.2.1; add one to the smoke log below when it happens.
 
 ## v0.2.1 migration regression gates
 
@@ -26,6 +27,12 @@ pause and try building -> resume -> sell final watchtower -> lose all lives ->
 retry -> inspect fresh Q/W HUD and restored economy -> menu -> play -> confirm
 no duplicated dust, skills or listeners; finish wave 40 and retry after victory.
 Repeat on desktop Chrome/Firefox and mobile touch devices (including tap-to-cast Q/W).
+
+## Browser smoke log
+
+| Date | Commit | Browser / device | Scenarios | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| none recorded | | | | | |
 
 ## v0.3.0 simulation gates
 

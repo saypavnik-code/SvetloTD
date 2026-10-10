@@ -12,6 +12,8 @@ Git commit `3c2983e`. See `docs/MIGRATION.md`.
 - 40 wave definitions: 1-20 authored, 21-40 provisional and **not yet balanced**.
 - Deterministic 40px terrain textures and 12 prototype tower/creature sprites generated with Python standard library.
 - Keyboard/mouse first; mobile and network co-op are roadmap work, not shipped features.
+- Headless regression tests cover the wave lifecycle, combat primitives and the build/sell economy.
+  Browser gameplay has not been smoke-tested since v0.2.1; see `docs/QA.md`.
 
 ## Quality gates
 
@@ -25,6 +27,8 @@ npm run build
 python3 scripts/check_bundle.py
 ```
 
+`npm run test:unit` runs the headless suites in `tests/` (runtime invariants, data, wave simulation, combat);
+`docs/QA.md` lists what they cover and what they do not.
 `npm install` should create a `package-lock.json` if one does not already exist.
 Commit the lockfile for reproducibility; then prefer `npm ci` in CI.
 The old Phaser type shim is an acknowledged migration item; passing typecheck
@@ -52,4 +56,5 @@ This is an independent homage. Do not redistribute Warcraft III maps or copyrigh
 
 One-time scripts use unique names: `patch_svetlogorsk_td_vMAJOR_MINOR_PATCH_topic.py`.
 Read `docs/PATCH_POLICY.md` before any change. Never reuse a filename or patch
-version. No patch may commit or push if verification fails.
+version. No patch may commit or push if verification fails. Apply pending patches in version order, each
+after its own `--dry-run`.
