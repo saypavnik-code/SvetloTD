@@ -51,6 +51,9 @@ export class WaveManager {
   private _spawnInterval = 0;
   private _spawnCtx: SpawnContext | null = null;
 
+  // Set by any GAME_OVER (victory or defeat): no further wave transitions happen.
+  private _terminated = false;
+
   onCountdownTick?: (secsLeft: number) => void;
   onWaveStart?:     (wave: WaveData) => void;
   onWaveComplete?:  (wave: WaveData, bonusGold: number) => void;
@@ -60,6 +63,7 @@ export class WaveManager {
     this._pool = pool;
     EventBus.on(GameEvents.ENEMY_KILLED,      this._onEnemyRemoved, this);
     EventBus.on(GameEvents.ENEMY_REACHED_END, this._onEnemyRemoved, this);
+    EventBus.on(GameEvents.GAME_OVER,         this._onGameOver,     this);
   }
 
   get currentWaveData(): WaveData | null { return WAVES[this._waveIndex] ?? null; }
@@ -75,6 +79,8 @@ export class WaveManager {
   }
 
   update(dt: number): void {
+    if (this._terminated) return;
+
     // 1. Tick enemies; cull inactive back to pool
     for (let i = this.activeEnemies.length - 1; i >= 0; i--) {
       const e = this.activeEnemies[i];
@@ -84,6 +90,14 @@ export class WaveManager {
       } else {
         e.update(dt);
       }
+    }
+
+    // 1b. Resolve wave completion once per tick, after every listener of this tick's
+    // kill/leak events (e.g. the life loss that ends the game) has already run.
+    // Defeat therefore always takes precedence over clearing the wave.
+    if (this.state === 'fighting' && this._enemiesRemaining <= 0 && !this._terminated) {
+      this._waveComplete();
+      if (this._terminated) return;
     }
 
     // 2. Countdown
@@ -107,18 +121,20 @@ export class WaveManager {
     }
   }
 
+  // Only counts the removal; update() decides when the wave is complete.
   private _onEnemyRemoved = (): void => {
     if (this.state !== 'fighting' && this.state !== 'spawning') return;
     this._enemiesRemaining = Math.max(0, this._enemiesRemaining - 1);
-    if (this._enemiesRemaining <= 0 && this._spawnedCount >= this._totalCount) {
-      this._waveComplete();
-    }
   };
+
+  private _onGameOver = (): void => { this._terminated = true; };
 
   private _beginCountdown(): void {
     this.state          = 'countdown';
     this._countdownSecs = BETWEEN_WAVE_SECS;
     this.onCountdownTick?.(BETWEEN_WAVE_SECS);
+    // Every countdown (including the one before wave 1) is a build phase → 100% sell.
+    EventBus.emit(GameEvents.BUILD_PHASE_START);
   }
 
   private _launchWave(): void {
@@ -172,7 +188,7 @@ export class WaveManager {
   }
 
   private _waveComplete(): void {
-    if (this.state === 'victory') return;
+    if (this.state === 'victory' || this._terminated) return;
     const wave  = WAVES[this._waveIndex];
 
     // NOTE: InterestSystem now handles bonusGold calculation from WaveData.
@@ -181,8 +197,6 @@ export class WaveManager {
     this.onWaveComplete?.(wave, wave.bonusGold);
     // Pass waveNumber (1-based) AND WaveData so InterestSystem can read bonusGold
     EventBus.emit(GameEvents.WAVE_COMPLETED, this._waveIndex + 1, wave);
-    // Build phase begins — no enemies on field → 100% sell refund
-    EventBus.emit(GameEvents.BUILD_PHASE_START);
 
     this._waveIndex++;
 
@@ -198,5 +212,6 @@ export class WaveManager {
   destroy(): void {
     EventBus.off(GameEvents.ENEMY_KILLED,      this._onEnemyRemoved, this);
     EventBus.off(GameEvents.ENEMY_REACHED_END, this._onEnemyRemoved, this);
+    EventBus.off(GameEvents.GAME_OVER,         this._onGameOver,     this);
   }
 }

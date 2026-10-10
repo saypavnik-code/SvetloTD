@@ -44,3 +44,16 @@ Do not mistake a shim-only typecheck for runtime verification.
 - `EconomyManager` and `LumberManager` reject negative and non-finite inputs.
 - `InputCapabilities` is a pure browser boundary; existing Q/W slots are touch buttons on touch devices.
 - VK reward ads, persistent meta bonuses and touch-only overlay are deferred by design.
+
+## v0.3.0 simulation boundaries
+
+- `WaveManager.update()` is the only place that completes a wave; `_onEnemyRemoved` only counts removals.
+  Completion runs after the tick's enemy updates, so scene listeners such as the life loss run first,
+  and a resulting GAME_OVER halts the manager (`_terminated`) before any wave transition.
+- `WaveManager._beginCountdown()` is the single emitter of BUILD_PHASE_START (every countdown is a build
+  phase); `_launchWave()` emits BUILD_PHASE_END.
+- `systems/HitEffects.ts` is the single authority that turns `TowerSpecial` data into status effects,
+  including the area slow. `Tower` only calls it.
+- `StatusEffectSystem` carries fractional poison damage between frames. `EffectType` has no `aoe_slow`:
+  the area slow is applied to each enemy as a plain `slow`.
+- Tests load the real TypeScript through `tests/support/load-source.mjs` (one loader, Phaser stubbed).

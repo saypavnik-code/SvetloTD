@@ -10,6 +10,7 @@ import { TILE_SIZE, DEPTH, COLORS } from '../config';
 import { BASE_CENTER_X, BASE_CENTER_Y } from '../data/mapData';
 import { GameSpeed } from '../systems/GameSpeed';
 import { EventBus, GameEvents } from '../utils/EventBus';
+import { applyHitSpecials } from '../systems/HitEffects';
 
 export enum TargetPriority { FIRST, LAST, STRONGEST, WEAKEST, NEAREST }
 
@@ -205,9 +206,7 @@ export class Tower {
       this.totalDamageDealt += this.data.damage;
       if (e.isDead) this.totalKills++;
 
-      for (const sp of specials) {
-        e.applyEffect({ type: sp.type, value: sp.value, duration: sp.duration, sourceId: id });
-      }
+      applyHitSpecials(e, specials, id, this._activeEnemiesFn());
     };
 
     proj.init(this.x, this.y, this._target, this.data.damage, this.data.damageType,

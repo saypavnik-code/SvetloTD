@@ -110,6 +110,9 @@ export class Enemy implements Poolable {
     if (!this.isActive) return;
 
     const { slowFraction } = this.fx.update(dt * 1000, (dmg, type) => this.takeDamage(dmg, type));
+    // Poison can kill the enemy inside fx.update(); _die() already started the dying
+    // animation, so it must not heal, move or leak for the rest of this tick.
+    if (this._isDead) return;
     this._speed = this._baseSpeed * (1 - slowFraction);
 
     if (this._isHealing && this.hp < this.maxHp) {

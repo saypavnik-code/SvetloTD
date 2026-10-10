@@ -8,6 +8,11 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.2.1 watchtower aura and stale-buff cleanup.
 - [x] v0.2.1 negative-resource-spend and duplicate GAME_OVER guards.
 - [x] v0.2.1 one source tree and automated Node runtime regression gate.
+- [x] v0.3.0 acid-tower poison is frame-rate independent (it previously never dealt damage).
+- [x] v0.3.0 Ice Bastion area slow is implemented in `src/systems/HitEffects.ts` (it was data-only before).
+- [x] v0.3.0 the countdown before wave 1 is a build phase with a 100% sell refund, like every other countdown.
+- [x] v0.3.0 defeat takes precedence over a same-tick wave clear or victory (last life lost to the last enemy).
+- [x] v0.3.0 headless wave-lifecycle simulation (40-wave victory, defeat, precedence) and data-consistency tests.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -22,7 +27,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 ## P1 - product/quality gate
 
 - [ ] Replace legacy Phaser type shim with official package declarations.
-- [ ] Add proper unit/integration tests (wave completions, no double reward, skill cooldowns).
+- [ ] Remaining unit/integration tests: hero skill cooldowns, tower targeting and priority, build/upgrade/sell flows, projectile lifecycle (wave completion and no double reward: v0.3.0).
 - [ ] Playtest and numerically rebalance levels 21-40 and all difficulty presets.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
@@ -60,3 +65,11 @@ until the corresponding tasks are tested and accepted.
 - [ ] Replace hand-written Phaser shim with official type definitions in a dedicated patch.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [ ] Add benchmark and economy-simulation tests before rebalancing 21-40.
+
+## Next sprint (recommended): v0.4.0 combat and economy simulation harness
+
+- Objective: measure, do not guess, before any rebalancing. Priority: P0/P1.
+- Scope: deterministic headless simulation of tower targeting, projectile flight, damage and gold income over waves 1-40 for a few representative builds; hero skill cooldown and build/upgrade/sell tests.
+- Dependencies: v0.3.0 shared test loader and wave simulation helpers (`tests/support/load-source.mjs`, `tests/simulation.test.mjs`).
+- Acceptance: reproducible report of leaks and gold per wave for each build; failing tests for every defect found; no balance changes in the same patch.
+- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed in v0.3.0).

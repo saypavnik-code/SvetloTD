@@ -10,7 +10,12 @@
 
 import type { DamageType } from '../data/towers';
 
-export type EffectType = 'slow' | 'armor_reduce' | 'poison' | 'aoe_slow';
+// A tower's area slow ('aoe_slow' special) is applied to each enemy as a plain
+// 'slow' by systems/HitEffects.ts, so it is not a separate effect type here.
+export type EffectType = 'slow' | 'armor_reduce' | 'poison';
+
+// Absorbs floating-point error when a whole damage point is due.
+const POISON_EPSILON = 1e-9;
 
 export interface StatusEffect {
   type:      EffectType;
@@ -22,6 +27,9 @@ export interface StatusEffect {
 
 export class StatusEffectSystem {
   readonly effects: StatusEffect[] = [];
+
+  // Poison damage accrued but not yet dealt (always < 1 after an update).
+  private _poisonCarry = 0;
 
   // ── Apply an incoming effect ───────────────────────────────────────────────
   apply(effect: Omit<StatusEffect, 'remaining'>): void {
@@ -52,14 +60,16 @@ export class StatusEffectSystem {
     takeDmg: (amount: number, type: DamageType) => void,
   ): { slowFraction: number; armorReduction: number } {
     const dt = delta / 1000;
-    let poisonAccum = 0;
 
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const e = this.effects[i];
+      // Count only the time the effect was still active, so total poison damage
+      // equals value * duration whatever the frame length.
+      const activeSecs = Math.min(dt, Math.max(0, e.remaining));
       e.remaining -= dt;
 
       if (e.type === 'poison') {
-        poisonAccum += e.value * dt; // damage per second → damage this frame
+        this._poisonCarry += e.value * activeSecs; // damage per second → damage this frame
       }
 
       if (e.remaining <= 0) {
@@ -67,10 +77,15 @@ export class StatusEffectSystem {
       }
     }
 
-    // Apply accumulated poison damage (chaos type bypasses armor matrix)
-    if (poisonAccum >= 1) {
-      takeDmg(Math.floor(poisonAccum), 'chaos');
+    // Deal whole points of poison damage (chaos type bypasses armor matrix) and
+    // keep the fraction for later frames: flooring each frame on its own would
+    // discard it and the poison would never tick at normal frame rates.
+    const wholeDamage = Math.floor(this._poisonCarry + POISON_EPSILON);
+    if (wholeDamage >= 1) {
+      this._poisonCarry -= wholeDamage;
+      takeDmg(wholeDamage, 'chaos');
     }
+    if (!this.hasPoison()) this._poisonCarry = 0;
 
     return {
       slowFraction:  this._maxSlow(),
@@ -102,5 +117,5 @@ export class StatusEffectSystem {
   hasArmorReduce(): boolean { return this.effects.some(e => e.type === 'armor_reduce'); }
   hasPoison():      boolean { return this.effects.some(e => e.type === 'poison'); }
 
-  reset(): void { this.effects.length = 0; }
+  reset(): void { this.effects.length = 0; this._poisonCarry = 0; }
 }
