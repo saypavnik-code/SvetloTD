@@ -14,7 +14,7 @@
 Audit status: v0.3.0 to v0.5.0 were authored from a Repomix snapshot of v0.2.1 and verified headlessly
 (unit tests, typecheck, game validation, production build, bundle budget). No browser run has been recorded
 since v0.2.1; add one to the smoke log below when it happens. v0.6.0 was authored from a Repomix snapshot of
-v0.5.0 and verified the same way.
+v0.5.0 and verified the same way; v0.7.0 was authored on the v0.6.0 tree and verified the same way.
 
 ## v0.2.1 migration regression gates
 
@@ -93,3 +93,19 @@ needs a browser. The browser smoke was not run for v0.4.0.
 Limits: hero skills, hero movement, the watchtower aura and selling are not simulated; towers are bought only
 during countdowns on fixed cells. The report states what a parked-hero, tower-only player achieves, not what a
 human achieves. The browser smoke was not run for v0.6.0.
+
+## v0.7.0 balance gates
+
+`tests/balance.test.mjs` covers the scenario and skill layer of the harness and the generated proposals:
+
+- `withScenario` replaces wave, enemy and starting-gold data for one run and restores it, also after an exception;
+  the levers reach the real systems (starting gold, bounty, wave size); `taper` keeps single-enemy waves at one enemy and
+  never makes a wave harder than today; the ledger invariants of v0.6.0 hold under every candidate;
+- the scripted hero rule: Q only with two or more enemies in the blast (a skipped Q must not start its cooldown), W only with a
+  tower in reach and an enemy alive, both respect their cooldowns, skills are off by default and runs stay deterministic;
+- every candidate meets the acceptance bar (at least 3 lives when wave 11 starts) with the scripted skills and candidate C also
+  with an idle hero; current data does not meet it;
+- `docs/BALANCE_PROPOSALS.md` equals the generator output (`npm run report:balance -- --write` after any data change).
+
+Limits: the skill rule is fixed, the hero never moves, the result depends on the four build rule lists, and the acceptance bar
+covers waves 1-10 only. No game data changed in v0.7.0. The browser smoke was not run for v0.7.0.

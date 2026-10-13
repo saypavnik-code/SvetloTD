@@ -49,6 +49,8 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 - Economy and balance work starts from `docs/ECONOMY_REPORT.md`. `tests/support/simulate.mjs` runs all 40 waves
   headlessly; regenerate the report with `npm run report:economy -- --write` whenever wave, enemy, tower,
   difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
+- A balance proposal is a scenario (`withScenario`), never an edit of the data files, until the owner picks one;
+  `npm run report:balance -- --write` regenerates `docs/BALANCE_PROPOSALS.md` and a test compares it.
 - Read private state only where the real path needs pointer input, and say so in a comment.
 - A regression test must fail on the unfixed code; confirm that before calling a defect fixed.
 

@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.6.0)
+## Current state (v0.7.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -12,6 +12,9 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - v0.6.0 added a deterministic headless economy and wave-pressure simulation and the generated
   `docs/ECONOMY_REPORT.md`. Its findings are measurements, not fixes: no balance data changed. The two open
   findings that need an owner decision are tracked as TODO tests in `tests/economy.test.mjs`.
+- v0.7.0 added scripted hero skills and temporary balance scenarios to the harness and the generated
+  `docs/BALANCE_PROPOSALS.md` (three measured opening candidates). Still no game data changed: it waits for the
+  owner's pick.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -38,7 +41,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   report (`npm run report:economy`), ledger invariants over every build and difficulty, report-sync test.
 - [ ] Opening balance (v0.6.0 finding, not fixed): with the default economy the best of 3080 tower layouts still
   leaks 6 of 8 enemies in wave 1 and every catalogued tower-only build is defeated by wave 3-4. The simulation
-  parks the hero and uses no skills, so this needs a hero-skill model and a human playtest before any data change.
+  parks the hero and uses no skills. v0.7.0 added the skill model (it barely helps: best wave-1 layout 5 leaks
+  instead of 6) and three candidates in `docs/BALANCE_PROPOSALS.md`. The owner's pick and one human playtest are
+  still needed before any data change.
+- [x] v0.7.0 scripted hero skills (Q when two or more enemies are in the blast, W with a tower in reach) and
+  scenario overrides (`withScenario`) in the headless harness; candidates A/B/C measured against an acceptance bar
+  (best build holds waves 1-10 with at least 3 lives); generated `docs/BALANCE_PROPOSALS.md` and `tests/balance.test.mjs`.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -94,16 +102,21 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.7.0 opening and economy proposal
+## Next sprint (recommended): v0.8.0 apply the owner's opening decision
 
-- Objective: turn the v0.6.0 findings into owner-approved data changes that the simulation validates. Priority: P0.
-- Scope: (1) extend `tests/support/simulate.mjs` with scripted hero play (Shockwave when enemies bunch up, Amber
-  Shield in range of towers) and re-measure the opening; (2) offer two or three proposals for starting gold, the
-  HP and counts of waves 1-5, bounty scaling, the difficulty bonus rule and a lumber sink, each with a generated
-  report; (3) apply only the proposal the owner picks and turn the two TODO tests into passing tests.
-- Dependencies: `tests/support/simulate.mjs`, `scripts/economy_report.mjs`, `docs/ECONOMY_REPORT.md`.
-- Acceptance: with the chosen data at least one catalogued build holds waves 1-10 on normal in the simulation;
-  every changed number is justified by the report; the report-sync test passes after regeneration.
+- Objective: write the chosen opening into the data and retire the tracked findings. Priority: P0.
+- Precondition: the owner picks candidate A, B or C of `docs/BALANCE_PROPOSALS.md` (or names other numbers) and
+  answers decisions 2 and 3 there (difficulty bonus, lumber). Without a pick this sprint does not start and no
+  balance data changes.
+- Scope: edit `src/config/difficulty.ts`, `src/data/waves.ts` and `src/data/enemies.ts` as picked; turn the two TODO
+  tests into passing tests according to decisions 2 and 3; change `tests/balance.test.mjs` so the chosen numbers are
+  regression tests of the data instead of scenarios; regenerate `docs/ECONOMY_REPORT.md` and
+  `docs/BALANCE_PROPOSALS.md` (or replace the latter by a short record of the decision).
+- Acceptance: on the new data at least one catalogued build holds waves 1-10 on normal with at least 3 lives with
+  both an idle hero and the scripted skills; both generated documents are in sync; every changed number is traceable
+  to the picked candidate.
+- After it: measure waves 11-40 the same way. Every candidate dies between waves 10 and 14, so the mid game is the
+  next balance problem, not a footnote.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
   since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and note the
   lives lost, to calibrate the simulation against a human.

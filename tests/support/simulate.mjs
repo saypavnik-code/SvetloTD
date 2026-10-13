@@ -2,7 +2,8 @@ import { loadModules } from './load-source.mjs';
 
 // Deterministic headless run of the real wave, economy, tower, projectile and hero code over all 40 waves.
 // It mirrors the per-frame order of GameScene.update (waves, hero, towers, projectiles). The hero is parked
-// on the base and only auto-attacks; hero skills Q/W and the watchtower aura are NOT simulated.
+// on the base and auto-attacks; with `skills: true` it also casts Q and W by a fixed rule (see `castSkills`).
+// The watchtower aura and hero movement are NOT simulated.
 
 const game = loadModules(
   'src/entities/Tower.ts',
@@ -24,10 +25,11 @@ const game = loadModules(
   'src/data/enemies.ts',
   'src/data/waves.ts',
   'src/data/mapData.ts',
+  'src/data/damageMatrix.ts',
   'src/config/difficulty.ts',
   'src/config.ts',
 );
-const { EventBus, GameEvents, GameConfig, TOWER_DEFS, WAVES, ENEMY_DEFS, MAP_DATA, ALL_PATHS, TILE_SIZE } = game;
+const { DAMAGE_MATRIX, DIFFICULTY_PRESETS, EventBus, GameEvents, GameConfig, TOWER_DEFS, WAVES, ENEMY_DEFS, MAP_DATA, ALL_PATHS, TILE_SIZE } = game;
 
 export { game };
 
@@ -96,7 +98,43 @@ export const BUILDS = {
 // oracle never spends (interest compounds); with `spend` it empties the purse every build phase.
 export const BASELINES = { none: { towers: false }, oracle_bank: { oracle: true }, oracle_spend: { oracle: true, spendAll: true } };
 
-export function simulate({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0 } = {}) {
+// A scenario temporarily replaces balance data so proposals can be measured without editing the data files.
+//   startGold            absolute starting gold for this scenario (default: the difficulty preset)
+//   waveTweak(wave)      returns the fields of that wave to override (count, hpMult, bonusGold, ...)
+//   enemyTweak(id, def)  returns the fields of that enemy type to override (bounty, hp, ...)
+export function withScenario(scenario, fn) {
+  const waveBackup = WAVES.map((w) => ({ ...w }));
+  const enemyBackup = Object.fromEntries(Object.entries(ENEMY_DEFS).map(([id, def]) => [id, { ...def }]));
+  try {
+    if (scenario?.waveTweak) WAVES.forEach((w) => Object.assign(w, scenario.waveTweak(w)));
+    if (scenario?.enemyTweak) for (const [id, def] of Object.entries(ENEMY_DEFS)) Object.assign(def, scenario.enemyTweak(id, def));
+    return fn();
+  } finally {
+    WAVES.forEach((w, i) => Object.assign(w, waveBackup[i]));
+    for (const [id, def] of Object.entries(ENEMY_DEFS)) Object.assign(def, enemyBackup[id]);
+  }
+}
+
+// Fixed hero skill rule: Q when two or more live enemies stand inside its blast radius, W when at least one
+// tower is inside its radius and an enemy is alive. Radii are read from the hero (private fields, harness only).
+export function castSkills(hero, enemies, towers, casts) {
+  const live = enemies.filter((e) => e.isActive && !e.isDead);
+  if (live.length === 0) return;
+  const qRadius = hero.Q_RADIUS ?? 90;
+  const wRadius = hero.W_RADIUS ?? 130;
+  if (hero.skillQCooldown === 0 && live.filter((e) => Math.hypot(e.x - hero.x, e.y - hero.y) <= qRadius).length >= 2) {
+    if (hero.useSkillQ(live)) casts.q++;
+  }
+  if (hero.skillWCooldown === 0 && towers.some((t) => Math.hypot(t.x - hero.x, t.y - hero.y) <= wRadius)) {
+    if (hero.useSkillW(towers)) casts.w++;
+  }
+}
+
+export function simulate(options = {}) {
+  return withScenario(options.scenario, () => runSimulation(options));
+}
+
+function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null } = {}) {
   const spec = baseline ? BASELINES[baseline] : { towers: true };
   const plan = build ? BUILDS[build] : (layout ? [] : null);
   if (baseline ? !spec : !plan) throw new Error(`unknown build/baseline: ${build ?? baseline}`);
@@ -108,7 +146,9 @@ export function simulate({ build = null, baseline = null, difficulty = 'normal',
   const interest = new game.InterestSystem(economy, lumber);
   const enemyPool = new game.ObjectPool(() => new game.Enemy(), 64);
   const projectilePool = new game.ObjectPool(() => new game.Projectile(), 64);
-  if (extraGold > 0) economy.addGold(extraGold);
+  const startDelta = extraGold + (scenario?.startGold == null ? 0 : scenario.startGold - DIFFICULTY_PRESETS[difficulty].startingGold);
+  if (startDelta > 0) economy.addGold(startDelta);
+  else if (startDelta < 0) economy.spendGold(-startDelta);
   const waves = new game.WaveManager(null, enemyPool);
   const { scene, click } = createScene();
   const builder = new game.BuildSystem(scene, economy, projectilePool, () => waves.activeEnemies);
@@ -174,46 +214,51 @@ export function simulate({ build = null, baseline = null, difficulty = 'normal',
     }
   };
 
-  for (const item of layout ?? []) {
-    builder.selectTowerType(item.id);
-    click(item.col, item.row);
-    spentPending += priceOf(item.id);
-  }
-  waves.startGame();
-  const dt = stepMs / 1000;
-  const maxSteps = Math.ceil((maxWave * 140) / dt);
-  for (let step = 0; step < maxSteps && !terminal; step++) {
-    time += dt;
-    waves.update(dt);
-    if (terminal) break;
-    if (heroUnit) heroUnit.update(dt, waves.activeEnemies);
-    if (spec.oracle) {
-      for (const e of waves.activeEnemies) if (e.isActive && !e.isDead) e.takeDamage(1e12, 'chaos');
-    } else {
-      builder.update(stepMs);
-      for (const projectile of [...projectilePool.activeItems]) {
-        projectile.update(stepMs);
-        projectile.tickSplash(dt);
-        if (projectile.isFinished) projectilePool.release(projectile);
+  const casts = { q: 0, w: 0 };
+  let result;
+  try {
+    for (const item of layout ?? []) {
+      builder.selectTowerType(item.id);
+      click(item.col, item.row);
+      spentPending += priceOf(item.id);
+    }
+    waves.startGame();
+    const dt = stepMs / 1000;
+    const maxSteps = Math.ceil((maxWave * 140) / dt);
+    for (let step = 0; step < maxSteps && !terminal; step++) {
+      time += dt;
+      waves.update(dt);
+      if (terminal) break;
+      if (heroUnit) heroUnit.update(dt, waves.activeEnemies);
+      if (heroUnit && skills) castSkills(heroUnit, waves.activeEnemies, builder.towers, casts);
+      if (spec.oracle) {
+        for (const e of waves.activeEnemies) if (e.isActive && !e.isDead) e.takeDamage(1e12, 'chaos');
+      } else {
+        builder.update(stepMs);
+        for (const projectile of [...projectilePool.activeItems]) {
+          projectile.update(stepMs);
+          projectile.tickSplash(dt);
+          if (projectile.isFinished) projectilePool.release(projectile);
+        }
       }
+      if (waves.state === 'countdown') {
+        if (spec.spendAll && economy.gold > 0) { spentPending += economy.gold; economy.spendGold(economy.gold); }
+        else if (plan) buyAccordingToPlan();
+      }
+      if (current && current.wave >= maxWave && current.cleared) break;
     }
-    if (waves.state === 'countdown') {
-      if (spec.spendAll && economy.gold > 0) { spentPending += economy.gold; economy.spendGold(economy.gold); }
-      else if (plan) buyAccordingToPlan();
-    }
-    if (current && current.wave >= maxWave && current.cleared) break;
+
+    result = {
+      build: build ?? baseline, difficulty, result: terminal ?? 'unfinished', reachedWave: current ? current.wave : 0,
+      livesLeft: economy.lives, goldEnd: economy.gold, lumberEnd: lumber.lumber, seconds: Math.round(time),
+      towersEnd: builder.towers.length, investedEnd: towerValue(), casts, rows,
+    };
+  } finally {
+    for (const [event, handler] of handlers) EventBus.off(event, handler);
+    waves.destroy(); interest.destroy(); economy.destroy();
+    for (const t of [...builder.towers]) t.destroy();
+    GameConfig.setDifficulty('normal');
   }
-
-  const result = {
-    build: build ?? baseline, difficulty, result: terminal ?? 'unfinished', reachedWave: current ? current.wave : 0,
-    livesLeft: economy.lives, goldEnd: economy.gold, lumberEnd: lumber.lumber, seconds: Math.round(time),
-    towersEnd: builder.towers.length, investedEnd: towerValue(), rows,
-  };
-
-  for (const [event, handler] of handlers) EventBus.off(event, handler);
-  waves.destroy(); interest.destroy(); economy.destroy();
-  for (const t of [...builder.towers]) t.destroy();
-  GameConfig.setDifficulty('normal');
   return result;
 }
 

@@ -71,3 +71,6 @@ Do not mistake a shim-only typecheck for runtime verification.
   idle hero cannot bank attacks.
 - `tests/support/simulate.mjs` is the headless economy harness (real wave, tower, hero and build code, no
   randomness); `scripts/economy_report.mjs` renders `docs/ECONOMY_REPORT.md` from it.
+- Scenarios (`withScenario` in the harness) replace wave, enemy and starting-gold data for one run and restore it in a
+  `finally`; `scripts/balance_proposals.mjs` renders `docs/BALANCE_PROPOSALS.md` from them. The scripted hero skill rule
+  (`castSkills`) lives in the harness, not in the game.
