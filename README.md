@@ -27,7 +27,7 @@ npm run build
 python3 scripts/check_bundle.py
 ```
 
-`npm run test:unit` runs the headless suites in `tests/` (runtime invariants, data, wave simulation, combat);
+`npm run test:unit` runs the headless suites in `tests/` (runtime invariants, data, wave simulation, combat, economy);
 `docs/QA.md` lists what they cover and what they do not.
 `npm install` should create a `package-lock.json` if one does not already exist.
 Commit the lockfile for reproducibility; then prefer `npm ci` in CI.

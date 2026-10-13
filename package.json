@@ -1,7 +1,7 @@
 {
   "name": "svetlogorsk-td",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "deploy": "npm run build && gh-pages -d dist",
     "typecheck": "tsc --noEmit",
     "validate": "python3 scripts/validate_game.py",
-    "test:unit": "node --test tests/*.test.mjs"
+    "test:unit": "node --test tests/*.test.mjs",
+    "report:economy": "node scripts/economy_report.mjs"
   },
   "dependencies": {
     "phaser": "^3.87.0"

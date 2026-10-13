@@ -96,7 +96,9 @@ export class Hero {
     }
 
     // ── Cooldowns (all game-speed adjusted) ─────────────────────────────────
-    this._attackCooldown = Math.max(0, this._attackCooldown - dt);
+    // The attack cooldown may go negative: the overshoot of this frame is carried into the next
+    // interval so the attack rate does not depend on the frame length.
+    this._attackCooldown -= dt;
     this.skillQCooldown  = Math.max(0, this.skillQCooldown  - dt);
     this.skillWCooldown  = Math.max(0, this.skillWCooldown  - dt);
     this._flashTimer     = Math.max(0, this._flashTimer     - dt);
@@ -115,10 +117,12 @@ export class Hero {
       }
       if (this._attackTarget) {
         this._attackTarget.takeDamage(this.ATTACK_DAMAGE, this.DAMAGE_TYPE);
-        this._attackCooldown = this.ATTACK_INTERVAL;
+        this._attackCooldown += this.ATTACK_INTERVAL;
         this._flashTimer     = 0.15;
       }
     }
+    // An idle hero cannot bank attacks.
+    if (this._attackCooldown < 0) this._attackCooldown = 0;
   }
 
   // ── Skill Q — Ударная волна ────────────────────────────────────────────────

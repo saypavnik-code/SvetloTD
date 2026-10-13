@@ -13,7 +13,8 @@
 
 Audit status: v0.3.0 to v0.5.0 were authored from a Repomix snapshot of v0.2.1 and verified headlessly
 (unit tests, typecheck, game validation, production build, bundle budget). No browser run has been recorded
-since v0.2.1; add one to the smoke log below when it happens.
+since v0.2.1; add one to the smoke log below when it happens. v0.6.0 was authored from a Repomix snapshot of
+v0.5.0 and verified the same way.
 
 ## v0.2.1 migration regression gates
 
@@ -72,3 +73,23 @@ scene (no rendering). It covers:
 Limits: input handlers, rendering, HUD/panel layout, pause/resume and the scene lifecycle are not
 executed; `_place`, `_selectTower` and `_target` are read or driven directly where the real input path
 needs a browser. The browser smoke was not run for v0.4.0.
+
+## v0.6.0 economy gates
+
+`tests/economy.test.mjs` runs the real wave, economy, tower, projectile, hero and build code for all 40 waves
+(`tests/support/simulate.mjs`, 30 Hz, no randomness). It covers:
+
+- a run is reproducible bit for bit; the oracle run clears 40 waves with no leaks; oracle income is identical at
+  20, 60 and 144 fps;
+- ledger invariants for every catalogued build, baseline and difficulty (42 runs): gold before a wave equals gold
+  after the previous award minus purchases, lives carry over, kills plus leaks equal the wave count,
+  interest is `floor(gold x rate)`, the bonus is `max(formula, bonusGold)`;
+- `docs/ECONOMY_REPORT.md` equals the generator output (`npm run report:economy -- --write` after any change to
+  wave, enemy, tower, difficulty or economy data);
+- `tests/combat.test.mjs`: hero auto-attack rate at 4-100 ms frames and no banked attacks;
+- two TODO tests record findings that need an owner decision (dead difficulty bonus parameters, lumber without a
+  sink). A TODO test is reported but does not fail the suite.
+
+Limits: hero skills, hero movement, the watchtower aura and selling are not simulated; towers are bought only
+during countdowns on fixed cells. The report states what a parked-hero, tower-only player achieves, not what a
+human achieves. The browser smoke was not run for v0.6.0.

@@ -67,3 +67,7 @@ Do not mistake a shim-only typecheck for runtime verification.
   priority to the new tower in `BuildSystem.upgradeSelected()`.
 - `tests/combat.test.mjs` drives entities with a chainable Phaser stand-in; it reads private state
   (`_target`, `_place`) only where the real path needs pointer input.
+- `Hero.update()` uses the same cooldown model for its auto-attack (v0.6.0): the overshoot is carried and an
+  idle hero cannot bank attacks.
+- `tests/support/simulate.mjs` is the headless economy harness (real wave, tower, hero and build code, no
+  randomness); `scripts/economy_report.mjs` renders `docs/ECONOMY_REPORT.md` from it.

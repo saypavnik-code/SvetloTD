@@ -284,6 +284,31 @@ test('Shockwave hits living enemies in radius, slows them and respects its coold
   } finally { EventBus.off(GameEvents.HERO_SKILL_Q, onSkill); }
 });
 
+test('hero auto-attack rate is the nominal rate whatever the frame length, and an idle hero cannot bank attacks', () => {
+  const interval = 0.83;                                  // Hero.ATTACK_INTERVAL
+  const hitsIn = (stepMs, seconds) => {
+    const hero = new game.Hero();
+    const enemy = new game.Enemy();
+    enemy.init('golem', game.PATH_TOP);                   // heavy armor: chaos damage is not modified
+    enemy.x = hero.x + 20; enemy.y = hero.y; enemy.hp = 1e9;
+    const dt = stepMs / 1000;
+    for (let t = 0; t < seconds; t += dt) hero.update(dt, [enemy]);
+    return Math.round((1e9 - enemy.hp) / 15);             // Hero.ATTACK_DAMAGE
+  };
+  const nominal = 60 / interval;
+  for (const stepMs of [4, 16.667, 33.3, 50, 100]) {
+    const hits = hitsIn(stepMs, 60);
+    assert(Math.abs(hits - nominal) <= 1.5, `${stepMs} ms frames: ${hits} hits in 60 s, nominal ${nominal.toFixed(1)}`);
+  }
+  const idle = new game.Hero();
+  for (let t = 0; t < 30; t += 0.1) idle.update(0.1, []);  // 30 s without a target
+  const enemy = new game.Enemy();
+  enemy.init('golem', game.PATH_TOP);
+  enemy.x = idle.x + 20; enemy.y = idle.y; enemy.hp = 1e9;
+  for (let t = 0; t < 1; t += 0.1) idle.update(0.1, [enemy]);
+  assert((1e9 - enemy.hp) / 15 <= 2, 'an idle hero must not release banked attacks');
+});
+
 test('Amber Shield buffs towers in radius by 25% for 6 s and refreshing does not stack', () => {
   const hero = new game.Hero();
   const near = setupTower('arrow_t1', 7, 7);        // ~85 px from the hero at the base centre

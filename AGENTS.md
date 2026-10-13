@@ -46,12 +46,16 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
   a browser run is recorded in `docs/QA.md`.
 - Drive time with explicit steps and compare several frame lengths (4-100 ms, and x3 game speed). Simulate
   waves headlessly through `WaveManager.update(dt)` as in `tests/simulation.test.mjs`.
+- Economy and balance work starts from `docs/ECONOMY_REPORT.md`. `tests/support/simulate.mjs` runs all 40 waves
+  headlessly; regenerate the report with `npm run report:economy -- --write` whenever wave, enemy, tower,
+  difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
 - Read private state only where the real path needs pointer input, and say so in a comment.
 - A regression test must fail on the unfixed code; confirm that before calling a defect fixed.
 
 ## Review checklist: defect classes already found here
 
-1. Frame-length dependence: a per-frame `floor`, a cooldown reset that drops the overshoot, or a state
+1. Frame-length dependence (towers v0.4.0, hero auto-attack v0.6.0): a per-frame `floor`, a cooldown reset that
+   drops the overshoot, or a state
    machine advanced inside an event handler. Test at several step sizes.
 2. Event ordering: listeners run in registration order. One subscriber must not finish a state machine
    before another has reacted to the same event (defeat vs wave clear).

@@ -2,13 +2,16 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.5.0)
+## Current state (v0.6.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
   a browser is still open, including the two P0 items below.
 - v0.3.0 and v0.4.0 fixed the confirmed defects listed in the P0 section; the defect classes are catalogued in
   `AGENTS.md` so they are checked in future changes.
+- v0.6.0 added a deterministic headless economy and wave-pressure simulation and the generated
+  `docs/ECONOMY_REPORT.md`. Its findings are measurements, not fixes: no balance data changed. The two open
+  findings that need an owner decision are tracked as TODO tests in `tests/economy.test.mjs`.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -29,6 +32,13 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.4.0 the sell button shows the real refund for the current phase (it printed the method's source code).
 - [x] v0.4.0 selling at 70% no longer loses a gold to floating-point rounding (an upgraded Wachturm refunded 118 instead of 119).
 - [x] v0.4.0 regression tests for towers, projectiles, hero skills and build/upgrade/sell economy.
+- [x] v0.6.0 hero auto-attack rate no longer depends on frame length (it dropped the frame overshoot on every
+  attack: 67 instead of 72 attacks per minute at 100 ms frames).
+- [x] v0.6.0 deterministic headless economy and wave-pressure simulation (`tests/support/simulate.mjs`), generated
+  report (`npm run report:economy`), ledger invariants over every build and difficulty, report-sync test.
+- [ ] Opening balance (v0.6.0 finding, not fixed): with the default economy the best of 3080 tower layouts still
+  leaks 6 of 8 enemies in wave 1 and every catalogued tower-only build is defeated by wave 3-4. The simulation
+  parks the hero and uses no skills, so this needs a hero-skill model and a human playtest before any data change.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -43,8 +53,10 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 ## P1 - product/quality gate
 
 - [ ] Replace legacy Phaser type shim with official package declarations.
-- [ ] Remaining tests: HUD/panel/scene flows, pause/resume and restart lifecycle, audio, persistence (covered so far: waves v0.3.0; towers, projectiles, hero skills, build/upgrade/sell v0.4.0).
-- [ ] Playtest and numerically rebalance levels 21-40 and all difficulty presets.
+- [ ] Remaining tests: HUD/panel/scene flows, pause/resume and restart lifecycle, audio, persistence (covered so far: waves v0.3.0; towers, projectiles, hero skills, build/upgrade/sell v0.4.0; economy ledger and wave pressure v0.6.0).
+- [ ] Playtest and numerically rebalance levels 21-40 and all difficulty presets. Start from `docs/ECONOMY_REPORT.md`:
+  dead difficulty bonus parameters (`max(formula, bonusGold)`), lumber without a sink, interest worth 55% of income
+  when nothing is spent, bounties that do not scale with wave HP.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
 - [ ] Implement explicit ownership of EventBus subscriptions in every scene/UI component.
@@ -80,15 +92,21 @@ until the corresponding tasks are tested and accepted.
 - [ ] Decide whether opt-in persistent meta bonuses belong in balanced multiplayer.
 - [ ] Replace hand-written Phaser shim with official type definitions in a dedicated patch.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
-- [ ] Add benchmark and economy-simulation tests before rebalancing 21-40.
+- [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.6.0 economy and wave-pressure simulation
+## Next sprint (recommended): v0.7.0 opening and economy proposal
 
-- Objective: measure, do not guess, before any rebalancing. Priority: P0/P1.
-- Scope: deterministic headless simulation of gold income and wave pressure over waves 1-40 for a few representative builds (tower, projectile and economy primitives are covered by `tests/combat.test.mjs` since v0.4.0).
-- Dependencies: the shared test loader and helpers (`tests/support/load-source.mjs`, `tests/simulation.test.mjs`, `tests/combat.test.mjs`).
-- Acceptance: reproducible report of leaks and gold per wave for each build; failing tests for every defect found; no balance changes in the same patch.
-- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed in v0.3.0-v0.5.0); record it in the `docs/QA.md` smoke log.
+- Objective: turn the v0.6.0 findings into owner-approved data changes that the simulation validates. Priority: P0.
+- Scope: (1) extend `tests/support/simulate.mjs` with scripted hero play (Shockwave when enemies bunch up, Amber
+  Shield in range of towers) and re-measure the opening; (2) offer two or three proposals for starting gold, the
+  HP and counts of waves 1-5, bounty scaling, the difficulty bonus rule and a lumber sink, each with a generated
+  report; (3) apply only the proposal the owner picks and turn the two TODO tests into passing tests.
+- Dependencies: `tests/support/simulate.mjs`, `scripts/economy_report.mjs`, `docs/ECONOMY_REPORT.md`.
+- Acceptance: with the chosen data at least one catalogued build holds waves 1-10 on normal in the simulation;
+  every changed number is justified by the report; the report-sync test passes after regeneration.
+- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
+  since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and note the
+  lives lost, to calibrate the simulation against a human.
 - Secondary candidates, in order: explicit EventBus subscription ownership in UI components; official Phaser type
   declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
   structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
