@@ -53,6 +53,8 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
   `npm run report:balance -- --write` regenerates `docs/BALANCE_PROPOSALS.md` and a test compares it.
 - Do not hardcode balance numbers (counts, gold, bounties) in unrelated tests: read them from the data, so a rebalance
   only touches the tests that pin the decision (`tests/balance.test.mjs`).
+- Scenarios can override waves, enemies, towers and difficulty presets (`waveTweak`, `enemyTweak`, `towerTweak`,
+  `presetTweak`). Wave-shape proposals go through `retaper` and `taperWave`, never through a copy of the taper rule.
 - Read private state only where the real path needs pointer input, and say so in a comment.
 - A regression test must fail on the unfixed code; confirm that before calling a defect fixed.
 

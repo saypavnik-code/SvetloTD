@@ -74,14 +74,28 @@ const LATE_WAVES: WaveData[] = Array.from({ length: 20 }, (_, index) => {
 // their count of 1. Edit the constants to retune the opening; waves from `until` on are untouched.
 export const OPENING_TAPER = { hp: 0.4, count: 0.8, until: 30 } as const;
 
-function taperWave(wave: WaveData): WaveData {
-  const t = Math.min(1, (wave.wave - 1) / (OPENING_TAPER.until - 1));
-  if (t >= 1) return wave;
+export interface WaveTaper {
+  hp: number;      // HP fraction at wave 1
+  count: number;   // count fraction at wave 1
+  until: number;   // wave at which both fractions have reached `end`
+  end?: number;    // fraction from `until` on (default 1: the written values)
+}
+
+// Pure function so balance proposals can try other tapers on BASE_WAVES (see tests/support/simulate.mjs).
+export function taperWave(wave: WaveData, taper: WaveTaper = OPENING_TAPER): WaveData {
+  const end = taper.end ?? 1;
+  const t = Math.min(1, (wave.wave - 1) / (taper.until - 1));
+  if (t >= 1 && end === 1) return wave;
+  const hpFactor = taper.hp + (end - taper.hp) * t;
+  const countFactor = taper.count + (end - taper.count) * t;
   return {
     ...wave,
-    hpMult: Math.round(wave.hpMult * (OPENING_TAPER.hp + (1 - OPENING_TAPER.hp) * t) * 100) / 100,
-    count: wave.count === 1 ? 1 : Math.max(1, Math.round(wave.count * (OPENING_TAPER.count + (1 - OPENING_TAPER.count) * t))),
+    hpMult: Math.round(wave.hpMult * hpFactor * 100) / 100,
+    count: wave.count === 1 ? 1 : Math.max(1, Math.round(wave.count * countFactor)),
   };
 }
 
-export const WAVES: WaveData[] = [...EARLY_WAVES, ...LATE_WAVES].map(taperWave);
+// The waves as written, before the taper.
+export const BASE_WAVES: WaveData[] = [...EARLY_WAVES, ...LATE_WAVES];
+
+export const WAVES: WaveData[] = BASE_WAVES.map((wave) => taperWave(wave));

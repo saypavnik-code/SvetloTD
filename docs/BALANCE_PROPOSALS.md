@@ -17,29 +17,30 @@ owner picks one and a later patch writes the numbers into the data files. Browse
 - Same simulation as `docs/ECONOMY_REPORT.md` (real code, 30 Hz, deterministic), difficulty normal unless stated, the four catalogued
   tower builds. Two hero modes: `idle` (parked on the base, auto-attack only) and `skills` (also casts Q when two or more
   enemies are inside its blast radius, W when a tower is inside its radius). Hero movement and the watchtower are not simulated.
-- **Acceptance:** the best build still has at least 3 lives when wave 11 starts, i.e. it held waves 1-10. It is a bar for
-  the opening only; it says nothing about waves 11-40.
-- `cleared` counts waves that ended (leaks allowed). `lives@11` is the lives left when wave 11 starts (0 if defeated earlier).
-- Results depend on the four build rule lists in `tests/support/simulate.mjs`; a smarter player does better by an unmeasured amount.
+- **Acceptance bars:** the best build still has at least 3 lives when wave 11 starts (it held waves 1-10, the opening bar) or
+  when wave 21 starts (waves 1-20, the mid-game bar).
+- `cleared` counts waves that ended (leaks allowed). `lives@11` and `lives@21` are the lives left when that wave starts (0 if defeated earlier).
+- Results depend on the four build rule lists in `tests/support/simulate.mjs`. None of them kills the fortified wave bosses reliably
+  (a cannon-heavy probe did not either), so a human who plans for the bosses does better by an unmeasured amount.
 
 ## Current data (normal)
 
-Acceptance: idle hero **PASS**, scripted skills **PASS**.
+Opening bar: idle hero **PASS**, scripted skills **PASS**. Mid-game bar: idle hero **FAIL**, scripted skills **FAIL**.
 
-| build | hero | outcome | cleared | lives@11 | Q casts | W casts |
-| --- | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 11 | 10 | 10 | 0 | 0 |
-| arrow | skills | defeated in wave 14 | 13 | 12 | 4 | 14 |
-| cannon_arrow | idle | defeated in wave 6 | 5 | 0 | 0 | 0 |
-| cannon_arrow | skills | defeated in wave 11 | 10 | 1 | 7 | 11 |
-| magic_slow | idle | defeated in wave 4 | 3 | 0 | 0 | 0 |
-| magic_slow | skills | defeated in wave 8 | 7 | 0 | 6 | 8 |
-| balanced | idle | defeated in wave 9 | 8 | 0 | 0 | 0 |
-| balanced | skills | defeated in wave 11 | 10 | 7 | 5 | 11 |
+| build | hero | outcome | cleared | lives@11 | lives@21 | Q casts | W casts |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| arrow | idle | defeated in wave 11 | 10 | 10 | 0 | 0 | 0 |
+| arrow | skills | defeated in wave 14 | 13 | 12 | 0 | 4 | 14 |
+| cannon_arrow | idle | defeated in wave 6 | 5 | 0 | 0 | 0 | 0 |
+| cannon_arrow | skills | defeated in wave 11 | 10 | 1 | 0 | 7 | 11 |
+| magic_slow | idle | defeated in wave 4 | 3 | 0 | 0 | 0 | 0 |
+| magic_slow | skills | defeated in wave 8 | 7 | 0 | 0 | 6 | 8 |
+| balanced | idle | defeated in wave 9 | 8 | 0 | 0 | 0 | 0 |
+| balanced | skills | defeated in wave 11 | 10 | 7 | 0 | 5 | 11 |
 
 ### Other difficulties (informational, waves 1-11 only)
 
-| difficulty | hero | best build | lives@11 | acceptance |
+| difficulty | hero | best build | lives@11 | opening bar |
 | --- | --- | --- | --- | --- |
 | hard | idle | arrow | 0 | FAIL |
 | hard | skills | arrow | 0 | FAIL |
@@ -56,6 +57,69 @@ Best build: `arrow`, defeated in wave 14, 13 waves cleared. Waves in which it le
 | 10 | boss_goliath | 1 of 1 | 5 | 7 | 1070 |
 | 11 | grunt | 11 of 16 | 11 | 8 | 1240 |
 | 14 | golem | 1 of 7 | 2 | 10 | 1700 |
+
+## Open proposals for the mid game (waves 11-40)
+
+| proposal | what changes | idle hero | scripted skills |
+| --- | --- | --- | --- |
+| D: Softer curve and doubled wave bonus | HP and count from 40% / 80% at wave 1, linear to 30% at wave 40; wave bonus x2; upgrade costs unchanged | PASS: arrow, 10 lives at wave 21, defeated in wave 25 | PASS: arrow, 10 lives at wave 21, defeated in wave 28 |
+| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: arrow, 4 lives at wave 21, defeated in wave 24 | PASS: arrow, 10 lives at wave 21, defeated in wave 24 |
+| F: Waves only | HP and count from 40% / 80% at wave 1, linear to 20% at wave 40; wave bonus unchanged; upgrade costs unchanged | FAIL: arrow, 0 lives at wave 21, defeated in wave 20 | PASS: arrow, 4 lives at wave 21, defeated in wave 25 |
+
+### Proposal D: all builds
+
+Waves keep getting harder, but a lot slower; the wave bonus pays twice. Towers and upgrades are untouched.
+
+| build | hero | outcome | cleared | lives@11 | lives@21 |
+| --- | --- | --- | --- | --- | --- |
+| arrow | idle | defeated in wave 25 | 24 | 20 | 10 |
+| arrow | skills | defeated in wave 28 | 27 | 20 | 10 |
+| cannon_arrow | idle | defeated in wave 15 | 14 | 6 | 0 |
+| cannon_arrow | skills | defeated in wave 20 | 19 | 17 | 0 |
+| magic_slow | idle | defeated in wave 6 | 5 | 0 | 0 |
+| magic_slow | skills | defeated in wave 16 | 15 | 11 | 0 |
+| balanced | idle | defeated in wave 16 | 15 | 12 | 0 |
+| balanced | skills | defeated in wave 20 | 19 | 18 | 0 |
+
+### Proposal E: all builds
+
+The curve is only half as soft as in D; the economy answers with a 1.5x bonus and tier-2/3 upgrades that cost 30% less.
+
+| build | hero | outcome | cleared | lives@11 | lives@21 |
+| --- | --- | --- | --- | --- | --- |
+| arrow | idle | defeated in wave 24 | 23 | 15 | 4 |
+| arrow | skills | defeated in wave 24 | 23 | 20 | 10 |
+| cannon_arrow | idle | defeated in wave 16 | 15 | 14 | 0 |
+| cannon_arrow | skills | defeated in wave 20 | 19 | 20 | 0 |
+| magic_slow | idle | defeated in wave 8 | 7 | 0 | 0 |
+| magic_slow | skills | defeated in wave 19 | 18 | 13 | 0 |
+| balanced | idle | defeated in wave 16 | 15 | 18 | 0 |
+| balanced | skills | defeated in wave 24 | 23 | 20 | 1 |
+
+### Proposal F: all builds
+
+Same softness as D at the end, but no economy change. Shows how far the curve alone can go.
+
+| build | hero | outcome | cleared | lives@11 | lives@21 |
+| --- | --- | --- | --- | --- | --- |
+| arrow | idle | defeated in wave 20 | 19 | 15 | 0 |
+| arrow | skills | defeated in wave 25 | 24 | 15 | 4 |
+| cannon_arrow | idle | defeated in wave 11 | 10 | 5 | 0 |
+| cannon_arrow | skills | defeated in wave 16 | 15 | 16 | 0 |
+| magic_slow | idle | defeated in wave 6 | 5 | 0 | 0 |
+| magic_slow | skills | defeated in wave 13 | 12 | 6 | 0 |
+| balanced | idle | defeated in wave 15 | 14 | 9 | 0 |
+| balanced | skills | defeated in wave 20 | 19 | 16 | 0 |
+
+## What-ifs for the design questions (not proposals, waves 1-20)
+
+Each row changes one thing against the current data and reports the best build.
+
+| what-if | idle hero | scripted skills |
+| --- | --- | --- |
+| W0: Current data | FAIL: arrow, 0 lives at wave 21, defeated in wave 11 | FAIL: arrow, 0 lives at wave 21, defeated in wave 14 |
+| W1: Tier-2/3 upgrades cost 30% less | FAIL: arrow, 0 lives at wave 21, defeated in wave 15 | FAIL: arrow, 0 lives at wave 21, defeated in wave 16 |
+| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | FAIL: arrow, 0 lives at wave 21, defeated in wave 16 | FAIL: arrow, 0 lives at wave 21, defeated in wave 17 |
 
 ## Tower efficiency (analytic, from the data)
 
@@ -77,43 +141,44 @@ targeting are ignored, so it is an aid for reading the simulation, not a result.
 Damage types in the matrix that no attacking tower uses: `normal` (x1.5 against medium armor).
 Best tower against medium armor, the armor of the most common enemy: `arrow_t1` at 0.180 dps per gold.
 
-## Pressure index (analytic aid, waves 1-20)
+## Pressure index (analytic aid, waves 1-20, current data and open proposals)
 
 Affordable damage per second divided by the damage per second needed to kill the wave in 10 s. Affordable = every gold
 earned so far (starting gold plus bounty and bonus of all earlier waves, nothing wasted) spent on tier-1 arrow towers at
 0.18 dps per gold against medium armor, plus the idle hero. The 10 s window is read from the wave-1 run. A value
 below 1 means the wave cannot be killed by what the economy could have bought. It ignores armor, range and focus.
 
-| wave | enemy | current |
-| --- | --- | --- |
-| 1 | grunt x6 | 3.00 |
-| 2 | grunt x8 | 2.05 |
-| 3 | runner x12 | 3.61 |
-| 4 | grunt x10 | 1.60 |
-| 5 | golem x2 | 3.30 |
-| 6 | grunt x12 | 1.17 |
-| 7 | wyvern x7 | 5.47 |
-| 8 | runner x17 | 2.61 |
-| 9 | golem x4 | 1.50 |
-| 10 | boss_goliath x1 | 1.93 |
-| 11 | grunt x16 | 0.90 |
-| 12 | wyvern x11 | 2.59 |
-| 13 | runner x26 | 1.89 |
-| 14 | golem x7 | 0.75 |
-| 15 | boss_goliath x1 | 1.13 |
-| 16 | grunt x23 | 0.52 |
-| 17 | wyvern x14 | 1.42 |
-| 18 | golem x11 | 0.38 |
-| 19 | runner x37 | 1.31 |
-| 20 | boss_goliath x1 | 0.48 |
+| wave | enemy | current | proposal D | proposal E | proposal F |
+| --- | --- | --- | --- | --- | --- |
+| 1 | grunt x6 | 3.00 | 3.00 | 3.00 | 3.00 |
+| 2 | grunt x8 | 2.05 | 2.23 | 2.19 | 2.18 |
+| 3 | runner x12 | 3.61 | 4.31 | 3.95 | 3.97 |
+| 4 | grunt x10 | 1.60 | 2.32 | 2.13 | 2.12 |
+| 5 | golem x2 | 3.30 | 4.61 | 4.11 | 4.14 |
+| 6 | grunt x12 | 1.17 | 2.15 | 1.68 | 1.87 |
+| 7 | wyvern x7 | 5.47 | 10.50 | 8.56 | 8.75 |
+| 8 | runner x17 | 2.61 | 5.49 | 4.11 | 4.51 |
+| 9 | golem x4 | 1.50 | 3.54 | 2.20 | 3.03 |
+| 10 | boss_goliath x1 | 1.93 | 3.55 | 2.96 | 3.08 |
+| 11 | grunt x16 | 0.90 | 2.40 | 1.76 | 1.98 |
+| 12 | wyvern x11 | 2.59 | 7.48 | 5.15 | 6.18 |
+| 13 | runner x26 | 1.89 | 5.50 | 3.89 | 4.85 |
+| 14 | golem x7 | 0.75 | 2.30 | 1.49 | 1.95 |
+| 15 | boss_goliath x1 | 1.13 | 2.55 | 1.94 | 2.15 |
+| 16 | grunt x23 | 0.52 | 1.93 | 1.27 | 1.72 |
+| 17 | wyvern x14 | 1.42 | 5.46 | 3.61 | 5.13 |
+| 18 | golem x11 | 0.38 | 1.52 | 0.97 | 1.49 |
+| 19 | runner x37 | 1.31 | 5.46 | 3.45 | 5.02 |
+| 20 | boss_goliath x1 | 0.48 | 1.28 | 0.90 | 1.07 |
 
 ## Open decisions
 
-1. **Mid game (waves 11-40).** The opening is addressed; the best build still loses where the table above says. Needs its own
-   measurement and a proposal.
-2. **Lumber sink.** Lumber is earned and never spent. The `LumberManager` header comment describes the intended sink (mercenaries
+1. **Mid game.** Pick proposal D, E or F, or name other numbers. Applying D or F edits `OPENING_TAPER` in `src/data/waves.ts` (`until` and
+   `end`) and the `bonusGold` values; E also lowers the `cost` of the tier-2/3 towers in `src/data/towers.ts`. The bars only cover waves
+   1-20: waves 21-40 follow the same curve but are not part of an acceptance bar yet.
+2. **Upgrades and damage types.** The what-if rows give the numbers: cheaper upgrades and a `normal`-damage tower are each a
+   design decision, not a tuning detail. See the efficiency table.
+3. **Lumber sink.** Lumber is earned and never spent. The `LumberManager` header comment describes the intended sink (mercenaries
    and tier-3 towers), which needs new content.
-3. **Damage types and upgrades.** See the efficiency table: the type listed as unused has no tower, and a tier-2 upgrade
-   gives less damage per gold than another tier-1 tower. Whether that is intended is a design decision.
-4. **Calibration.** The skill rule is fixed and the hero never moves. One human play of waves 1-3 with skills (lives lost per wave)
-   tells how pessimistic `idle` and `skills` are, and whether the new opening is now too easy for a human.
+4. **Calibration.** The skill rule is fixed, the hero never moves and no build plans for the bosses. One human play of waves 1-3
+   and one of the wave 10 boss tell how pessimistic `idle` and `skills` are before any proposal is applied.

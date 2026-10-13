@@ -102,16 +102,24 @@ export const BASELINES = { none: { towers: false }, oracle_bank: { oracle: true 
 //   startGold            absolute starting gold for this scenario (default: the difficulty preset)
 //   waveTweak(wave)      returns the fields of that wave to override (count, hpMult, bonusGold, ...)
 //   enemyTweak(id, def)  returns the fields of that enemy type to override (bounty, hp, ...)
+//   towerTweak(id, def)  returns the fields of that tower to override (cost, damage, damageType, ...)
+//   presetTweak(id, cfg) returns the fields of that difficulty preset to override (interestRate, ...)
+// Only existing fields may be overridden; everything is restored in a `finally`.
 export function withScenario(scenario, fn) {
-  const waveBackup = WAVES.map((w) => ({ ...w }));
-  const enemyBackup = Object.fromEntries(Object.entries(ENEMY_DEFS).map(([id, def]) => [id, { ...def }]));
+  const targets = [
+    [WAVES, scenario?.waveTweak ? (w) => scenario.waveTweak(w) : null],
+    [Object.values(ENEMY_DEFS), scenario?.enemyTweak ? (def) => scenario.enemyTweak(def.id, def) : null],
+    [Object.entries(TOWER_DEFS).map(([id, def]) => Object.assign(def, { __id: id })), scenario?.towerTweak ? (def) => scenario.towerTweak(def.__id, def) : null],
+    [Object.entries(DIFFICULTY_PRESETS).map(([id, cfg]) => Object.assign(cfg, { __id: id })), scenario?.presetTweak ? (cfg) => scenario.presetTweak(cfg.__id, cfg) : null],
+  ];
+  const backups = targets.map(([objects]) => objects.map((o) => ({ ...o })));
   try {
-    if (scenario?.waveTweak) WAVES.forEach((w) => Object.assign(w, scenario.waveTweak(w)));
-    if (scenario?.enemyTweak) for (const [id, def] of Object.entries(ENEMY_DEFS)) Object.assign(def, scenario.enemyTweak(id, def));
+    targets.forEach(([objects, tweak]) => { if (tweak) objects.forEach((o) => Object.assign(o, tweak(o))); });
     return fn();
   } finally {
-    WAVES.forEach((w, i) => Object.assign(w, waveBackup[i]));
-    for (const [id, def] of Object.entries(ENEMY_DEFS)) Object.assign(def, enemyBackup[id]);
+    targets.forEach(([objects], i) => objects.forEach((o, j) => Object.assign(o, backups[i][j])));
+    for (const def of Object.values(TOWER_DEFS)) delete def.__id;
+    for (const cfg of Object.values(DIFFICULTY_PRESETS)) delete cfg.__id;
   }
 }
 

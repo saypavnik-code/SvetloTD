@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.8.0)
+## Current state (v0.9.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -17,6 +17,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - v0.8.0 wrote the owner's decisions of 2026-10-11 into the data: opening candidate C (starting gold 300 / 260 / 200,
   bounties x1.5, `OPENING_TAPER` for waves 1-29) and the wave bonus `round(bonusGold x waveBonusMult)` with 1.0 / 0.8 /
   0.6. Lumber stays unspent until a sink is added. Waves 11-40 are not rebalanced.
+- v0.9.0 measured the mid game and put three proposals (D, E, F) and two design what-ifs in `docs/BALANCE_PROPOSALS.md`;
+  no game data changed. On the current data the best catalogued build still loses in waves 11-14; D and E hold waves 1-20.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -50,6 +52,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.8.0 difficulty bonus is `round(bonusGold x waveBonusMult)` (1.0 / 0.8 / 0.6, as `DESIGN.md` section 6 always
   said); the dead `waveBonusBase/Scale` fields and the unused `STARTING_GOLD` constant are gone. A test that hardcoded
   wave 1's size now reads it from the data.
+- [x] v0.9.0 mid-game measurement: `BASE_WAVES` and the pure `taperWave` are exported from `src/data/waves.ts` (data
+  unchanged), scenarios can also override towers and difficulty presets, a mid-game bar (waves 1-20), proposals D/E/F.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -65,10 +69,11 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 
 - [ ] Replace legacy Phaser type shim with official package declarations.
 - [ ] Remaining tests: HUD/panel/scene flows, pause/resume and restart lifecycle, audio, persistence (covered so far: waves v0.3.0; towers, projectiles, hero skills, build/upgrade/sell v0.4.0; economy ledger and wave pressure v0.6.0).
-- [ ] Mid game: measure and rebalance waves 11-40 and the hard and insane presets (both fail the opening bar). Start
-  from `docs/BALANCE_PROPOSALS.md` ("Where the best build loses") and `docs/ECONOMY_REPORT.md`: interest is worth 56% of
-  income when nothing is spent, bounties do not scale with wave HP, no tower uses the `normal` damage type, and a
-  tier-2 upgrade gives less damage per gold than another tier-1 tower.
+- [ ] Mid game: pick one of the proposals D, E, F of `docs/BALANCE_PROPOSALS.md` (or other numbers) and write it into the
+  data; hard and insane still fail the opening bar. Numbers behind the design questions: cheaper tier-2/3 upgrades
+  (-30%) or an arrow tower with `normal` damage each take the best build from wave 11 to waves 15-16 on their own;
+  none of the four catalogued builds kills the fortified wave bosses (waves 10 and 15 cost 5 lives each). Also
+  open: interest is worth 56% of income when nothing is spent and bounties do not scale with wave HP.
 - [ ] Lumber sink (owner decision 2026-10-11: later): mercenaries and tier-3 towers as the `LumberManager` header
   describes; needs new content. A TODO test tracks it.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
@@ -108,20 +113,19 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.9.0 mid-game measurement and proposals
+## Next sprint (recommended): v0.10.0 apply the owner's mid-game decision
 
-- Objective: the opening is fixed; the best catalogued build now loses in waves 11-14 (idle hero: wave 11). Measure the
-  mid game and put proposals on the table; no data change without the owner's pick. Priority: P0.
-- Scope: (1) raise the acceptance bar to waves 1-20 and add `CANDIDATES` in `scripts/balance_proposals.mjs` for the HP
-  curve of waves 11-40, bounty scaling and the interest rate; (2) include hard and insane, which fail the opening bar
-  today; (3) put the two design questions of the report to the owner with numbers: no tower uses the `normal` damage type,
-  and tier-2 upgrades give less damage per gold than another tier-1 tower.
-- Dependencies: `tests/support/simulate.mjs`, `scripts/balance_proposals.mjs`, `docs/BALANCE_PROPOSALS.md`.
-- Acceptance: at least one proposal lets the best build hold waves 1-20 on normal with an idle and with a scripted
-  hero; every proposal is measured in the generated document; the document-sync test passes.
+- Objective: write the owner's pick of D, E or F (or other numbers) into the data. Priority: P0.
+- Precondition: the owner's pick and answers to decisions 2 and 3 of `docs/BALANCE_PROPOSALS.md`. Without a pick do
+  the first secondary candidate below instead; no balance data changes.
+- Scope: change `OPENING_TAPER` (rename it if its meaning grows) and `bonusGold` in `src/data/waves.ts`, and for E the
+  tier-2/3 `cost` in `src/data/towers.ts`; turn the proposal tests of `tests/balance.test.mjs` into regression tests of the
+  data; regenerate both documents; extend the acceptance bar to waves 1-30.
+- Acceptance: on the new data the best catalogued build holds waves 1-20 on normal with an idle and with a scripted hero;
+  both generated documents are in sync; every changed number is traceable to the pick.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
-  since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and note the
-  lives lost: the new opening may be easy for a human.
+  since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and the wave 10 boss
+  once, noting the lives lost: the new opening may be easy for a human, and no catalogued build plans for the bosses.
 - Secondary candidates, in order: explicit EventBus subscription ownership in UI components; official Phaser type
   declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
   structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for

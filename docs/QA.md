@@ -14,7 +14,7 @@
 Audit status: v0.3.0 to v0.5.0 were authored from a Repomix snapshot of v0.2.1 and verified headlessly
 (unit tests, typecheck, game validation, production build, bundle budget). No browser run has been recorded
 since v0.2.1; add one to the smoke log below when it happens. v0.6.0 was authored from a Repomix snapshot of
-v0.5.0 and verified the same way; v0.7.0 was authored on the v0.6.0 tree and v0.8.0 on the v0.7.0 tree, both verified the same way.
+v0.5.0 and verified the same way; v0.7.0 was authored on the v0.6.0 tree, v0.8.0 on the v0.7.0 tree and v0.9.0 on the v0.8.0 tree, all verified the same way.
 
 ## v0.2.1 migration regression gates
 
@@ -122,3 +122,15 @@ data. The lumber TODO test stays: the sink is postponed by the owner.
 
 Limits: the acceptance bar covers waves 1-10 on normal; hard and insane fail it and are reported as information; hero movement is
 not simulated and no human has played the new opening. The browser smoke was not run for v0.8.0.
+
+## v0.9.0 mid-game measurement
+
+No game data changed; `tests/balance.test.mjs` grew. `taperWave` is a pure function and `WAVES` is `BASE_WAVES` tapered by it
+(pinned wave by wave); `retaper(OPENING_TAPER)` is the identity on the data; `taperWave` keeps boss waves at one enemy, never makes a
+wave harder than written for `end` <= 1 and honours `end`. Scenarios can override towers and difficulty presets; they are restored, leave
+no marker fields behind, and reach the real systems (tower price, interest rate). The ledger invariants hold under a scenario that
+changes gold, bounty, waves, tower prices and interest. Proposals D and E meet the mid-game bar (at least 3 lives when wave 21
+starts) with an idle hero and with the scripted skills, F with the skills; the current data does not meet it.
+
+Limits: the bars cover waves 1-20 on normal; the four catalogued builds do not plan for the fortified bosses; no human has played
+any of this. The browser smoke was not run for v0.9.0.

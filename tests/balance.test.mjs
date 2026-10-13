@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { bestOf, buildProposals, evaluate, passes, taper } from '../scripts/balance_proposals.mjs';
+import { CANDIDATES, WHAT_IFS, bestOf, bonusTimes, buildProposals, evaluate, passes, retaper, upgradeCostTimes } from '../scripts/balance_proposals.mjs';
 import { castSkills, game, simulate, withScenario } from './support/simulate.mjs';
 
-const { DIFFICULTY_PRESETS, ENEMY_DEFS, OPENING_TAPER, WAVES, Hero, Enemy, PATH_TOP } = game;
+const { BASE_WAVES, DIFFICULTY_PRESETS, ENEMY_DEFS, OPENING_TAPER, TOWER_DEFS, WAVES, Hero, Enemy, PATH_TOP, taperWave } = game;
 const sum = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
-const snapshot = () => JSON.stringify({ WAVES, ENEMY_DEFS });
+const snapshot = () => JSON.stringify({ WAVES, ENEMY_DEFS, TOWER_DEFS, DIFFICULTY_PRESETS });
 
 // ── The owner's decisions of v0.8.0 are in the data ─────────────────────────
 
@@ -62,21 +62,56 @@ test('scenario levers reach the real systems: starting gold, bounty and wave siz
   assert.equal(poorer.rows[0].goldAtStart, 100, 'starting gold can be lowered as well');
 });
 
-test('taper keeps boss waves at one enemy, never exceeds the current values and reaches them at the end', () => {
-  const tweak = taper({ hp: 0.3, count: 0.5, until: 30 });
-  for (const wave of WAVES) {
-    const t = tweak(wave);
-    assert(t.hpMult <= wave.hpMult + 1e-9 && t.count <= wave.count, `wave ${wave.wave} is not harder than today`);
+test('taperWave: the data is BASE_WAVES tapered by OPENING_TAPER, and retaper of it changes nothing', () => {
+  assert.equal(BASE_WAVES.length, 40);
+  WAVES.forEach((wave, i) => assert.deepEqual(wave, taperWave(BASE_WAVES[i]), `wave ${wave.wave} is the tapered base wave`));
+  const identity = retaper(OPENING_TAPER);
+  for (const wave of WAVES) assert.deepEqual(identity(wave), { hpMult: wave.hpMult, count: wave.count }, `wave ${wave.wave}`);
+});
+
+test('taperWave keeps boss waves at one enemy, never exceeds the base values for end <= 1 and honours `end`', () => {
+  const soft = { hp: 0.3, count: 0.5, until: 30 };
+  for (const base of BASE_WAVES) {
+    const t = taperWave(base, soft);
+    assert(t.hpMult <= base.hpMult + 1e-9 && t.count <= base.count, `wave ${base.wave} is not harder than written`);
     assert(t.count >= 1);
-    if (wave.count === 1) assert.equal(t.count, 1, `wave ${wave.wave} keeps its single enemy`);
-    if (wave.wave >= 30) assert.deepEqual(t, { hpMult: wave.hpMult, count: wave.count }, `wave ${wave.wave} is unchanged`);
+    if (base.count === 1) assert.equal(t.count, 1, `wave ${base.wave} keeps its single enemy`);
+    if (base.wave >= 30) assert.deepEqual(t, base, `wave ${base.wave} is unchanged when end is 1`);
   }
-  assert.equal(tweak(WAVES[0]).hpMult, Math.round(WAVES[0].hpMult * 0.3 * 100) / 100, 'wave 1 starts at the given HP fraction');
-  assert.equal(tweak(WAVES[0]).count, Math.round(WAVES[0].count * 0.5), 'wave 1 starts at the given count fraction');
+  assert.equal(taperWave(BASE_WAVES[0], soft).hpMult, Math.round(BASE_WAVES[0].hpMult * 0.3 * 100) / 100, 'wave 1 starts at the given HP fraction');
+  assert.equal(taperWave(BASE_WAVES[0], soft).count, Math.round(BASE_WAVES[0].count * 0.5), 'wave 1 starts at the given count fraction');
+  const lower = { ...soft, until: 40, end: 0.5 };
+  assert.equal(taperWave(BASE_WAVES[39], lower).hpMult, Math.round(BASE_WAVES[39].hpMult * 0.5 * 100) / 100, 'from `until` on the fraction is `end`');
+  assert.equal(taperWave(BASE_WAVES[39], lower).count, 1, 'the final boss stays alone');
+});
+
+test('tower and preset tweaks reach the real systems and are restored', () => {
+  const before = snapshot();
+  const cost = TOWER_DEFS.arrow_t2.cost;
+  withScenario({ towerTweak: upgradeCostTimes(0.5) }, () => {
+    assert.equal(TOWER_DEFS.arrow_t2.cost, Math.round(cost * 0.5));
+    assert.equal(TOWER_DEFS.arrow_t1.cost, 50, 'tier-1 towers keep their price');
+  });
+  assert.equal(snapshot(), before);
+  assert(!('__id' in TOWER_DEFS.arrow_t1) && !('__id' in DIFFICULTY_PRESETS.normal), 'no marker fields are left behind');
+  const plain = simulate({ baseline: 'oracle_bank' });
+  const rich = simulate({ baseline: 'oracle_bank', scenario: { presetTweak: (id) => (id === 'normal' ? { interestRate: 0.1 } : {}) } });
+  assert(sum(rich.rows, 'interest') > sum(plain.rows, 'interest') * 1.5, 'a higher interest rate pays more interest');
+  assert.equal(snapshot(), before);
+  const arrow = simulate({ build: 'arrow', extraGold: 600, maxWave: 1 });
+  const cheaper = simulate({ build: 'arrow', extraGold: 600, maxWave: 1, scenario: { towerTweak: (id) => (id === 'arrow_t1' ? { cost: 25 } : {}) } });
+  assert(cheaper.rows[0].towers > arrow.rows[0].towers, 'cheaper towers buy more towers with the same gold');
+  assert.equal(bonusTimes(2)({ wave: 10 }).bonusGold, BASE_WAVES[9].bonusGold * 2);
 });
 
 test('ledger invariants hold under a scenario that changes gold, bounty and waves', () => {
-  const scenario = { startGold: 200, waveTweak: taper({ hp: 0.5, count: 0.9, until: 20 }), enemyTweak: (id, def) => ({ bounty: def.bounty * 2 }) };
+  const scenario = {
+    startGold: 200,
+    waveTweak: retaper({ hp: 0.5, count: 0.9, until: 20 }),
+    enemyTweak: (id, def) => ({ bounty: def.bounty * 2 }),
+    towerTweak: upgradeCostTimes(0.8),
+    presetTweak: (id) => (id === 'normal' ? { interestRate: 0.07 } : {}),
+  };
   for (const skills of [false, true]) {
     const run = simulate({ build: 'balanced', skills, scenario });
     const tag = skills ? 'skills' : 'idle';
@@ -135,6 +170,25 @@ test('skills are off by default, cost nothing when off and respect the cooldowns
   assert(on.casts.q <= Math.ceil(on.seconds / 12) + 1, 'Q cooldown is 12 s');
   assert(on.casts.w <= Math.ceil(on.seconds / 25) + 1, 'W cooldown is 25 s');
   assert.deepEqual(simulate({ build: 'arrow', extraGold: 600, skills: true }), on, 'deterministic');
+});
+
+// ── Mid-game proposals ──────────────────────────────────────────────────────
+
+test('proposals D and E meet the mid-game bar with an idle hero and with the scripted skills; F with the skills', () => {
+  const MID = 21;
+  const byId = Object.fromEntries(CANDIDATES.map((c) => [c.id, evaluate(c.scenario, MID)]));
+  for (const id of ['D', 'E']) {
+    assert(passes(byId[id].idle, MID), `${id} idle: best build has ${bestOf(byId[id].idle, MID).lives21} lives at wave 21`);
+    assert(passes(byId[id].skills, MID), `${id} skills: best build has ${bestOf(byId[id].skills, MID).lives21} lives at wave 21`);
+  }
+  assert(passes(byId.F.skills, MID), 'F skills');
+});
+
+test('current data does not meet the mid-game bar, and the what-ifs are measured against it', () => {
+  const current = evaluate(WHAT_IFS[0].scenario, 21);
+  assert(!passes(current.idle, 21) && !passes(current.skills, 21), 'the wall in the mid game is the finding the proposals answer');
+  assert.equal(WHAT_IFS[0].scenario, null);
+  assert(WHAT_IFS.length >= 3);
 });
 
 // ── The committed status document is the simulation's output ────────────────

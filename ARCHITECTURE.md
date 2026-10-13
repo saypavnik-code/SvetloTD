@@ -76,3 +76,5 @@ Do not mistake a shim-only typecheck for runtime verification.
   (`castSkills`) lives in the harness, not in the game.
 - The wave bonus is `round(WaveData.bonusGold x waveBonusMult)` (`InterestSystem`). `OPENING_TAPER` in `src/data/waves.ts`
   softens waves 1-29 once at module load, so `WAVES` is the final data that every system and the harness read.
+- `src/data/waves.ts` exports `BASE_WAVES` (as written) and the pure `taperWave(wave, taper)`; the harness re-derives other
+  curves from `BASE_WAVES` with the same function.
