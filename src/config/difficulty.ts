@@ -11,8 +11,7 @@ export interface DifficultyConfig {
   enemyHpMult:     number;   // applied on top of wave hpMult
   enemySpeedMult:  number;
   interestRate:    number;   // fraction of unspent gold awarded per wave
-  waveBonusBase:   number;   // flat gold at wave completion
-  waveBonusScale:  number;   // +N per wave number
+  waveBonusMult:   number;   // multiplies WaveData.bonusGold, rounded, paid at wave completion
   startingGold:    number;
 }
 
@@ -21,22 +20,22 @@ export const DIFFICULTY_PRESETS: Record<DifficultyId, DifficultyConfig> = {
     id: 'normal', label: 'Нормально',
     enemyHpMult: 1.0, enemySpeedMult: 1.0,
     interestRate: 0.05,
-    waveBonusBase: 15, waveBonusScale: 3,
-    startingGold: 150,
+    waveBonusMult: 1.0,
+    startingGold: 300,
   },
   hard: {
     id: 'hard', label: 'Сложно',
     enemyHpMult: 1.6, enemySpeedMult: 1.15,
     interestRate: 0.03,
-    waveBonusBase: 10, waveBonusScale: 2,
-    startingGold: 130,
+    waveBonusMult: 0.8,
+    startingGold: 260,
   },
   insane: {
     id: 'insane', label: 'Безумие',
     enemyHpMult: 2.8, enemySpeedMult: 1.3,
     interestRate: 0.01,
-    waveBonusBase: 5, waveBonusScale: 1,
-    startingGold: 100,
+    waveBonusMult: 0.6,
+    startingGold: 200,
   },
 };
 

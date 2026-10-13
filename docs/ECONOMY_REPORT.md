@@ -11,26 +11,24 @@ wave, enemy, tower, difficulty or economy data. Browser smoke: not run. This rep
 - Towers are bought only during countdowns, through the real pointer pipeline of `BuildSystem`, on the 24 cells that
   cover the most lane waypoints (see `rankedSlots`). A build is an ordered rule list; the first applicable rule is bought
   when affordable, otherwise the build waits.
-- The hero is parked on the base and only auto-attacks. Hero skills Q/W, hero movement, the watchtower aura and selling
-  are NOT simulated, so results describe tower-only play with an idle hero. A human using skills does better by an
-  amount this report does not measure.
+- In this report the hero is parked on the base and only auto-attacks; the scripted Q/W rule is used in
+  `docs/BALANCE_PROPOSALS.md`. Hero movement, the watchtower aura and selling are NOT simulated, so results describe
+  tower-only play with an idle hero. A human using skills does better by an amount this report does not measure.
 - `oracle_bank` kills every enemy the moment it spawns and never spends (interest compounds); `oracle_spend` empties the
   purse every countdown. Together they bound the income any player can receive.
 
 ## Findings
 
-1. **The opening cannot be held.** Starting gold is 150. The best of 3080 searched opening layouts (6 tower sets on the 16 best cells)
-   still leaks 6 of 8 enemies in wave 1; see the opening search below.
-2. **Every catalogued build is defeated early with the default economy:** arrow at wave 3, cannon_arrow at wave 3, magic_slow at wave 3, balanced at wave 3.
-   With +600 starting gold: arrow falls at wave 6, cannon_arrow falls at wave 6, magic_slow falls at wave 4, balanced falls at wave 6.
-3. **Income is bounded.** Killing everything pays 11337 gold in bounties and wave bonuses over 40 waves; banking it adds
-   14009 gold of interest (55% of everything earned when nothing is ever spent).
-4. **Pressure outgrows income.** Enemy HP per gold of wave income is 15.4 in wave 1, 61.5 in wave 20 and 130.7 in wave 40;
+1. **Opening.** Starting gold is 300. The best of 3080 searched opening layouts (6 tower sets on the 16 best cells)
+   leaks 0 of 6 enemies in wave 1; see the opening search below.
+2. **Catalogued builds with the default economy:** arrow defeated in wave 11, cannon_arrow defeated in wave 6, magic_slow defeated in wave 4, balanced defeated in wave 9.
+   With +600 starting gold: arrow defeated in wave 16, cannon_arrow defeated in wave 15, magic_slow defeated in wave 11, balanced defeated in wave 13.
+3. **Income is bounded.** Killing everything pays 14032 gold in bounties and wave bonuses over 40 waves; banking it adds
+   17903 gold of interest (56% of everything earned when nothing is ever spent).
+4. **Pressure against income.** Enemy HP per gold of wave income is 4.3 in wave 1, 43.7 in wave 20 and 121.5 in wave 40;
    bounties do not scale with the wave HP multiplier.
-5. **Difficulty bonus parameters are dead.** Wave bonus is `max(base + wave x scale, bonusGold)`; the formula wins in 1 of 40 waves on normal,
-   0 on hard and 0 on insane. Total bonus over 40 waves: 5731 / 5730 / 5730 gold
-   (formula alone would pay 3060 / 2040 / 1020). Tracked as a TODO test; fixing it is a balance decision.
-6. **Lumber has no sink.** A full run earns 8 lumber and no system spends it.
+5. **Difficulty bonus.** The wave bonus is `round(bonusGold x waveBonusMult)`; total bonus over 40 waves is 5730 / 4584 / 3438 gold on normal / hard / insane.
+6. **Lumber has no sink.** A full run earns 8 lumber and no system spends it (owner decision: a sink is added later).
 
 ## Wave pressure and income envelope (normal)
 
@@ -38,126 +36,177 @@ wave, enemy, tower, difficulty or economy data. Browser smoke: not run. This rep
 
 | wave | enemy | count | total HP | bounty | bonus | HP per gold | bank gold | interest |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | grunt | 8 | 800 | 32 | 20 | 15.4 | 150 | 9 |
-| 2 | grunt | 10 | 1200 | 40 | 25 | 18.5 | 211 | 12 |
-| 3 | runner | 15 | 750 | 45 | 25 | 10.7 | 288 | 16 |
-| 4 | grunt | 12 | 1800 | 48 | 30 | 23.1 | 374 | 21 |
-| 5 | golem | 3 | 1200 | 42 | 40 | 14.6 | 473 | 25 |
-| 6 | grunt | 14 | 2800 | 56 | 35 | 30.8 | 580 | 31 |
-| 7 | wyvern (air) | 8 | 640 | 56 | 40 | 6.7 | 702 | 37 |
-| 8 | runner | 20 | 1500 | 60 | 40 | 15.0 | 835 | 44 |
-| 9 | golem | 5 | 3000 | 70 | 45 | 26.1 | 979 | 52 |
-| 10 | boss_goliath | 1 | 2000 | 60 | 100 | 12.5 | 1146 | 60 |
-| 11 | grunt | 18 | 5400 | 72 | 50 | 44.3 | 1366 | 71 |
-| 12 | wyvern (air) | 12 | 1920 | 84 | 51 | 14.2 | 1559 | 82 |
-| 13 | runner | 30 | 3000 | 90 | 55 | 20.7 | 1776 | 93 |
-| 14 | golem | 8 | 8000 | 112 | 60 | 46.5 | 2014 | 106 |
-| 15 | boss_goliath | 1 | 5000 | 60 | 120 | 27.8 | 2292 | 117 |
-| 16 | grunt | 25 | 12500 | 100 | 70 | 73.5 | 2589 | 134 |
-| 17 | wyvern (air) | 15 | 4800 | 105 | 75 | 26.7 | 2893 | 149 |
-| 18 | golem | 12 | 19200 | 168 | 80 | 77.4 | 3222 | 169 |
-| 19 | runner | 40 | 6000 | 120 | 90 | 28.6 | 3639 | 187 |
-| 20 | boss_goliath | 1 | 16000 | 60 | 200 | 61.5 | 4036 | 204 |
-| 21 | grunt | 18 | 7200 | 72 | 110 | 39.6 | 4500 | 228 |
-| 22 | runner | 20 | 4660 | 60 | 122 | 25.6 | 4910 | 248 |
-| 23 | wyvern (air) | 22 | 9328 | 154 | 134 | 32.4 | 5340 | 274 |
-| 24 | golem | 24 | 57120 | 336 | 146 | 118.5 | 5902 | 311 |
-| 25 | boss_goliath | 1 | 22000 | 60 | 158 | 100.9 | 6695 | 337 |
-| 26 | runner | 28 | 10164 | 84 | 170 | 40.0 | 7250 | 366 |
-| 27 | wyvern (air) | 30 | 18960 | 210 | 182 | 48.4 | 7870 | 404 |
-| 28 | golem | 32 | 109440 | 448 | 194 | 170.5 | 8666 | 455 |
-| 29 | grunt | 34 | 31280 | 136 | 206 | 91.5 | 9763 | 494 |
-| 30 | boss_goliath | 1 | 32000 | 60 | 218 | 115.1 | 10599 | 532 |
-| 31 | wyvern (air) | 38 | 31920 | 266 | 230 | 64.4 | 11409 | 583 |
-| 32 | golem | 40 | 178400 | 560 | 242 | 222.4 | 12488 | 652 |
-| 33 | grunt | 42 | 49560 | 168 | 254 | 117.4 | 13942 | 705 |
-| 34 | runner | 44 | 27412 | 132 | 266 | 68.9 | 15069 | 760 |
-| 35 | boss_goliath | 1 | 42000 | 60 | 278 | 124.3 | 16227 | 814 |
-| 36 | golem | 45 | 247500 | 630 | 290 | 269.0 | 17379 | 900 |
-| 37 | grunt | 45 | 64800 | 180 | 302 | 134.4 | 19199 | 968 |
-| 38 | runner | 45 | 33885 | 135 | 314 | 75.5 | 20649 | 1039 |
-| 39 | wyvern (air) | 45 | 56520 | 315 | 326 | 88.2 | 22137 | 1122 |
-| 40 | boss_goliath | 1 | 52000 | 60 | 338 | 130.7 | 23900 | 1198 |
+| 1 | grunt | 6 | 240 | 36 | 20 | 4.3 | 300 | 16 |
+| 2 | grunt | 8 | 400 | 48 | 25 | 5.5 | 372 | 21 |
+| 3 | runner | 12 | 264 | 60 | 25 | 3.1 | 466 | 26 |
+| 4 | grunt | 10 | 690 | 60 | 30 | 7.7 | 577 | 31 |
+| 5 | golem | 2 | 384 | 42 | 40 | 4.7 | 698 | 37 |
+| 6 | grunt | 12 | 1212 | 72 | 35 | 11.3 | 817 | 44 |
+| 7 | wyvern (air) | 7 | 294 | 77 | 40 | 2.5 | 968 | 52 |
+| 8 | runner | 17 | 697 | 85 | 40 | 5.6 | 1137 | 61 |
+| 9 | golem | 4 | 1360 | 84 | 45 | 10.5 | 1323 | 70 |
+| 10 | boss_goliath | 1 | 1180 | 90 | 100 | 6.2 | 1522 | 80 |
+| 11 | grunt | 16 | 2912 | 96 | 50 | 19.9 | 1792 | 94 |
+| 12 | wyvern (air) | 11 | 1111 | 121 | 50 | 6.5 | 2032 | 107 |
+| 13 | runner | 26 | 1690 | 130 | 55 | 9.1 | 2310 | 122 |
+| 14 | golem | 7 | 4676 | 147 | 60 | 22.6 | 2617 | 138 |
+| 15 | boss_goliath | 1 | 3440 | 90 | 120 | 16.4 | 2962 | 152 |
+| 16 | grunt | 23 | 8165 | 138 | 70 | 39.3 | 3324 | 173 |
+| 17 | wyvern (air) | 14 | 3276 | 154 | 75 | 14.3 | 3705 | 192 |
+| 18 | golem | 11 | 13244 | 231 | 80 | 42.6 | 4126 | 217 |
+| 19 | runner | 37 | 4292 | 185 | 90 | 15.6 | 4654 | 241 |
+| 20 | boss_goliath | 1 | 12680 | 90 | 200 | 43.7 | 5170 | 263 |
+| 21 | grunt | 17 | 5542 | 102 | 110 | 26.1 | 5723 | 291 |
+| 22 | runner | 19 | 3686 | 95 | 122 | 17.0 | 6226 | 316 |
+| 23 | wyvern (air) | 21 | 7602 | 231 | 134 | 20.8 | 6759 | 349 |
+| 24 | golem | 23 | 47932 | 483 | 146 | 76.2 | 7473 | 397 |
+| 25 | boss_goliath | 1 | 19720 | 90 | 158 | 79.5 | 8499 | 429 |
+| 26 | runner | 27 | 8991 | 135 | 170 | 29.5 | 9176 | 465 |
+| 27 | wyvern (air) | 29 | 17197 | 319 | 182 | 34.3 | 9946 | 513 |
+| 28 | golem | 32 | 104960 | 672 | 194 | 121.2 | 10960 | 581 |
+| 29 | grunt | 34 | 30634 | 204 | 206 | 74.7 | 12407 | 630 |
+| 30 | boss_goliath | 1 | 32000 | 90 | 218 | 103.9 | 13447 | 676 |
+| 31 | wyvern (air) | 38 | 31920 | 418 | 230 | 49.3 | 14431 | 742 |
+| 32 | golem | 40 | 178400 | 840 | 242 | 164.9 | 15821 | 833 |
+| 33 | grunt | 42 | 49560 | 252 | 254 | 97.9 | 17736 | 899 |
+| 34 | runner | 44 | 27412 | 220 | 266 | 56.4 | 19141 | 968 |
+| 35 | boss_goliath | 1 | 42000 | 90 | 278 | 114.1 | 20595 | 1034 |
+| 36 | golem | 45 | 247500 | 945 | 290 | 200.4 | 21997 | 1147 |
+| 37 | grunt | 45 | 64800 | 270 | 302 | 113.3 | 24379 | 1232 |
+| 38 | runner | 45 | 33885 | 225 | 314 | 62.9 | 26183 | 1320 |
+| 39 | wyvern (air) | 45 | 56520 | 495 | 326 | 68.8 | 28042 | 1426 |
+| 40 | boss_goliath | 1 | 52000 | 90 | 338 | 121.5 | 30289 | 1518 |
 
-Totals: bounty 5606, bonus 5731, enemy HP 1183659; oracle_spend ends with 401 gold.
+Totals: bounty 8302, bonus 5730, enemy HP 1124468; oracle_spend ends with 432 gold.
 
 ## Builds with the default economy (normal)
 
-### arrow: defeat at wave 3, 0 lives left, 3 towers
+### arrow: defeat at wave 11, 0 lives left, 8 towers
 
 | wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 0 | 150 | 3 | 150 | 0 | 8 | 12 | 12.7 |
-| 2 | 20 | 0 | 3 | 150 | 0 | 10 | 2 | 13.8 |
-| 3 | 46 | 0 | 3 | 150 | 1 | 2 | 0 | - |
+| 1 | 30 | 270 | 3 | 270 | 6 | 0 | 20 | 10.0 |
+| 2 | 89 | 0 | 3 | 270 | 8 | 0 | 20 | 11.6 |
+| 3 | 48 | 120 | 3 | 390 | 12 | 0 | 20 | 7.2 |
+| 4 | 18 | 120 | 3 | 510 | 10 | 0 | 20 | 11.8 |
+| 5 | 61 | 50 | 4 | 560 | 2 | 0 | 20 | 11.1 |
+| 6 | 28 | 120 | 4 | 680 | 7 | 5 | 15 | 13.4 |
+| 7 | 58 | 50 | 5 | 730 | 7 | 0 | 15 | 8.4 |
+| 8 | 11 | 170 | 6 | 900 | 17 | 0 | 15 | 7.6 |
+| 9 | 20 | 120 | 6 | 1020 | 4 | 0 | 15 | 14.3 |
+| 10 | 104 | 50 | 7 | 1070 | 0 | 1 | 10 | 13.7 |
+| 11 | 39 | 170 | 8 | 1240 | 3 | 10 | 0 | - |
 
-### cannon_arrow: defeat at wave 3, 0 lives left, 2 towers
-
-| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 25 | 125 | 2 | 125 | 0 | 8 | 12 | 12.7 |
-| 2 | 46 | 0 | 2 | 125 | 0 | 10 | 2 | 13.8 |
-| 3 | 73 | 0 | 2 | 125 | 1 | 2 | 0 | - |
-
-### magic_slow: defeat at wave 3, 0 lives left, 2 towers
-
-| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 40 | 110 | 2 | 110 | 1 | 7 | 13 | 13.4 |
-| 2 | 66 | 0 | 2 | 110 | 0 | 10 | 3 | 13.8 |
-| 3 | 94 | 0 | 2 | 110 | 1 | 3 | 0 | - |
-
-### balanced: defeat at wave 3, 0 lives left, 2 towers
+### cannon_arrow: defeat at wave 6, 0 lives left, 3 towers
 
 | wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 40 | 110 | 2 | 110 | 0 | 8 | 12 | 12.7 |
-| 2 | 62 | 0 | 2 | 110 | 0 | 10 | 2 | 13.8 |
-| 3 | 90 | 0 | 2 | 110 | 1 | 2 | 0 | - |
+| 1 | 55 | 245 | 2 | 245 | 5 | 1 | 19 | 10.2 |
+| 2 | 109 | 0 | 2 | 245 | 6 | 2 | 17 | 11.4 |
+| 3 | 177 | 0 | 2 | 245 | 8 | 4 | 13 | 8.2 |
+| 4 | 22 | 230 | 3 | 475 | 7 | 3 | 10 | 12.5 |
+| 5 | 97 | 0 | 3 | 475 | 2 | 0 | 10 | 12.8 |
+| 6 | 65 | 120 | 3 | 595 | 2 | 10 | 0 | - |
+
+### magic_slow: defeat at wave 4, 0 lives left, 2 towers
+
+| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 190 | 110 | 2 | 110 | 2 | 4 | 16 | 10.7 |
+| 2 | 32 | 200 | 2 | 310 | 5 | 3 | 13 | 12.6 |
+| 3 | 90 | 0 | 2 | 310 | 4 | 8 | 5 | 8.4 |
+| 4 | 140 | 0 | 2 | 310 | 2 | 5 | 0 | - |
+
+### balanced: defeat at wave 9, 0 lives left, 5 towers
+
+| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 70 | 230 | 2 | 230 | 6 | 0 | 20 | 10.0 |
+| 2 | 131 | 0 | 2 | 230 | 6 | 2 | 18 | 11.4 |
+| 3 | 0 | 200 | 2 | 430 | 9 | 3 | 15 | 8.2 |
+| 4 | 22 | 50 | 3 | 480 | 6 | 4 | 11 | 12.9 |
+| 5 | 90 | 0 | 3 | 480 | 2 | 0 | 11 | 12.4 |
+| 6 | 58 | 120 | 3 | 600 | 3 | 9 | 2 | 13.4 |
+| 7 | 54 | 60 | 4 | 660 | 7 | 0 | 2 | 8.5 |
+| 8 | 177 | 0 | 4 | 660 | 17 | 0 | 2 | 7.8 |
+| 9 | 40 | 275 | 5 | 935 | 2 | 1 | 0 | - |
 
 ## Builds with +600 starting gold (diagnostic, normal)
 
-### arrow: defeat at wave 6, 0 lives left, 7 towers
+### arrow: defeat at wave 16, 0 lives left, 16 towers
 
 | wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 20 | 730 | 5 | 730 | 8 | 0 | 20 | 11.4 |
-| 2 | 74 | 0 | 5 | 730 | 10 | 0 | 20 | 13.1 |
-| 3 | 24 | 120 | 5 | 850 | 15 | 0 | 20 | 8.6 |
-| 4 | 47 | 50 | 6 | 900 | 5 | 7 | 13 | 14.5 |
-| 5 | 100 | 0 | 6 | 900 | 3 | 0 | 13 | 13.4 |
-| 6 | 19 | 170 | 7 | 1070 | 1 | 13 | 0 | - |
+| 1 | 0 | 900 | 6 | 900 | 6 | 0 | 20 | 8.7 |
+| 2 | 57 | 0 | 6 | 900 | 8 | 0 | 20 | 10.0 |
+| 3 | 15 | 120 | 6 | 1020 | 12 | 0 | 20 | 7.2 |
+| 4 | 53 | 50 | 7 | 1070 | 10 | 0 | 20 | 10.9 |
+| 5 | 28 | 120 | 7 | 1190 | 2 | 0 | 20 | 9.6 |
+| 6 | 63 | 50 | 8 | 1240 | 12 | 0 | 20 | 11.9 |
+| 7 | 6 | 170 | 9 | 1410 | 7 | 0 | 20 | 8.3 |
+| 8 | 7 | 120 | 9 | 1530 | 17 | 0 | 20 | 7.4 |
+| 9 | 86 | 50 | 10 | 1580 | 4 | 0 | 20 | 12.5 |
+| 10 | 53 | 170 | 11 | 1750 | 0 | 1 | 15 | 13.7 |
+| 11 | 35 | 120 | 11 | 1870 | 9 | 7 | 8 | 13.2 |
+| 12 | 93 | 50 | 12 | 1920 | 11 | 0 | 8 | 9.4 |
+| 13 | 104 | 170 | 13 | 2090 | 26 | 0 | 8 | 9.1 |
+| 14 | 10 | 290 | 14 | 2380 | 7 | 0 | 8 | 16.6 |
+| 15 | 4 | 220 | 16 | 2600 | 0 | 1 | 3 | 13.6 |
+| 16 | 4 | 120 | 16 | 2720 | 4 | 3 | 0 | - |
 
-### cannon_arrow: defeat at wave 6, 0 lives left, 5 towers
-
-| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 80 | 670 | 4 | 670 | 7 | 1 | 19 | 12.3 |
-| 2 | 133 | 0 | 4 | 670 | 2 | 8 | 11 | 13.8 |
-| 3 | 173 | 0 | 4 | 670 | 15 | 0 | 11 | 9.1 |
-| 4 | 73 | 180 | 4 | 850 | 2 | 10 | 1 | 14.5 |
-| 5 | 40 | 75 | 5 | 925 | 3 | 0 | 1 | 14.7 |
-| 6 | 126 | 0 | 5 | 925 | 0 | 1 | 0 | - |
-
-### magic_slow: defeat at wave 4, 0 lives left, 4 towers
-
-| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 30 | 720 | 3 | 720 | 5 | 3 | 17 | 12.7 |
-| 2 | 12 | 60 | 4 | 780 | 3 | 7 | 10 | 13.8 |
-| 3 | 50 | 0 | 4 | 780 | 12 | 3 | 7 | 9.8 |
-| 4 | 115 | 0 | 4 | 780 | 3 | 7 | 0 | - |
-
-### balanced: defeat at wave 6, 0 lives left, 6 towers
+### cannon_arrow: defeat at wave 15, 0 lives left, 13 towers
 
 | wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 90 | 660 | 4 | 660 | 8 | 0 | 20 | 12.1 |
-| 2 | 148 | 0 | 4 | 660 | 7 | 3 | 17 | 13.8 |
-| 3 | 9 | 200 | 4 | 860 | 15 | 0 | 17 | 8.8 |
-| 4 | 6 | 75 | 5 | 935 | 3 | 9 | 8 | 14.5 |
-| 5 | 48 | 0 | 5 | 935 | 3 | 0 | 8 | 14.8 |
-| 6 | 84 | 50 | 6 | 985 | 2 | 8 | 0 | - |
+| 1 | 50 | 850 | 4 | 850 | 6 | 0 | 20 | 8.6 |
+| 2 | 35 | 75 | 5 | 925 | 8 | 0 | 20 | 10.1 |
+| 3 | 112 | 0 | 5 | 925 | 12 | 0 | 20 | 7.5 |
+| 4 | 25 | 180 | 5 | 1105 | 10 | 0 | 20 | 11.6 |
+| 5 | 69 | 50 | 6 | 1155 | 2 | 0 | 20 | 10.2 |
+| 6 | 36 | 120 | 6 | 1275 | 11 | 1 | 19 | 12.9 |
+| 7 | 92 | 50 | 7 | 1325 | 7 | 0 | 19 | 8.5 |
+| 8 | 22 | 195 | 8 | 1520 | 17 | 0 | 19 | 7.7 |
+| 9 | 152 | 0 | 8 | 1520 | 4 | 0 | 19 | 13.8 |
+| 10 | 37 | 255 | 9 | 1775 | 1 | 0 | 19 | 12.1 |
+| 11 | 3 | 230 | 10 | 2005 | 5 | 11 | 8 | 12.6 |
+| 12 | 84 | 0 | 10 | 2005 | 11 | 0 | 8 | 10.1 |
+| 13 | 95 | 170 | 11 | 2175 | 24 | 2 | 6 | 9.0 |
+| 14 | 85 | 195 | 12 | 2370 | 6 | 1 | 4 | 18.0 |
+| 15 | 26 | 255 | 13 | 2625 | 0 | 1 | -1 | - |
+
+### magic_slow: defeat at wave 11, 0 lives left, 8 towers
+
+| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 120 | 780 | 4 | 780 | 6 | 0 | 20 | 7.7 |
+| 2 | 183 | 0 | 4 | 780 | 8 | 0 | 20 | 11.6 |
+| 3 | 17 | 250 | 5 | 1030 | 12 | 0 | 20 | 7.7 |
+| 4 | 105 | 0 | 5 | 1030 | 10 | 0 | 20 | 12.7 |
+| 5 | 53 | 150 | 5 | 1180 | 2 | 0 | 20 | 10.1 |
+| 6 | 79 | 60 | 6 | 1240 | 9 | 3 | 17 | 13.6 |
+| 7 | 174 | 0 | 6 | 1240 | 7 | 0 | 17 | 8.1 |
+| 8 | 43 | 260 | 7 | 1500 | 7 | 10 | 7 | 8.3 |
+| 9 | 121 | 0 | 7 | 1500 | 4 | 0 | 7 | 15.4 |
+| 10 | 10 | 250 | 8 | 1750 | 1 | 0 | 7 | 15.8 |
+| 11 | 55 | 150 | 8 | 1900 | 6 | 7 | 0 | - |
+
+### balanced: defeat at wave 13, 0 lives left, 11 towers
+
+| wave | gold at start | spent before | towers | invested | kills | leaks | lives left | clear s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 40 | 860 | 4 | 860 | 6 | 0 | 20 | 7.7 |
+| 2 | 24 | 75 | 5 | 935 | 8 | 0 | 20 | 9.0 |
+| 3 | 50 | 50 | 6 | 985 | 12 | 0 | 20 | 7.2 |
+| 4 | 140 | 0 | 6 | 985 | 10 | 0 | 20 | 10.9 |
+| 5 | 60 | 180 | 6 | 1165 | 2 | 0 | 20 | 10.0 |
+| 6 | 147 | 0 | 6 | 1165 | 10 | 2 | 18 | 13.3 |
+| 7 | 52 | 200 | 7 | 1365 | 7 | 0 | 18 | 8.3 |
+| 8 | 55 | 120 | 7 | 1485 | 17 | 0 | 18 | 7.7 |
+| 9 | 127 | 60 | 8 | 1545 | 4 | 0 | 18 | 12.9 |
+| 10 | 66 | 200 | 8 | 1745 | 1 | 0 | 18 | 15.6 |
+| 11 | 8 | 255 | 9 | 2000 | 6 | 10 | 8 | 13.5 |
+| 12 | 46 | 50 | 10 | 2050 | 11 | 0 | 8 | 10.0 |
+| 13 | 5 | 220 | 11 | 2270 | 18 | 8 | 0 | - |
 
 ## Wave 1 opening search (hero parked on the base)
 
@@ -165,9 +214,9 @@ Every combination of the listed towers on the 16 best-covered cells, each simula
 
 | towers | layouts | best leaks | worst leaks | best layout (col,row) |
 | --- | --- | --- | --- | --- |
-| arrow x3 | 560 | 6 | 8 | 10,7 11,6 11,7 |
-| magic x2 | 120 | 6 | 8 | 7,6 10,6 |
-| arrow + magic | 240 | 7 | 8 | 7,7 10,7 |
-| arrow x2 + slow | 1680 | 6 | 8 | 7,7 10,7 7,6 |
-| magic + slow | 240 | 6 | 8 | 11,7 11,10 |
-| arrow + cannon | 240 | 8 | 8 | 7,7 10,7 |
+| arrow x3 | 560 | 0 | 4 | 7,7 10,7 7,10 |
+| magic x2 | 120 | 0 | 3 | 7,7 10,7 |
+| arrow + magic | 240 | 1 | 4 | 7,7 10,7 |
+| arrow x2 + slow | 1680 | 0 | 5 | 7,7 10,7 7,10 |
+| magic + slow | 240 | 2 | 5 | 7,7 7,10 |
+| arrow + cannon | 240 | 1 | 6 | 7,7 7,10 |

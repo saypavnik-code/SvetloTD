@@ -49,16 +49,17 @@ interestGold = floor(currentGold * interestRate)
 
 #### Wave Completion Bonus
 ```
-waveBonus = baseBonus + (waveNumber * scalingBonus)
+waveBonus = round(WaveData.bonusGold * waveBonusMult)
 ```
 
-| Difficulty | baseBonus | scalingBonus |
-|---|---|---|
-| Normal | 15 | 3 |
-| Hard | 10 | 2 |
-| Insane | 5 | 1 |
+| Difficulty | waveBonusMult |
+|---|---|
+| Normal | 1.0 |
+| Hard | 0.8 |
+| Insane | 0.6 |
 
-This replaces / augments the existing `WaveData.bonusGold` field (keep that for wave-specific overrides; generic formula is the fallback).
+As built since v0.8.0 and matching the multiplier column of section 6. The earlier `baseBonus + waveNumber * scalingBonus`
+formula (15 + 3w, 10 + 2w, 5 + 1w) never applied, because `WaveData.bonusGold` always won the `max`; it was removed.
 
 #### Creep Bounty Table (revised)
 

@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.7.0)
+## Current state (v0.8.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -13,8 +13,10 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   `docs/ECONOMY_REPORT.md`. Its findings are measurements, not fixes: no balance data changed. The two open
   findings that need an owner decision are tracked as TODO tests in `tests/economy.test.mjs`.
 - v0.7.0 added scripted hero skills and temporary balance scenarios to the harness and the generated
-  `docs/BALANCE_PROPOSALS.md` (three measured opening candidates). Still no game data changed: it waits for the
-  owner's pick.
+  `docs/BALANCE_PROPOSALS.md` (three measured opening candidates).
+- v0.8.0 wrote the owner's decisions of 2026-10-11 into the data: opening candidate C (starting gold 300 / 260 / 200,
+  bounties x1.5, `OPENING_TAPER` for waves 1-29) and the wave bonus `round(bonusGold x waveBonusMult)` with 1.0 / 0.8 /
+  0.6. Lumber stays unspent until a sink is added. Waves 11-40 are not rebalanced.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -39,14 +41,15 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   attack: 67 instead of 72 attacks per minute at 100 ms frames).
 - [x] v0.6.0 deterministic headless economy and wave-pressure simulation (`tests/support/simulate.mjs`), generated
   report (`npm run report:economy`), ledger invariants over every build and difficulty, report-sync test.
-- [ ] Opening balance (v0.6.0 finding, not fixed): with the default economy the best of 3080 tower layouts still
-  leaks 6 of 8 enemies in wave 1 and every catalogued tower-only build is defeated by wave 3-4. The simulation
-  parks the hero and uses no skills. v0.7.0 added the skill model (it barely helps: best wave-1 layout 5 leaks
-  instead of 6) and three candidates in `docs/BALANCE_PROPOSALS.md`. The owner's pick and one human playtest are
-  still needed before any data change.
+- [x] Opening balance (v0.8.0): the owner picked candidate C of `docs/BALANCE_PROPOSALS.md` and it is in the data.
+  The best catalogued build now holds waves 1-10 with 10 lives left (idle hero) or 12 (scripted skills); the bar is 3.
+  Hard and insane still fail the bar (informational, see the report).
 - [x] v0.7.0 scripted hero skills (Q when two or more enemies are in the blast, W with a tower in reach) and
   scenario overrides (`withScenario`) in the headless harness; candidates A/B/C measured against an acceptance bar
   (best build holds waves 1-10 with at least 3 lives); generated `docs/BALANCE_PROPOSALS.md` and `tests/balance.test.mjs`.
+- [x] v0.8.0 difficulty bonus is `round(bonusGold x waveBonusMult)` (1.0 / 0.8 / 0.6, as `DESIGN.md` section 6 always
+  said); the dead `waveBonusBase/Scale` fields and the unused `STARTING_GOLD` constant are gone. A test that hardcoded
+  wave 1's size now reads it from the data.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -62,9 +65,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 
 - [ ] Replace legacy Phaser type shim with official package declarations.
 - [ ] Remaining tests: HUD/panel/scene flows, pause/resume and restart lifecycle, audio, persistence (covered so far: waves v0.3.0; towers, projectiles, hero skills, build/upgrade/sell v0.4.0; economy ledger and wave pressure v0.6.0).
-- [ ] Playtest and numerically rebalance levels 21-40 and all difficulty presets. Start from `docs/ECONOMY_REPORT.md`:
-  dead difficulty bonus parameters (`max(formula, bonusGold)`), lumber without a sink, interest worth 55% of income
-  when nothing is spent, bounties that do not scale with wave HP.
+- [ ] Mid game: measure and rebalance waves 11-40 and the hard and insane presets (both fail the opening bar). Start
+  from `docs/BALANCE_PROPOSALS.md` ("Where the best build loses") and `docs/ECONOMY_REPORT.md`: interest is worth 56% of
+  income when nothing is spent, bounties do not scale with wave HP, no tower uses the `normal` damage type, and a
+  tier-2 upgrade gives less damage per gold than another tier-1 tower.
+- [ ] Lumber sink (owner decision 2026-10-11: later): mercenaries and tier-3 towers as the `LumberManager` header
+  describes; needs new content. A TODO test tracks it.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
 - [ ] Implement explicit ownership of EventBus subscriptions in every scene/UI component.
@@ -102,24 +108,20 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.8.0 apply the owner's opening decision
+## Next sprint (recommended): v0.9.0 mid-game measurement and proposals
 
-- Objective: write the chosen opening into the data and retire the tracked findings. Priority: P0.
-- Precondition: the owner picks candidate A, B or C of `docs/BALANCE_PROPOSALS.md` (or names other numbers) and
-  answers decisions 2 and 3 there (difficulty bonus, lumber). Without a pick this sprint does not start and no
-  balance data changes.
-- Scope: edit `src/config/difficulty.ts`, `src/data/waves.ts` and `src/data/enemies.ts` as picked; turn the two TODO
-  tests into passing tests according to decisions 2 and 3; change `tests/balance.test.mjs` so the chosen numbers are
-  regression tests of the data instead of scenarios; regenerate `docs/ECONOMY_REPORT.md` and
-  `docs/BALANCE_PROPOSALS.md` (or replace the latter by a short record of the decision).
-- Acceptance: on the new data at least one catalogued build holds waves 1-10 on normal with at least 3 lives with
-  both an idle hero and the scripted skills; both generated documents are in sync; every changed number is traceable
-  to the picked candidate.
-- After it: measure waves 11-40 the same way. Every candidate dies between waves 10 and 14, so the mid game is the
-  next balance problem, not a footnote.
+- Objective: the opening is fixed; the best catalogued build now loses in waves 11-14 (idle hero: wave 11). Measure the
+  mid game and put proposals on the table; no data change without the owner's pick. Priority: P0.
+- Scope: (1) raise the acceptance bar to waves 1-20 and add `CANDIDATES` in `scripts/balance_proposals.mjs` for the HP
+  curve of waves 11-40, bounty scaling and the interest rate; (2) include hard and insane, which fail the opening bar
+  today; (3) put the two design questions of the report to the owner with numbers: no tower uses the `normal` damage type,
+  and tier-2 upgrades give less damage per gold than another tier-1 tower.
+- Dependencies: `tests/support/simulate.mjs`, `scripts/balance_proposals.mjs`, `docs/BALANCE_PROPOSALS.md`.
+- Acceptance: at least one proposal lets the best build hold waves 1-20 on normal with an idle and with a scripted
+  hero; every proposal is measured in the generated document; the document-sync test passes.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
   since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and note the
-  lives lost, to calibrate the simulation against a human.
+  lives lost: the new opening may be easy for a human.
 - Secondary candidates, in order: explicit EventBus subscription ownership in UI components; official Phaser type
   declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
   structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for

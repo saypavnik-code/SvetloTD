@@ -216,7 +216,8 @@ test('leaking every enemy ends in exactly one defeat and stops completing waves'
 
 test('losing the last life on the final enemy of a wave is a defeat, not a wave clear', () => {
   const world = createWorld();
-  world.economy.loseLife(12); // wave 1 has 8 grunts of one life each: 8 lives left
+  const grunts = game.WAVES[0].count;   // wave 1 is grunts of one life each
+  world.economy.loseLife(20 - grunts);  // exactly as many lives left as enemies in wave 1
   world.waves.startGame();
   run(world, { until: () => world.log.terminal.length > 0 });
   for (let i = 0; i < 50; i++) world.waves.update(0.1);

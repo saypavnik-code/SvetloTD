@@ -3,9 +3,8 @@
 //
 // Listens for WAVE_COMPLETED. On each event:
 //   1. Calculates interest = floor(currentGold * interestRate)
-//   2. Calculates waveBonus = waveBonusBase + waveNumber * waveBonusScale
-//      (overridden by WaveData.bonusGold if that value is higher — keeps
-//       hand-crafted boss wave rewards intact)
+//   2. Calculates waveBonus = round(WaveData.bonusGold * waveBonusMult), so the
+//      difficulty preset scales the hand-crafted reward of every wave
 //   3. Adds both sums to EconomyManager via addGold()
 //   4. Emits INTEREST_AWARDED and WAVE_BONUS_AWARDED for HUD floating text
 //
@@ -41,11 +40,7 @@ export class InterestSystem {
     }
 
     // ── 2. Wave completion bonus ───────────────────────────────────────────────
-    const formulaBonus = cfg.waveBonusBase + waveNumber * cfg.waveBonusScale;
-    // Use wave-specific bonusGold if it's higher (preserves boss wave rewards)
-    const waveBonus = waveData
-      ? Math.max(formulaBonus, waveData.bonusGold)
-      : formulaBonus;
+    const waveBonus = waveData ? Math.round(waveData.bonusGold * cfg.waveBonusMult) : 0;
 
     this._economy.addGold(waveBonus);
     EventBus.emit(GameEvents.WAVE_BONUS_AWARDED, waveBonus);

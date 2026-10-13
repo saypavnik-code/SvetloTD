@@ -14,7 +14,7 @@
 Audit status: v0.3.0 to v0.5.0 were authored from a Repomix snapshot of v0.2.1 and verified headlessly
 (unit tests, typecheck, game validation, production build, bundle budget). No browser run has been recorded
 since v0.2.1; add one to the smoke log below when it happens. v0.6.0 was authored from a Repomix snapshot of
-v0.5.0 and verified the same way; v0.7.0 was authored on the v0.6.0 tree and verified the same way.
+v0.5.0 and verified the same way; v0.7.0 was authored on the v0.6.0 tree and v0.8.0 on the v0.7.0 tree, both verified the same way.
 
 ## v0.2.1 migration regression gates
 
@@ -109,3 +109,16 @@ human achieves. The browser smoke was not run for v0.6.0.
 
 Limits: the skill rule is fixed, the hero never moves, the result depends on the four build rule lists, and the acceptance bar
 covers waves 1-10 only. No game data changed in v0.7.0. The browser smoke was not run for v0.7.0.
+
+## v0.8.0 owner decisions
+
+The first patch that changes balance data. `tests/balance.test.mjs` pins the decisions: starting gold 300 / 260 / 200,
+bounties 6 / 5 / 21 / 11 / 90, `OPENING_TAPER` and the resulting wave 1 (6 enemies at 40% HP), boss waves keep one enemy, waves
+from 30 on are untouched; the applied opening meets the acceptance bar with an idle hero and with the scripted skills.
+`tests/economy.test.mjs` pins the difficulty bonus (`round(bonusGold x waveBonusMult)`, 1.0 / 0.8 / 0.6, dead fields gone) and checks that
+the real `InterestSystem` pays what the table says on insane. `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md` were
+regenerated. One test from v0.3.0 (defeat precedence on the last enemy of wave 1) hardcoded wave 1's size and now reads it from the
+data. The lumber TODO test stays: the sink is postponed by the owner.
+
+Limits: the acceptance bar covers waves 1-10 on normal; hard and insane fail it and are reported as information; hero movement is
+not simulated and no human has played the new opening. The browser smoke was not run for v0.8.0.

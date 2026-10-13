@@ -71,9 +71,7 @@ export function buildReport() {
   const openings = Object.entries(OPENINGS).map(([name, ids]) => ({ name, ...searchOpening(ids, slots) }));
   const bestOverall = Math.min(...openings.map((o) => o.best.leaks));
 
-  const bonusWins = (difficulty) => waveTable(difficulty).filter((w) => w.formulaBonus > w.bonusGold).length;
   const bonusTotal = (difficulty) => sum(waveTable(difficulty), 'bonus');
-  const formulaTotal = (difficulty) => sum(waveTable(difficulty), 'formulaBonus');
   const killAllIncome = sum(normal, 'income');
   const hpPerGold = (wave) => normal[wave - 1].totalHp / normal[wave - 1].income;
 
@@ -91,26 +89,24 @@ export function buildReport() {
   lines.push('- Towers are bought only during countdowns, through the real pointer pipeline of `BuildSystem`, on the 24 cells that');
   lines.push('  cover the most lane waypoints (see `rankedSlots`). A build is an ordered rule list; the first applicable rule is bought');
   lines.push('  when affordable, otherwise the build waits.');
-  lines.push('- The hero is parked on the base and only auto-attacks. Hero skills Q/W, hero movement, the watchtower aura and selling');
-  lines.push('  are NOT simulated, so results describe tower-only play with an idle hero. A human using skills does better by an');
-  lines.push('  amount this report does not measure.');
+  lines.push('- In this report the hero is parked on the base and only auto-attacks; the scripted Q/W rule is used in');
+  lines.push('  `docs/BALANCE_PROPOSALS.md`. Hero movement, the watchtower aura and selling are NOT simulated, so results describe');
+  lines.push('  tower-only play with an idle hero. A human using skills does better by an amount this report does not measure.');
   lines.push('- `oracle_bank` kills every enemy the moment it spawns and never spends (interest compounds); `oracle_spend` empties the');
   lines.push('  purse every countdown. Together they bound the income any player can receive.');
   lines.push('');
   lines.push('## Findings');
   lines.push('');
-  lines.push(`1. **The opening cannot be held.** Starting gold is ${game.DIFFICULTY_PRESETS.normal.startingGold}. The best of ${openings.reduce((n, o) => n + o.runs, 0)} searched opening layouts (${openings.length} tower sets on the 16 best cells)`);
-  lines.push(`   still leaks ${bestOverall} of ${normal[0].count} enemies in wave 1; see the opening search below.`);
-  lines.push(`2. **Every catalogued build is defeated early with the default economy:** ${defaults.map((r) => `${r.build} at wave ${r.reachedWave}`).join(', ')}.`);
-  lines.push(`   With +${HEAD_START} starting gold: ${headStart.map((r) => `${r.build} ${r.result === 'victory' ? 'wins' : `falls at wave ${r.reachedWave}`}`).join(', ')}.`);
+  lines.push(`1. **Opening.** Starting gold is ${game.DIFFICULTY_PRESETS.normal.startingGold}. The best of ${openings.reduce((n, o) => n + o.runs, 0)} searched opening layouts (${openings.length} tower sets on the 16 best cells)`);
+  lines.push(`   leaks ${bestOverall} of ${normal[0].count} enemies in wave 1; see the opening search below.`);
+  lines.push(`2. **Catalogued builds with the default economy:** ${defaults.map((r) => `${r.build} ${r.result === 'victory' ? 'wins' : `defeated in wave ${r.reachedWave}`}`).join(', ')}.`);
+  lines.push(`   With +${HEAD_START} starting gold: ${headStart.map((r) => `${r.build} ${r.result === 'victory' ? 'wins' : `defeated in wave ${r.reachedWave}`}`).join(', ')}.`);
   lines.push(`3. **Income is bounded.** Killing everything pays ${killAllIncome} gold in bounties and wave bonuses over 40 waves; banking it adds`);
   lines.push(`   ${sum(bank.rows, 'interest')} gold of interest (${Math.round(100 * sum(bank.rows, 'interest') / (sum(bank.rows, 'interest') + killAllIncome))}% of everything earned when nothing is ever spent).`);
-  lines.push(`4. **Pressure outgrows income.** Enemy HP per gold of wave income is ${hpPerGold(1).toFixed(1)} in wave 1, ${hpPerGold(20).toFixed(1)} in wave 20 and ${hpPerGold(40).toFixed(1)} in wave 40;`);
+  lines.push(`4. **Pressure against income.** Enemy HP per gold of wave income is ${hpPerGold(1).toFixed(1)} in wave 1, ${hpPerGold(20).toFixed(1)} in wave 20 and ${hpPerGold(40).toFixed(1)} in wave 40;`);
   lines.push('   bounties do not scale with the wave HP multiplier.');
-  lines.push(`5. **Difficulty bonus parameters are dead.** Wave bonus is \`max(base + wave x scale, bonusGold)\`; the formula wins in ${bonusWins('normal')} of 40 waves on normal,`);
-  lines.push(`   ${bonusWins('hard')} on hard and ${bonusWins('insane')} on insane. Total bonus over 40 waves: ${bonusTotal('normal')} / ${bonusTotal('hard')} / ${bonusTotal('insane')} gold`);
-  lines.push(`   (formula alone would pay ${formulaTotal('normal')} / ${formulaTotal('hard')} / ${formulaTotal('insane')}). Tracked as a TODO test; fixing it is a balance decision.`);
-  lines.push(`6. **Lumber has no sink.** A full run earns ${bank.lumberEnd} lumber and no system spends it.`);
+  lines.push(`5. **Difficulty bonus.** The wave bonus is \`round(bonusGold x waveBonusMult)\`; total bonus over 40 waves is ${bonusTotal('normal')} / ${bonusTotal('hard')} / ${bonusTotal('insane')} gold on normal / hard / insane.`);
+  lines.push(`6. **Lumber has no sink.** A full run earns ${bank.lumberEnd} lumber and no system spends it (owner decision: a sink is added later).`);
   lines.push('');
   lines.push('## Wave pressure and income envelope (normal)');
   lines.push('');

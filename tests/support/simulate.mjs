@@ -269,11 +269,10 @@ export function waveTable(difficulty = 'normal') {
     const def = ENEMY_DEFS[w.enemyType];
     const hpEach = Math.round(def.hp * w.hpMult * cfg.enemyHpMult);
     const bounty = def.bounty * w.count;
-    const formula = cfg.waveBonusBase + w.wave * cfg.waveBonusScale;
-    const bonus = Math.max(formula, w.bonusGold);
+    const bonus = Math.round(w.bonusGold * cfg.waveBonusMult);
     return {
       wave: w.wave, enemyType: w.enemyType, count: w.count, flying: def.isFlying, armor: def.armorType,
-      hpEach, totalHp: hpEach * w.count, bounty, bonus, bonusGold: w.bonusGold, formulaBonus: formula, income: bounty + bonus,
+      hpEach, totalHp: hpEach * w.count, bounty, bonus, bonusGold: w.bonusGold, income: bounty + bonus,
       livesAtStake: def.livesCost * w.count,
     };
   });

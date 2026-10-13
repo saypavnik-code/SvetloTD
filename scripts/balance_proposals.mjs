@@ -1,14 +1,17 @@
-// Generates docs/BALANCE_PROPOSALS.md: opening and economy proposals measured with the headless simulation.
+// Generates docs/BALANCE_PROPOSALS.md: the status of balance decisions and any open proposals, measured with the
+// headless simulation.
 //   npm run report:balance            print the document
 //   npm run report:balance -- --write rewrite docs/BALANCE_PROPOSALS.md
 // Run from the repository root. tests/balance.test.mjs fails when the committed document is stale.
-// Nothing here changes game data: a candidate is a temporary scenario (see `withScenario`).
+// Nothing here changes game data: a proposal is a temporary scenario (see `withScenario` in the harness).
+// To put a new proposal on the table, add it to CANDIDATES; the owner's pick is then written into the data files by a
+// later patch and the candidate is removed again.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { BUILDS, game, simulate, waveTable, withScenario } from '../tests/support/simulate.mjs';
 
 const DOC_PATH = 'docs/BALANCE_PROPOSALS.md';
-const { TOWER_DEFS, DAMAGE_MATRIX, DIFFICULTY_PRESETS, WAVES } = game;
+const { TOWER_DEFS, DAMAGE_MATRIX, DIFFICULTY_PRESETS, ENEMY_DEFS, OPENING_TAPER } = game;
 const BUILD_NAMES = Object.keys(BUILDS);
 const MIN_LIVES = 3;          // acceptance: lives left when wave 11 starts
 const WINDOW_SECONDS = 10;    // assumed time enemies stay inside tower range, from the wave-1 run
@@ -20,8 +23,8 @@ const table = (header, rows) => [
   ...rows.map((row) => `| ${row.join(' | ')} |`),
 ].join('\n');
 
-// Early waves are softer and taper linearly back to the current values at wave `until`. Single-enemy
-// (boss) waves keep their count of 1.
+// A softer opening that tapers linearly back to the current values at wave `until`. Single-enemy (boss) waves keep
+// their count of 1. This is the rule `OPENING_TAPER` in src/data/waves.ts applies to the data.
 export function taper({ hp, count, until }) {
   return (wave) => {
     const t = Math.min(1, (wave.wave - 1) / (until - 1));
@@ -32,29 +35,9 @@ export function taper({ hp, count, until }) {
     };
   };
 }
-const bountyTimes = (factor) => (id, def) => ({ bounty: Math.round(def.bounty * factor) });
 
-export const CANDIDATES = [
-  {
-    id: 'A', name: 'Wave side: softer early waves', startGold: 150, bounty: 1, ramp: { hp: 0.3, count: 0.7, until: 30 },
-    note: 'Economy untouched; waves 1-29 start much easier and return to current values at wave 30.',
-  },
-  {
-    id: 'B', name: 'Economy side: richer start and bounties', startGold: 900, bounty: 2, ramp: null,
-    note: 'Waves untouched; the player starts with six times the gold and kills pay double.',
-  },
-  {
-    id: 'C', name: 'Balanced', startGold: 300, bounty: 1.5, ramp: { hp: 0.4, count: 0.8, until: 30 },
-    note: 'Both sides move less: double the starting gold, 1.5x bounties, waves start at 40% HP and 80% count.',
-  },
-].map((candidate) => ({
-  ...candidate,
-  scenario: {
-    startGold: candidate.startGold,
-    ...(candidate.ramp ? { waveTweak: taper(candidate.ramp) } : {}),
-    ...(candidate.bounty !== 1 ? { enemyTweak: bountyTimes(candidate.bounty) } : {}),
-  },
-}));
+// Open proposals, each { id, name, note, scenario }. Empty: the owner's pick of v0.8.0 (candidate C) is in the data.
+export const CANDIDATES = [];
 
 function outcome(run) {
   const wave11 = run.rows.find((row) => row.wave === 11);
@@ -66,15 +49,16 @@ function outcome(run) {
     lives10: wave11 ? wave11.livesAtStart : 0,
     livesEnd: run.livesLeft,
     casts: run.casts,
+    rows: run.rows,
   };
 }
 
 // Every catalogued build, with an idle hero and with the scripted skills.
-export function evaluate(scenario, maxWave = 40) {
+export function evaluate(scenario, maxWave = 40, difficulty = 'normal') {
   const result = { idle: [], skills: [] };
   for (const skills of [false, true]) {
     for (const build of BUILD_NAMES) {
-      result[skills ? 'skills' : 'idle'].push(outcome(simulate({ build, skills, scenario, maxWave })));
+      result[skills ? 'skills' : 'idle'].push(outcome(simulate({ build, skills, scenario, maxWave, difficulty })));
     }
   }
   return result;
@@ -84,46 +68,58 @@ const better = (a, b) => (!b || a.lives10 > b.lives10 || (a.lives10 === b.lives1
 export const bestOf = (outcomes) => outcomes.reduce((best, o) => better(o, best), null);
 export const passes = (outcomes) => bestOf(outcomes).lives10 >= MIN_LIVES;
 const fate = (o) => (o.result === 'victory' ? 'victory' : `defeated in wave ${o.reachedWave}`);
+const verdict = (outcomes) => (passes(outcomes) ? 'PASS' : 'FAIL');
+
+const dpsPerGold = (def, armor, cost) => (def.damage * (DAMAGE_MATRIX[def.damageType]?.[armor] ?? 1) * def.attackSpeed) / cost;
+function cumulativeCost(id) {
+  const parent = Object.entries(TOWER_DEFS).find(([, def]) => (def.upgradeTo ?? []).includes(id));
+  return TOWER_DEFS[id].cost + (parent ? cumulativeCost(parent[0]) : 0);
+}
 
 function pressureIndex(scenario) {
-  const startGold = scenario?.startGold ?? DIFFICULTY_PRESETS.normal.startingGold;
   const arrow = TOWER_DEFS.arrow_t1;
-  const dpsPerGold = (arrow.damage * DAMAGE_MATRIX[arrow.damageType].medium * arrow.attackSpeed) / arrow.cost;
+  const perGold = dpsPerGold(arrow, 'medium', arrow.cost);
   const hero = new game.Hero();
   const heroDps = hero.ATTACK_DAMAGE / hero.ATTACK_INTERVAL;
   return withScenario(scenario, () => {
-    let gold = startGold;
+    let gold = scenario?.startGold ?? DIFFICULTY_PRESETS.normal.startingGold;
     return waveTable('normal').map((w) => {
-      const affordable = gold * dpsPerGold + heroDps;
+      const affordable = gold * perGold + heroDps;
       gold += w.income;
       return affordable / (w.totalHp / WINDOW_SECONDS);
     });
   });
 }
 
-function bonusTotals(multipliers) {
-  return Object.fromEntries(Object.entries(multipliers).map(([id, m]) => [id, WAVES.reduce((sum, w) => sum + Math.round(w.bonusGold * m), 0)]));
-}
-
 export function buildProposals() {
-  const baseline = evaluate(null);
+  const normal = evaluate(null);
+  const other = ['hard', 'insane'].map((difficulty) => ({ difficulty, result: evaluate(null, 11, difficulty) }));
   const candidates = CANDIDATES.map((c) => ({ ...c, result: evaluate(c.scenario) }));
   const arrow = TOWER_DEFS.arrow_t1;
-  const dpsPerGold = (arrow.damage * DAMAGE_MATRIX[arrow.damageType].medium * arrow.attackSpeed) / arrow.cost;
-  const indexBase = pressureIndex(null);
-  const indexCand = CANDIDATES.map((c) => pressureIndex(c.scenario));
+  const perGold = dpsPerGold(arrow, 'medium', arrow.cost);
+  const index = [pressureIndex(null), ...CANDIDATES.map((c) => pressureIndex(c.scenario))];
+  const presets = Object.values(DIFFICULTY_PRESETS);
+  const bounties = Object.values(ENEMY_DEFS).map((d) => `${d.id} ${d.bounty}`).join(', ');
+  const best = bestOf(normal.skills);
 
   const lines = [];
-  lines.push('# Opening and economy proposals (generated)');
+  lines.push('# Balance decisions and proposals (generated)');
   lines.push('');
   lines.push('Generated by `npm run report:balance -- --write` from the headless simulation. Do not edit by hand:');
-  lines.push('`tests/balance.test.mjs` fails when this file is stale. **Nothing here changes game data.** A candidate is a temporary');
-  lines.push('scenario; the owner picks one (or asks for another) and a later patch writes the numbers into the data files.');
-  lines.push('Browser smoke: not run.');
+  lines.push('`tests/balance.test.mjs` fails when this file is stale. A proposal is a temporary scenario that changes no game data; the');
+  lines.push('owner picks one and a later patch writes the numbers into the data files. Browser smoke: not run.');
+  lines.push('');
+  lines.push('## Decisions applied (owner, 2026-10-11, patch v0.8.0)');
+  lines.push('');
+  lines.push(`- **Opening, candidate C.** Starting gold ${presets.map((p) => `${p.startingGold} (${p.id})`).join(', ')}, which is twice the old values. Bounties x1.5, rounded:`);
+  lines.push(`  ${bounties}. Waves 1-${OPENING_TAPER.until - 1} start at ${Math.round(OPENING_TAPER.hp * 100)}% HP and ${Math.round(OPENING_TAPER.count * 100)}% count and return linearly to`);
+  lines.push(`  100% at wave ${OPENING_TAPER.until} (\`OPENING_TAPER\` in \`src/data/waves.ts\`); single-enemy waves keep their count of 1.`);
+  lines.push(`- **Difficulty bonus.** \`round(bonusGold x waveBonusMult)\` with ${presets.map((p) => `${p.waveBonusMult.toFixed(1)} (${p.id})`).join(', ')}. The old dead \`waveBonusBase/Scale\` fields are gone.`);
+  lines.push('- **Lumber.** Stays earned and unspent; a sink is added later (tracked by a TODO test).');
   lines.push('');
   lines.push('## Method, metric and limits');
   lines.push('');
-  lines.push('- Same simulation as `docs/ECONOMY_REPORT.md` (real code, 30 Hz, deterministic), difficulty normal, the four catalogued');
+  lines.push('- Same simulation as `docs/ECONOMY_REPORT.md` (real code, 30 Hz, deterministic), difficulty normal unless stated, the four catalogued');
   lines.push('  tower builds. Two hero modes: `idle` (parked on the base, auto-attack only) and `skills` (also casts Q when two or more');
   lines.push('  enemies are inside its blast radius, W when a tower is inside its radius). Hero movement and the watchtower are not simulated.');
   lines.push(`- **Acceptance:** the best build still has at least ${MIN_LIVES} lives when wave 11 starts, i.e. it held waves 1-10. It is a bar for`);
@@ -131,94 +127,98 @@ export function buildProposals() {
   lines.push('- `cleared` counts waves that ended (leaks allowed). `lives@11` is the lives left when wave 11 starts (0 if defeated earlier).');
   lines.push('- Results depend on the four build rule lists in `tests/support/simulate.mjs`; a smarter player does better by an unmeasured amount.');
   lines.push('');
-  lines.push('## Current data');
+  lines.push('## Current data (normal)');
+  lines.push('');
+  lines.push(`Acceptance: idle hero **${verdict(normal.idle)}**, scripted skills **${verdict(normal.skills)}**.`);
   lines.push('');
   lines.push(table(
     ['build', 'hero', 'outcome', 'cleared', 'lives@11', 'Q casts', 'W casts'],
     BUILD_NAMES.flatMap((name, i) => ['idle', 'skills'].map((mode) => {
-      const o = baseline[mode][i];
+      const o = normal[mode][i];
       return [name, mode, fate(o), o.cleared, o.lives10, o.casts.q, o.casts.w];
     })),
   ));
   lines.push('');
-  lines.push('## Pressure index (analytic aid, waves 1-20)');
-  lines.push('');
-  lines.push(`Affordable damage per second divided by the damage per second needed to kill the wave in ${WINDOW_SECONDS} s. Affordable = every gold`);
-  lines.push(`earned so far (starting gold plus bounty and bonus of all earlier waves, nothing wasted) spent on tier-1 arrow towers at`);
-  lines.push(`${dpsPerGold.toFixed(2)} dps per gold against medium armor, plus the idle hero. The ${WINDOW_SECONDS} s window is read from the wave-1 run. A value`);
-  lines.push('below 1 means the wave cannot be killed by what the economy could have bought. It ignores armor, range and focus, so it is');
-  lines.push('an aid for reading the simulation, not a result.');
+  lines.push('### Other difficulties (informational, waves 1-11 only)');
   lines.push('');
   lines.push(table(
-    ['wave', 'enemy', 'current', ...CANDIDATES.map((c) => `candidate ${c.id}`)],
-    waveTable('normal').slice(0, 20).map((w, i) => [
-      w.wave, `${w.enemyType} x${w.count}`, indexBase[i].toFixed(2), ...indexCand.map((index) => index[i].toFixed(2)),
-    ]),
-  ));
-  lines.push('');
-  lines.push('## Candidates');
-  lines.push('');
-  lines.push(table(
-    ['candidate', 'starting gold', 'waves 1-29 HP and count', 'bounty', 'note'],
-    candidates.map((c) => [
-      `${c.id}: ${c.name}`, c.startGold,
-      c.ramp ? `from ${Math.round(c.ramp.hp * 100)}% HP and ${Math.round(c.ramp.count * 100)}% count, linear to 100% at wave ${c.ramp.until}` : 'unchanged',
-      c.bounty === 1 ? 'unchanged' : `x${c.bounty}`, c.note,
-    ]),
-  ));
-  lines.push('');
-  lines.push(table(
-    ['candidate', 'hero', 'best build', 'acceptance', 'lives@11', 'best build over 40 waves'],
-    candidates.flatMap((c) => ['idle', 'skills'].map((mode) => {
-      const best = bestOf(c.result[mode]);
-      return [c.id, mode, best.build, passes(c.result[mode]) ? 'PASS' : 'FAIL', best.lives10, `${fate(best)}, ${best.cleared} cleared`];
+    ['difficulty', 'hero', 'best build', 'lives@11', 'acceptance'],
+    other.flatMap(({ difficulty, result }) => ['idle', 'skills'].map((mode) => {
+      const top = bestOf(result[mode]);
+      return [difficulty, mode, top.build, top.lives10, verdict(result[mode])];
     })),
   ));
   lines.push('');
+  lines.push('### Where the best build loses (normal, scripted skills)');
+  lines.push('');
+  lines.push(`Best build: \`${best.build}\`, ${fate(best)}, ${best.cleared} waves cleared. Waves in which it leaked:`);
+  lines.push('');
+  const leaking = best.rows.filter((row) => row.leaks > 0);
+  lines.push(leaking.length === 0 ? 'None.' : table(
+    ['wave', 'enemy', 'leaks of count', 'lives lost', 'towers', 'invested'],
+    leaking.map((row) => [row.wave, row.enemyType, `${row.leaks} of ${row.count}`, row.livesLost, row.towers, row.invested]),
+  ));
+  lines.push('');
   for (const c of candidates) {
-    lines.push(`### Candidate ${c.id}: all builds`);
+    lines.push(`## Open proposal ${c.id}: ${c.name}`);
+    lines.push('');
+    lines.push(c.note);
     lines.push('');
     lines.push(table(
-      ['build', 'idle: outcome', 'idle lives@11', 'skills: outcome', 'skills lives@11'],
-      BUILD_NAMES.map((name, i) => [name, fate(c.result.idle[i]), c.result.idle[i].lives10, fate(c.result.skills[i]), c.result.skills[i].lives10]),
+      ['hero', 'best build', 'acceptance', 'lives@11', 'best build over 40 waves'],
+      ['idle', 'skills'].map((mode) => {
+        const top = bestOf(c.result[mode]);
+        return [mode, top.build, verdict(c.result[mode]), top.lives10, `${fate(top)}, ${top.cleared} cleared`];
+      }),
     ));
     lines.push('');
   }
-  lines.push('## Sweep: how much each lever matters (best build, skills, waves 1-11 only)');
+  lines.push('## Tower efficiency (analytic, from the data)');
   lines.push('');
-  lines.push('Bounty x1.5 in every row. HP and count scale from the given fraction at wave 1 to 100% at wave 30.');
+  lines.push('Damage per second per gold of cumulative cost against each armor, from the damage matrix. Splash, slow, poison, range and');
+  lines.push('targeting are ignored, so it is an aid for reading the simulation, not a result.');
   lines.push('');
-  const sweep = [];
-  for (const startGold of [150, 250, 400]) {
-    for (const hp of [1, 0.6, 0.4]) {
-      for (const count of [1, 0.7]) {
-        const scenario = {
-          startGold,
-          ...(hp === 1 && count === 1 ? {} : { waveTweak: taper({ hp, count, until: 30 }) }),
-          enemyTweak: bountyTimes(1.5),
-        };
-        const best = bestOf(BUILD_NAMES.map((build) => outcome(simulate({ build, skills: true, scenario, maxWave: 11 }))));
-        sweep.push([startGold, `${Math.round(hp * 100)}%`, `${Math.round(count * 100)}%`, best.build, best.lives10, best.lives10 >= MIN_LIVES ? 'PASS' : 'FAIL']);
-      }
-    }
-  }
-  lines.push(table(['starting gold', 'HP at wave 1', 'count at wave 1', 'best build', 'lives@11', 'acceptance'], sweep));
+  const attackers = Object.entries(TOWER_DEFS).filter(([, def]) => def.damage > 0);
+  lines.push(table(
+    ['tower', 'cumulative cost', 'damage type', 'light', 'medium', 'heavy', 'fortified'],
+    attackers.map(([id, def]) => {
+      const cost = cumulativeCost(id);
+      return [id, cost, def.damageType, ...['light', 'medium', 'heavy', 'fortified'].map((a) => dpsPerGold(def, a, cost).toFixed(3))];
+    }),
+  ));
   lines.push('');
-  lines.push('## Decisions the owner has to make');
+  const types = new Set(attackers.map(([, def]) => def.damageType));
+  const unused = Object.keys(DAMAGE_MATRIX).filter((type) => !types.has(type));
+  lines.push(`Damage types in the matrix that no attacking tower uses: ${unused.length ? unused.map((t) => `\`${t}\` (x${DAMAGE_MATRIX[t].medium} against medium armor)`).join(', ') : 'none'}.`);
+  lines.push(`Best tower against medium armor, the armor of the most common enemy: ${(() => {
+    const top = attackers.map(([id, def]) => [id, dpsPerGold(def, 'medium', cumulativeCost(id))]).sort((a, b) => b[1] - a[1])[0];
+    return `\`${top[0]}\` at ${top[1].toFixed(3)} dps per gold`;
+  })()}.`);
   lines.push('');
-  lines.push('1. **Opening.** Pick candidate A, B or C, or name other numbers. A and C change `src/data/waves.ts`; B and C change');
-  lines.push('   `startingGold` in `src/config/difficulty.ts` and `bounty` in `src/data/enemies.ts`. Whatever is picked, waves 11+ stay');
-  lines.push('   unsolved (see "best build over 40 waves"): they need their own measurement and a later sprint.');
-  const totals = bonusTotals({ normal: 1, hard: 0.8, insane: 0.6 });
-  const current = (difficulty) => waveTable(difficulty).reduce((sum, w) => sum + w.bonus, 0);
-  const change = (difficulty) => totals.normal - current(difficulty);
-  lines.push('2. **Difficulty bonus.** `max(formula, bonusGold)` makes `waveBonusBase/Scale` dead. Options: (a) delete the two fields: the bonus becomes');
-  lines.push(`   \`bonusGold\` on every difficulty (${totals.normal} gold over 40 waves; change against today: ${change('normal')} / ${change('hard')} / ${change('insane')} gold on normal / hard / insane); (b) replace the`);
-  lines.push(`   rule with \`round(bonusGold x multiplier)\` using 1.0 / 0.8 / 0.6 for normal / hard / insane (${totals.normal} / ${totals.hard} / ${totals.insane} gold).`);
-  lines.push('3. **Lumber.** It is earned and never spent. Options: (a) remove it from the HUD and the systems; (b) add the sink that the');
-  lines.push('   `LumberManager` header comment describes (mercenaries and tier-3 towers), which needs new content and is a larger sprint.');
+  lines.push(`## Pressure index (analytic aid, waves 1-20${CANDIDATES.length ? ', current data and open proposals' : ''})`);
+  lines.push('');
+  lines.push(`Affordable damage per second divided by the damage per second needed to kill the wave in ${WINDOW_SECONDS} s. Affordable = every gold`);
+  lines.push(`earned so far (starting gold plus bounty and bonus of all earlier waves, nothing wasted) spent on tier-1 arrow towers at`);
+  lines.push(`${perGold.toFixed(2)} dps per gold against medium armor, plus the idle hero. The ${WINDOW_SECONDS} s window is read from the wave-1 run. A value`);
+  lines.push('below 1 means the wave cannot be killed by what the economy could have bought. It ignores armor, range and focus.');
+  lines.push('');
+  lines.push(table(
+    ['wave', 'enemy', 'current', ...CANDIDATES.map((c) => `proposal ${c.id}`)],
+    waveTable('normal').slice(0, 20).map((w, i) => [
+      w.wave, `${w.enemyType} x${w.count}`, ...index.map((values) => values[i].toFixed(2)),
+    ]),
+  ));
+  lines.push('');
+  lines.push('## Open decisions');
+  lines.push('');
+  lines.push('1. **Mid game (waves 11-40).** The opening is addressed; the best build still loses where the table above says. Needs its own');
+  lines.push('   measurement and a proposal.');
+  lines.push('2. **Lumber sink.** Lumber is earned and never spent. The `LumberManager` header comment describes the intended sink (mercenaries');
+  lines.push('   and tier-3 towers), which needs new content.');
+  lines.push('3. **Damage types and upgrades.** See the efficiency table: the type listed as unused has no tower, and a tier-2 upgrade');
+  lines.push('   gives less damage per gold than another tier-1 tower. Whether that is intended is a design decision.');
   lines.push('4. **Calibration.** The skill rule is fixed and the hero never moves. One human play of waves 1-3 with skills (lives lost per wave)');
-  lines.push('   tells how pessimistic `idle` and `skills` are before any number is written into the data.');
+  lines.push('   tells how pessimistic `idle` and `skills` are, and whether the new opening is now too easy for a human.');
   lines.push('');
   return lines.join('\n');
 }

@@ -59,3 +59,16 @@ cooperative authority model and player-count scaling after measured playtests.
   The Watchtower aura multiplies with it.
 - The tower panel sell button shows the refund for the current phase (100% between waves, 70% in combat).
 - Open design question (not changed): cannon splash also damages flying enemies caught in the blast.
+
+## Economy and opening (v0.8.0)
+
+- Starting gold: 300 normal, 260 hard, 200 insane (twice the earlier values; owner decision, candidate C of the v0.7.0
+  proposals).
+- Wave bonus: `round(bonusGold x waveBonusMult)` with 1.0 / 0.8 / 0.6. Interest: `floor(unspent gold x interestRate)`, 5% / 3% / 1%,
+  paid first when a wave is cleared.
+- Bounties: grunt 6, runner 5, golem 21, wyvern 11, Goliath 90.
+- Opening taper: waves 1-29 start at 40% HP and 80% count (wave 1 is 6 goblins at 40% HP) and return linearly to the written
+  values at wave 30; single-enemy waves keep their count of 1. Constants: `OPENING_TAPER` in `src/data/waves.ts`.
+- Lumber is earned every 5 waves and from golems and bosses; nothing spends it yet (a sink is planned).
+- Measured status: `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md`. Waves 11-40 and the hard and insane presets are
+  not rebalanced.

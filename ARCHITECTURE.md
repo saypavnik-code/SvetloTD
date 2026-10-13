@@ -74,3 +74,5 @@ Do not mistake a shim-only typecheck for runtime verification.
 - Scenarios (`withScenario` in the harness) replace wave, enemy and starting-gold data for one run and restore it in a
   `finally`; `scripts/balance_proposals.mjs` renders `docs/BALANCE_PROPOSALS.md` from them. The scripted hero skill rule
   (`castSkills`) lives in the harness, not in the game.
+- The wave bonus is `round(WaveData.bonusGold x waveBonusMult)` (`InterestSystem`). `OPENING_TAPER` in `src/data/waves.ts`
+  softens waves 1-29 once at module load, so `WAVES` is the final data that every system and the harness read.

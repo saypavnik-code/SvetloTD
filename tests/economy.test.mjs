@@ -56,8 +56,7 @@ test('gold, lives, kills, interest and bonus add up in every wave of every run',
           if (!row.cleared) return;
           assert.equal(row.kills + row.leaks, row.count, `${tag}: every enemy of wave ${row.wave} dies or leaks once`);
           assert.equal(row.interest, Math.floor((row.goldAtStart + row.bounty) * cfg.interestRate), `${tag}: interest in wave ${row.wave}`);
-          const formula = cfg.waveBonusBase + row.wave * cfg.waveBonusScale;
-          assert.equal(row.bonus, Math.max(formula, WAVES[row.wave - 1].bonusGold), `${tag}: bonus in wave ${row.wave}`);
+          assert.equal(row.bonus, Math.round(WAVES[row.wave - 1].bonusGold * cfg.waveBonusMult), `${tag}: bonus in wave ${row.wave}`);
           assert.equal(row.goldAfterAward, row.goldAtStart + row.bounty + row.interest + row.bonus, `${tag}: awards in wave ${row.wave}`);
         });
       }
@@ -69,7 +68,7 @@ test('gold, lives, kills, interest and bonus add up in every wave of every run',
 test('towers are bought through the real build system and cost exactly their price', () => {
   const run = simulate({ build: 'arrow', extraGold: 600, maxWave: 1 });
   const first = run.rows[0];
-  assert.equal(first.spentBefore + first.goldAtStart, 150 + 600, 'purchases plus remaining gold equal the starting purse');
+  assert.equal(first.spentBefore + first.goldAtStart, DIFFICULTY_PRESETS.normal.startingGold + 600, 'purchases plus remaining gold equal the starting purse');
   assert.equal(first.invested, first.spentBefore, 'invested equals spent before the first wave');
 });
 
@@ -80,16 +79,25 @@ test('docs/ECONOMY_REPORT.md is up to date (run `npm run report:economy -- --wri
   assert.equal(committed, buildReport());
 });
 
-// ── Findings that are tracked, not fixed: they are balance or design decisions ──
-// A TODO test is reported but does not fail the suite; remove `todo` when the decision is made.
+// ── Difficulty bonus (decided by the owner in v0.8.0) ───────────────────────
 
-test('difficulty presets change the wave bonus', { todo: 'v0.6.0 finding: max(formula, bonusGold) makes waveBonusBase/Scale dead on hard and insane' }, () => {
+test('difficulty presets scale the wave bonus: round(bonusGold x multiplier) with 1.0 / 0.8 / 0.6', () => {
   const total = (difficulty) => sum(waveTable(difficulty), 'bonus');
-  assert(total('insane') < total('normal') * 0.9, `insane pays ${total('insane')}, normal pays ${total('normal')}`);
-  assert(total('hard') < total('normal') * 0.95, `hard pays ${total('hard')}, normal pays ${total('normal')}`);
+  assert.deepEqual(['normal', 'hard', 'insane'].map((d) => DIFFICULTY_PRESETS[d].waveBonusMult), [1.0, 0.8, 0.6]);
+  assert(total('insane') < total('hard') && total('hard') < total('normal'));
+  assert.equal(total('normal'), sum(WAVES, 'bonusGold'), 'normal pays the wave bonusGold as written');
+  for (const difficulty of Object.keys(DIFFICULTY_PRESETS)) {
+    const cfg = DIFFICULTY_PRESETS[difficulty];
+    assert.equal('waveBonusBase' in cfg || 'waveBonusScale' in cfg, false, `${difficulty}: the dead formula fields are gone`);
+  }
+  const run = simulate({ baseline: 'oracle_bank', difficulty: 'insane' });
+  assert.equal(sum(run.rows, 'bonus'), total('insane'), 'the real InterestSystem pays what the table says');
 });
 
-test('lumber is spent by some system', { todo: 'v0.6.0 finding: lumber is earned (waves, golems, bosses) but has no sink' }, () => {
+// ── Tracked finding, not fixed: a design decision the owner postponed ───────
+// A TODO test is reported but does not fail the suite; remove `todo` when the sink exists.
+
+test('lumber is spent by some system', { todo: 'owner decision 2026-10-11: a lumber sink is added later; lumber stays unspent until then' }, () => {
   const spenders = [];
   const visit = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {

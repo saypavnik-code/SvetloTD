@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// waves.ts — All 20 wave definitions.
+// waves.ts — All 40 wave definitions (20 hand-made, 20 generated), softened by OPENING_TAPER.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { EnemyId } from './enemies';
@@ -69,4 +69,19 @@ const LATE_WAVES: WaveData[] = Array.from({ length: 20 }, (_, index) => {
     preview: isBoss ? `Citadel guardian ${wave}` : `Reinforcements ${wave}`,
   };
 });
-export const WAVES: WaveData[] = [...EARLY_WAVES, ...LATE_WAVES];
+// Opening taper (v0.8.0, candidate C of docs/BALANCE_PROPOSALS.md, chosen by the owner): wave 1 starts at
+// 40% HP and 80% count and both return linearly to the values above at wave 30. Single-enemy (boss) waves keep
+// their count of 1. Edit the constants to retune the opening; waves from `until` on are untouched.
+export const OPENING_TAPER = { hp: 0.4, count: 0.8, until: 30 } as const;
+
+function taperWave(wave: WaveData): WaveData {
+  const t = Math.min(1, (wave.wave - 1) / (OPENING_TAPER.until - 1));
+  if (t >= 1) return wave;
+  return {
+    ...wave,
+    hpMult: Math.round(wave.hpMult * (OPENING_TAPER.hp + (1 - OPENING_TAPER.hp) * t) * 100) / 100,
+    count: wave.count === 1 ? 1 : Math.max(1, Math.round(wave.count * (OPENING_TAPER.count + (1 - OPENING_TAPER.count) * t))),
+  };
+}
+
+export const WAVES: WaveData[] = [...EARLY_WAVES, ...LATE_WAVES].map(taperWave);

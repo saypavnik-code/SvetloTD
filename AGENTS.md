@@ -51,6 +51,8 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
   difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
 - A balance proposal is a scenario (`withScenario`), never an edit of the data files, until the owner picks one;
   `npm run report:balance -- --write` regenerates `docs/BALANCE_PROPOSALS.md` and a test compares it.
+- Do not hardcode balance numbers (counts, gold, bounties) in unrelated tests: read them from the data, so a rebalance
+  only touches the tests that pin the decision (`tests/balance.test.mjs`).
 - Read private state only where the real path needs pointer input, and say so in a comment.
 - A regression test must fail on the unfixed code; confirm that before calling a defect fixed.
 
