@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { WaveManager } from '../systems/WaveManager';
-import { EconomyManager } from '../systems/EconomyManager';
 import { WAVES, type WaveData } from '../data/waves';
 import { GAME_WIDTH, GAME_HEIGHT, DEPTH, FONT_FAMILY, COLORS } from '../config';
 
@@ -21,7 +20,6 @@ const ARMOR_COLORS: Record<string, string> = {
 export class WaveInfo {
   private readonly _scene: Phaser.Scene;
   private readonly _wm: WaveManager;
-  private readonly _economy: EconomyManager;
 
   private _cdRoot!: Phaser.GameObjects.Container;
   private _cdTitle!: Phaser.GameObjects.Text;
@@ -40,10 +38,9 @@ export class WaveInfo {
 
   private _countdownFull = 20;
 
-  constructor(scene: Phaser.Scene, wm: WaveManager, economy: EconomyManager) {
+  constructor(scene: Phaser.Scene, wm: WaveManager) {
     this._scene = scene;
     this._wm = wm;
-    this._economy = economy;
 
     this._buildBackground();
     this._buildCountdownPanel();
@@ -155,8 +152,8 @@ export class WaveInfo {
 
     this._wm.onWaveStart = (wave) => this._showActiveWave(wave);
 
-    this._wm.onWaveComplete = (_wave, bonusGold) => {
-      this._economy.addGold(bonusGold);
+    // Presentation only: gold is paid by InterestSystem (single owner of the wave bonus).
+    this._wm.onWaveComplete = () => {
       this._countdownFull = 20;
       this._showCountdown();
     };

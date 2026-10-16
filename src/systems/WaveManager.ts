@@ -56,7 +56,7 @@ export class WaveManager {
 
   onCountdownTick?: (secsLeft: number) => void;
   onWaveStart?:     (wave: WaveData) => void;
-  onWaveComplete?:  (wave: WaveData, bonusGold: number) => void;
+  onWaveComplete?:  (wave: WaveData) => void;
   onVictory?:       () => void;
 
   constructor(_scene: unknown, pool: ObjectPool<Enemy>) {
@@ -191,10 +191,9 @@ export class WaveManager {
     if (this.state === 'victory' || this._terminated) return;
     const wave  = WAVES[this._waveIndex];
 
-    // NOTE: InterestSystem now handles bonusGold calculation from WaveData.
-    // The old local bonus/earlyBonus logic is removed — InterestSystem takes
-    // EARLY_BONUS via the earlyBonus flag emitted below if needed.
-    this.onWaveComplete?.(wave, wave.bonusGold);
+    // Gold is paid by InterestSystem on WAVE_COMPLETED (the single owner of the wave bonus).
+    // The callback is presentation only and deliberately receives no gold amount.
+    this.onWaveComplete?.(wave);
     // Pass waveNumber (1-based) AND WaveData so InterestSystem can read bonusGold
     EventBus.emit(GameEvents.WAVE_COMPLETED, this._waveIndex + 1, wave);
 

@@ -73,6 +73,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
    `tests/combat.test.mjs` scans `src/`.
 7. State changed by assigning a field from the UI skips the owner's logic (target priority). Change state
    through the entity's method.
+8. Money changed outside its owning system (v0.10.0): `WaveInfo` credited the raw wave bonus next to the scaled
+   `InterestSystem` payout. A harness that leaves the UI out cannot see this: wire the real UI class into the test
+   (`tests/ui_wiring.test.mjs`) and assert that every unit of gold is explained by an event.
 
 ## Resuming in a new session
 

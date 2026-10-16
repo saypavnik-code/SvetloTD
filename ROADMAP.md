@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.9.0)
+## Current state (v0.10.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -19,6 +19,9 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   0.6. Lumber stays unspent until a sink is added. Waves 11-40 are not rebalanced.
 - v0.9.0 measured the mid game and put three proposals (D, E, F) and two design what-ifs in `docs/BALANCE_PROPOSALS.md`;
   no game data changed. On the current data the best catalogued build still loses in waves 11-14; D and E hold waves 1-20.
+- v0.10.0 fixed a double payment found by wiring the real `WaveInfo` into a test: the UI callback credited the raw `bonusGold`
+  on top of the scaled `InterestSystem` payout, so the 1.0 / 0.8 / 0.6 multipliers were never in effect in the game and income
+  was above everything the reports measured (the harness has no UI). The UI no longer touches the economy; no data changed.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -54,6 +57,9 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   wave 1's size now reads it from the data.
 - [x] v0.9.0 mid-game measurement: `BASE_WAVES` and the pure `taperWave` are exported from `src/data/waves.ts` (data
   unchanged), scenarios can also override towers and difficulty presets, a mid-game bar (waves 1-20), proposals D/E/F.
+- [x] v0.10.0 the wave bonus was credited twice (raw `bonusGold` by `WaveInfo`, scaled by `InterestSystem`: up to 11460 instead of
+  5730 gold over 40 waves on normal, and the hard/insane multipliers were void). It is paid once by `InterestSystem`;
+  `onWaveComplete` carries no gold amount; a test wires the real `WaveInfo`; a guard keeps `src/ui/` away from gold, lives and lumber.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -74,6 +80,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   (-30%) or an arrow tower with `normal` damage each take the best build from wave 11 to waves 15-16 on their own;
   none of the four catalogued builds kills the fortified wave bosses (waves 10 and 15 cost 5 lives each). Also
   open: interest is worth 56% of income when nothing is spent and bounties do not scale with wave HP.
+- [ ] Early-start bonus (owner decision needed): the start-now button prints "+N" (`round(bonusGold x 1.2)`) but no system pays it.
+  Either pay it in a system (and measure it) or drop the number from the label. A TODO test in `tests/ui_wiring.test.mjs` tracks it.
 - [ ] Lumber sink (owner decision 2026-10-11: later): mercenaries and tier-3 towers as the `LumberManager` header
   describes; needs new content. A TODO test tracks it.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).

@@ -26,7 +26,8 @@ Static validation alone is **not** an E2E/browser test.
 Manual browser smoke (still pending): start -> first wave -> place & upgrade ->
 pause and try building -> resume -> sell final watchtower -> lose all lives ->
 retry -> inspect fresh Q/W HUD and restored economy -> menu -> play -> confirm
-no duplicated dust, skills or listeners; finish wave 40 and retry after victory.
+no duplicated dust, skills or listeners; finish wave 40 and retry after victory. After wave 1 the gold must grow by the
+wave bonus once ("+N бонус" is the only bonus; 20 on normal), not twice.
 Repeat on desktop Chrome/Firefox and mobile touch devices (including tap-to-cast Q/W).
 
 ## Browser smoke log
@@ -134,3 +135,14 @@ starts) with an idle hero and with the scripted skills, F with the skills; the c
 
 Limits: the bars cover waves 1-20 on normal; the four catalogued builds do not plan for the fortified bosses; no human has played
 any of this. The browser smoke was not run for v0.9.0.
+
+## v0.10.0 wave bonus paid once
+
+No game data changed. `tests/ui_wiring.test.mjs` plays wave 1 on every difficulty with the real `WaveInfo` wired to the `WaveManager`
+and requires that all gold is explained by reported events (kill bounties, interest, the scaled wave bonus); it failed on v0.9.0
+(393 gold instead of 373 on normal: the raw wave 1 bonus of 20 was credited by the UI on top of the scaled one). A guard test keeps
+`src/ui/` from calling `addGold`, `spendGold`, `loseLife` or lumber mutators. A TODO test records that the start-now button prints an
+early-start bonus that nothing pays (owner decision needed). `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md` are unchanged:
+the harness never had the UI payout, so the reports already described the single payment that the game now matches.
+
+Limits: the Phaser scene lifecycle and rendering are still untested; no browser run. The browser smoke was not run for v0.10.0.

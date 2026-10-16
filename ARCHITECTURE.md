@@ -5,6 +5,7 @@
 Root `src/main.ts` boots Phaser Scenes: Boot -> Menu -> Game -> GameOver.
 `GameScene` orchestrates but must not own numerical game rules. Data lives in `src/data/`;
 combat entities in `src/entities/`; services in `src/systems/`; HUD in `src/ui/`.
+UI components never change gold, lives or lumber: the economy systems own them (guard: `tests/ui_wiring.test.mjs`).
 `EventBus` is an event contract, not a place to store mutable game state.
 
 ## Geometry (one source of truth)

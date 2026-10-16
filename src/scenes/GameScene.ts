@@ -155,7 +155,7 @@ export class GameScene extends Phaser.Scene {
     this._hud          = new HUD(this, this._economy, this._waveManager);
     this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy);
     this._towerPanel.bindHotkeys(this);
-    this._waveInfo     = new WaveInfo(this, this._waveManager, this._economy);
+    this._waveInfo     = new WaveInfo(this, this._waveManager);
     this._floatingText = new FloatingTextPool(this);
 
     this._buildPauseOverlay();
