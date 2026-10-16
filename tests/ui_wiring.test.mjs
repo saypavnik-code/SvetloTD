@@ -92,9 +92,13 @@ test('UI components never change gold, lives or lumber (the economy systems own 
   assert.deepEqual(offenders, []);
 });
 
-// ── Findings that need an owner decision ────────────────────────────────────
+// ── The start-now button must not advertise gold that nothing pays ─────────
 
-test('starting a wave early pays the bonus printed on the button', { todo: 'owner decision needed: WaveInfo prints "+N" on the start-now button (round(bonusGold x 1.2)) but no system pays an early-start bonus' }, () => {
+test('the start-now button promises no early-start bonus (no system pays one)', () => {
+  const source = readFileSync(join('src', 'ui', 'WaveInfo.ts'), 'utf8');
+  assert(!/EARLY_BONUS/.test(source), 'an early-start bonus constant is back in WaveInfo');
+  assert(!/Начать сейчас[^'`]*\$\{/.test(source), 'the start-now label interpolates a gold amount');
+  // And indeed skipping the countdown pays nothing.
   const economy = new game.EconomyManager();
   const lumber = new game.LumberManager();
   const interest = new game.InterestSystem(economy, lumber);
@@ -105,8 +109,7 @@ test('starting a wave early pays the bonus printed on the button', { todo: 'owne
     waves.startGame();
     waves.skipCountdown();
     waves.update(0.1);
-    const printed = Math.round(WAVES[0].bonusGold * 1.2);
-    assert.equal(economy.gold, before + printed, 'no early-start bonus is paid');
+    assert.equal(economy.gold, before);
   } finally {
     waves.destroy(); interest.destroy(); economy.destroy();
   }

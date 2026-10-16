@@ -528,23 +528,16 @@ export class GameScene extends Phaser.Scene {
     bg.fillStyle(COLORS.bgGameField, 1); bg.fillRect(0, 0, GRID_COLS*TILE_SIZE, GRID_ROWS*TILE_SIZE);
 
     const grid = this.add.graphics().setDepth(DEPTH.GRID);
-    grid.lineStyle(1, COLORS.gridLine, 0.18);
+    grid.lineStyle(1, COLORS.gridLine, 0.10);
     for (let r=0; r<=GRID_ROWS; r++) { grid.beginPath(); grid.moveTo(0,r*TILE_SIZE); grid.lineTo(GRID_COLS*TILE_SIZE,r*TILE_SIZE); grid.strokePath(); }
     for (let c=0; c<=GRID_COLS; c++) { grid.beginPath(); grid.moveTo(c*TILE_SIZE,0); grid.lineTo(c*TILE_SIZE,GRID_ROWS*TILE_SIZE); grid.strokePath(); }
 
-    const g = this.add.graphics().setDepth(DEPTH.PATH);
-    const deco = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
     for (let row=0; row<GRID_ROWS; row++) for (let col=0; col<GRID_COLS; col++) {
       const cell=MAP_DATA[row][col]; const px=col*TILE_SIZE, py=row*TILE_SIZE;
-      this.add.image(px + TILE_SIZE/2, py + TILE_SIZE/2,
-        cell === 'E' ? 'tile_grass' : cell === 'B' ? 'tile_base' : 'tile_path')
-        .setDepth(DEPTH.BACKGROUND);
-      if (cell==='P'||cell==='B') {
-        g.fillStyle(COLORS.pathMain,0.18); g.fillRect(px,py,TILE_SIZE,TILE_SIZE);
-        g.fillStyle(COLORS.pathBorder,0.30); g.fillRect(px,py,TILE_SIZE,2); g.fillRect(px,py,2,TILE_SIZE);
-        const seed=(row*31+col*17)%100;
-        if (seed<28) { deco.fillStyle(COLORS.pathBorder,0.40); deco.fillCircle(px+(seed%28)+5,py+((seed*7)%28)+5,1.5); }
-      }
+      const pick = (((row * 73856093) ^ (col * 19349663)) >>> 0) % 12;   // deterministic, unpatterned variant per cell
+      const texture = cell === 'E' ? `tile_grass_${'abcd'[pick % 4]}` : `tile_path_${'abc'[pick % 3]}`;
+      this.add.image(px + TILE_SIZE/2, py + TILE_SIZE/2, texture)
+        .setDisplaySize(TILE_SIZE, TILE_SIZE).setDepth(DEPTH.BACKGROUND);
     }
     this._drawPathEdges();
   }

@@ -247,11 +247,13 @@ export class Tower {
 
     // ── Foundation plate — stone square under every tower ──────────────────
     const fp = h + 4;
-    g.fillStyle(0x18140F, 0.82); g.fillRoundedRect(cx-fp, cy-fp, fp*2, fp*2, 3);
-    g.lineStyle(1, 0x2E2418, 0.55);
-    g.beginPath(); g.moveTo(cx-fp, cy+fp); g.lineTo(cx-fp, cy-fp); g.lineTo(cx+fp, cy-fp); g.strokePath();
-    g.lineStyle(1, 0x0A0806, 0.70);
-    g.beginPath(); g.moveTo(cx+fp, cy-fp); g.lineTo(cx+fp, cy+fp); g.lineTo(cx-fp, cy+fp); g.strokePath();
+    g.fillStyle(0x000000, 0.28); g.fillRoundedRect(cx-fp+2, cy-fp+3, fp*2, fp*2, 5);        // soft drop shadow
+    g.fillStyle(0x6E5F4A, 1);    g.fillRoundedRect(cx-fp, cy-fp, fp*2, fp*2, 5);            // stone pad
+    g.fillStyle(0x84735A, 1);    g.fillRoundedRect(cx-fp+2, cy-fp+2, fp*2-4, fp*2-4, 4);
+    g.lineStyle(1.5, 0xA8946F, 0.8);
+    g.beginPath(); g.moveTo(cx-fp+1, cy+fp-4); g.lineTo(cx-fp+1, cy-fp+1); g.lineTo(cx+fp-4, cy-fp+1); g.strokePath();
+    g.lineStyle(1.5, 0x2E2418, 0.8);
+    g.beginPath(); g.moveTo(cx+fp-1, cy-fp+4); g.lineTo(cx+fp-1, cy+fp-1); g.lineTo(cx-fp+4, cy+fp-1); g.strokePath();
 
     // ── Buff rings ──────────────────────────────────────────────────────────
     if (this.isAuraBoosted) {

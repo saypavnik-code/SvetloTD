@@ -145,20 +145,18 @@ export class TowerPanel {
       }).setOrigin(0.5).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(hkLbl);
 
-      // Color swatch
-      const swG = s.add.graphics().setDepth(DEPTH.PANEL + 2);
-      swG.fillStyle(COLORS.walnutDark, 0.9); swG.fillRoundedRect(PX+PAD+30, ry+18, 14, 14, 2);
-      swG.fillStyle(data.color, 0.95); swG.fillRoundedRect(PX+PAD+32, ry+20, 10, 10, 2);
-      this._buildRoot.add(swG);
+      // Tower medallion (generated icon: tw_<kind>)
+      const icon = s.add.image(PX+PAD+49, ry+ROW_H/2, `tw_${id.split('_')[0]}`).setDisplaySize(38, 38).setDepth(DEPTH.PANEL + 2);
+      this._buildRoot.add(icon);
 
       // Name
-      const nameTxt = s.add.text(PX+PAD+50, ry+12, data.name, {
+      const nameTxt = s.add.text(PX+PAD+76, ry+12, data.name, {
         fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css, fontStyle: 'bold',
       }).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(nameTxt); this._rowNameTxts.push(nameTxt);
 
       // Subtitle
-      const sub = s.add.text(PX+PAD+50, ry+30, data.description, {
+      const sub = s.add.text(PX+PAD+76, ry+30, data.description, {
         fontFamily: FONT, fontSize: '11px', color: COLORS.textMuted_css,
       }).setDepth(DEPTH.PANEL + 2);
       this._buildRoot.add(sub);

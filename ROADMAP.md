@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.10.0)
+## Current state (v0.12.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -26,6 +26,11 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   `EnemyOutcomes` system pays kill bounty and lumber and takes the lives of leaks (these rules lived in `GameScene` handlers and
   were copied by hand into the harnesses, where golem and boss lumber was missing: a full run earns 186 lumber, not the 8 the
   report claimed). Gold is unchanged; only the lumber line of `docs/ECONOMY_REPORT.md` moved.
+- v0.12.0 art pass 1 (owner: the graphics were old and poor): generated HUD icons, tower medallions in the build panel, terrain
+  (4 grass and 3 cobble variants, seamless 2x textures), stone pads under towers, enemy ground shadows; the speed buttons moved
+  into the field (the side panel covered them) and the hero skill slots no longer sit on the wave text. The start-now button no
+  longer advertises an early-start bonus nobody paid (decided by the assistant under the owner's delegation of mechanics decisions).
+  First real browser run (headless Chromium): menu to wave 1 with towers placed, no console or page errors.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -86,8 +91,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   (-30%) or an arrow tower with `normal` damage each take the best build from wave 11 to waves 15-16 on their own;
   none of the four catalogued builds kills the fortified wave bosses (waves 10 and 15 cost 5 lives each). Also
   open: interest is worth 56% of income when nothing is spent and bounties do not scale with wave HP.
-- [ ] Early-start bonus (owner decision needed): the start-now button prints "+N" (`round(bonusGold x 1.2)`) but no system pays it.
-  Either pay it in a system (and measure it) or drop the number from the label. A TODO test in `tests/ui_wiring.test.mjs` tracks it.
+- [x] v0.12.0 early-start bonus: the label no longer promises it; a test keeps `WaveInfo` from advertising gold no system pays.
+  A real early bonus may return as a designed, measured feature.
 - [ ] Lumber sink (owner decision 2026-10-11: later): mercenaries and tier-3 towers as the `LumberManager` header
   describes; needs new content. A TODO test tracks it.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
@@ -100,6 +105,9 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [ ] Tower schools and counters; at least three viable strategies for waves 10/20/30/40.
 - [ ] Art bible: silhouette language, scale, palette, contrast and animations.
 - [ ] Replace prototypes with authored 2D sprite atlases, 2-4 animation states each.
+- [ ] Art pass 2: towers, enemies, hero and the base are still vector shapes (v0.12.0 did icons, terrain and layout);
+  next: authored sprites, panel and button frames, menu background, projectile and hit effects. Regenerate with
+  `python3 scripts/generate_ui_art.py` (the PNGs are committed).
 - [ ] SFX mixing/ducking, captions, color-blind modes, reduced-motion option.
 - [ ] Hero depth and active abilities; wave modifiers with comprehensible telegraphs.
 
@@ -127,9 +135,10 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.12.0 apply the owner's mid-game decision
+## Next sprint (recommended): v0.13.0 apply the mid-game decision
 
-- Objective: write the owner's pick of D, E or F (or other numbers) into the data. Priority: P0.
+- Objective: write the mid-game pick into the data. The owner delegated mechanics decisions on 2026-10-14; the planned pick
+  is D (waves 1-20 hold with 10 lives to spare for both hero modes). Priority: P0.
 - Precondition: the owner's pick and answers to decisions 2 and 3 of `docs/BALANCE_PROPOSALS.md`. Without a pick do
   the first secondary candidate below instead; no balance data changes.
 - Scope: change `OPENING_TAPER` (rename it if its meaning grows) and `bonusGold` in `src/data/waves.ts`, and for E the

@@ -51,6 +51,8 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
   difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
 - Kill bounty, lumber yield and leak lives are paid by the real `EnemyOutcomes`: a harness builds it right after
   `WaveManager` and registers only its own bookkeeping after that, instead of copying the scene's handlers.
+- Real rendering can be checked headlessly in the assistant's sandbox: `@sparticuz/chromium` + `puppeteer-core` (not project
+  dependencies) run the built game under SwiftShader; serve `dist/`, click through the menu, take screenshots, collect console errors.
 - A balance proposal is a scenario (`withScenario`), never an edit of the data files, until the owner picks one;
   `npm run report:balance -- --write` regenerates `docs/BALANCE_PROPOSALS.md` and a test compares it.
 - Do not hardcode balance numbers (counts, gold, bounties) in unrelated tests: read them from the data, so a rebalance

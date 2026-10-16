@@ -53,24 +53,24 @@ export class HUD {
     bg.lineStyle(1, COLORS.amberDeep, 0.7);
     bg.beginPath(); bg.moveTo(GRID_COLS * TILE_SIZE + 2, 0); bg.lineTo(GRID_COLS * TILE_SIZE + 2, BAR_H); bg.strokePath();
 
-    s.add.text(14, 13, '❤', { fontFamily: FONT, fontSize: '18px', color: COLORS.textDanger_css }).setDepth(DEPTH.HUD);
-    this._livesNum = s.add.text(38, 14, `${STARTING_LIVES}`, {
+    s.add.image(26, 22, 'icon_heart').setDisplaySize(24, 24).setDepth(DEPTH.HUD);
+    this._livesNum = s.add.text(44, 14, `${STARTING_LIVES}`, {
       fontFamily: FONT, fontSize: '16px', color: COLORS.textDanger_css, fontStyle: 'bold',
     }).setDepth(DEPTH.HUD);
 
-    s.add.text(110, 13, '◆', { fontFamily: FONT, fontSize: '18px', color: COLORS.amberWarm_css }).setDepth(DEPTH.HUD);
+    s.add.image(122, 22, 'icon_gold').setDisplaySize(24, 24).setDepth(DEPTH.HUD);
     this._goldDisplay = this._economy.gold;
-    this._goldNum = s.add.text(134, 14, `${this._economy.gold}`, {
+    this._goldNum = s.add.text(140, 14, `${this._economy.gold}`, {
       fontFamily: FONT, fontSize: '16px', color: COLORS.textGold_css, fontStyle: 'bold',
     }).setDepth(DEPTH.HUD);
 
     // Lumber counter — shown after gold
-    s.add.text(210, 13, '🪵', { fontFamily: FONT, fontSize: '14px' }).setDepth(DEPTH.HUD);
-    this._lumberNum = s.add.text(232, 14, '0', {
+    s.add.image(222, 22, 'icon_lumber').setDisplaySize(26, 26).setDepth(DEPTH.HUD);
+    this._lumberNum = s.add.text(240, 14, '0', {
       fontFamily: FONT, fontSize: '16px', color: '#7CBA5C', fontStyle: 'bold',
     }).setDepth(DEPTH.HUD);
 
-    this._waveText = s.add.text(GAME_WIDTH / 2, 21, `Волна 1 / ${WAVES.length}`, {
+    this._waveText = s.add.text(GRID_COLS * TILE_SIZE / 2 + 50, 21, `Волна 1 / ${WAVES.length}`, {
       fontFamily: FONT,
       fontSize: '15px',
       color: COLORS.textPrimary_css,
@@ -81,7 +81,7 @@ export class HUD {
     const speeds = [1, 2, 3];
     const btnW = 42;
     const btnH = 28;
-    const startX = GAME_WIDTH - 16 - speeds.length * (btnW + 6);
+    const startX = GRID_COLS * TILE_SIZE - 12 - speeds.length * (btnW + 6) + 6;   // inside the field: the side panel covers the rest of the bar
     speeds.forEach((spd, i) => {
       const bx = startX + i * (btnW + 6);
       const by = (BAR_H - btnH) / 2;
@@ -105,7 +105,7 @@ export class HUD {
     const speeds = [1, 2, 3];
     const btnW = 42;
     const btnH = 28;
-    const startX = GAME_WIDTH - 16 - speeds.length * (btnW + 6);
+    const startX = GRID_COLS * TILE_SIZE - 12 - speeds.length * (btnW + 6) + 6;   // inside the field: the side panel covers the rest of the bar
     const bx = startX + idx * (btnW + 6);
     const by = (BAR_H - btnH) / 2;
 

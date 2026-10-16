@@ -6,7 +6,9 @@ import { GAME_WIDTH, GAME_HEIGHT, DEPTH, FONT_FAMILY, COLORS } from '../config';
 const BAR_H = 52;
 const BAR_Y = GAME_HEIGHT - BAR_H;
 const FONT = FONT_FAMILY;
-const EARLY_BONUS_MULT = 1.2;
+const LEFT = 112;     // the hero skill slots (Q/W) sit at the left edge of the bottom bar
+const CD_W = 350;     // countdown bar width
+const WAVE_W = 520;   // wave progress bar width
 
 const ARMOR_COLORS: Record<string, string> = {
   unarmored: COLORS.textMuted_css,
@@ -68,21 +70,21 @@ export class WaveInfo {
     this._cdBgFlash = s.add.graphics().setDepth(DEPTH.HUD - 1).setVisible(false);
     this._cdRoot.add(this._cdBgFlash);
 
-    this._cdTitle = s.add.text(16, BAR_Y + 10, '', {
+    this._cdTitle = s.add.text(LEFT, BAR_Y + 10, '', {
       fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css, wordWrap: { width: 560 }, fontStyle: 'bold',
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdTitle);
 
-    this._cdHint = s.add.text(16, BAR_Y + 30, '', {
+    this._cdHint = s.add.text(LEFT, BAR_Y + 30, '', {
       fontFamily: FONT, fontSize: '11px', color: COLORS.textSecondary_css,
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdHint);
 
     this._cdBarBg = s.add.graphics().setDepth(DEPTH.PANEL + 2);
     this._cdBarBg.fillStyle(COLORS.bgDark, 0.55);
-    this._cdBarBg.fillRoundedRect(16, BAR_Y + 44, 450, 6, 2);
+    this._cdBarBg.fillRoundedRect(LEFT, BAR_Y + 44, CD_W, 6, 2);
     this._cdBarBg.lineStyle(1, COLORS.walnutLight, 0.6);
-    this._cdBarBg.strokeRoundedRect(16, BAR_Y + 44, 450, 6, 2);
+    this._cdBarBg.strokeRoundedRect(LEFT, BAR_Y + 44, CD_W, 6, 2);
     this._cdRoot.add(this._cdBarBg);
 
     this._cdBarFill = s.add.graphics().setDepth(DEPTH.PANEL + 2);
@@ -125,16 +127,16 @@ export class WaveInfo {
     const s = this._scene;
     this._waveRoot = s.add.container(0, 0).setDepth(DEPTH.PANEL + 1).setVisible(false);
 
-    this._waveTitleTxt = s.add.text(16, BAR_Y + 14, '', {
+    this._waveTitleTxt = s.add.text(LEFT, BAR_Y + 14, '', {
       fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css, fontStyle: 'bold',
     }).setDepth(DEPTH.PANEL + 2);
     this._waveRoot.add(this._waveTitleTxt);
 
     this._waveBarBg = s.add.graphics().setDepth(DEPTH.PANEL + 2);
     this._waveBarBg.fillStyle(COLORS.bgDark, 0.6);
-    this._waveBarBg.fillRoundedRect(16, BAR_Y + 40, 620, 8, 2);
+    this._waveBarBg.fillRoundedRect(LEFT, BAR_Y + 40, WAVE_W, 8, 2);
     this._waveBarBg.lineStyle(1, COLORS.walnutLight, 0.6);
-    this._waveBarBg.strokeRoundedRect(16, BAR_Y + 40, 620, 8, 2);
+    this._waveBarBg.strokeRoundedRect(LEFT, BAR_Y + 40, WAVE_W, 8, 2);
     this._waveRoot.add(this._waveBarBg);
 
     this._waveBarFill = s.add.graphics().setDepth(DEPTH.PANEL + 2);
@@ -147,7 +149,7 @@ export class WaveInfo {
       const pct = secs / this._countdownFull;
       this._cdBarFill.clear();
       this._cdBarFill.fillStyle(COLORS.amberWarm, 0.95);
-      this._cdBarFill.fillRoundedRect(16, BAR_Y + 44, 450 * (1 - pct), 6, 2);
+      this._cdBarFill.fillRoundedRect(LEFT, BAR_Y + 44, CD_W * (1 - pct), 6, 2);
     };
 
     this._wm.onWaveStart = (wave) => this._showActiveWave(wave);
@@ -184,8 +186,7 @@ export class WaveInfo {
     this._cdHint.setText(this._effectivenessHint(next));
     this._cdHint.setColor(armorCol);
 
-    const bonus = Math.round(next.bonusGold * EARLY_BONUS_MULT);
-    this._cdBtnLbl.setText(`▶ Начать сейчас  +${bonus}◆`);
+    this._cdBtnLbl.setText('▶ Начать сейчас');   // no early-start bonus exists, so the label must not promise one
 
     if (isBoss) {
       this._cdBgFlash.clear().setVisible(true);
@@ -237,6 +238,6 @@ export class WaveInfo {
     this._waveTitleTxt.setText(`Волна ${Math.min(this._wm.waveNumber, WAVES.length)} • Осталось: ${active}/${total}`);
     this._waveBarFill.clear();
     this._waveBarFill.fillStyle(isBoss ? COLORS.danger : COLORS.amberWarm, 0.95);
-    this._waveBarFill.fillRoundedRect(16, BAR_Y + 40, 620 * pct, 8, 2);
+    this._waveBarFill.fillRoundedRect(LEFT, BAR_Y + 40, WAVE_W * pct, 8, 2);
   }
 }

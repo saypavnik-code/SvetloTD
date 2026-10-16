@@ -233,6 +233,9 @@ export class Enemy implements Poolable {
     const c   = flash ? 0xFFFFFF : this.def.color;
     const cd  = this.def.colorDark;
 
+    // Ground contact shadow: lifts the enemy off the cobbles
+    if (!this._isFlying) { g.fillStyle(0x000000, 0.28); g.fillEllipse(cx + 1, cy + r * 0.75, r * 2.0, r * 0.85); }
+
     switch (this.def.id) {
       case 'grunt':
         g.fillStyle(c, 1); g.fillCircle(cx, cy, r);
