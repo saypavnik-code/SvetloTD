@@ -22,6 +22,10 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - v0.10.0 fixed a double payment found by wiring the real `WaveInfo` into a test: the UI callback credited the raw `bonusGold`
   on top of the scaled `InterestSystem` payout, so the 1.0 / 0.8 / 0.6 multipliers were never in effect in the game and income
   was above everything the reports measured (the harness has no UI). The UI no longer touches the economy; no data changed.
+- v0.11.0 gave events and money one owner: `Subscriptions` registers and removes a component's EventBus listeners, and the new
+  `EnemyOutcomes` system pays kill bounty and lumber and takes the lives of leaks (these rules lived in `GameScene` handlers and
+  were copied by hand into the harnesses, where golem and boss lumber was missing: a full run earns 186 lumber, not the 8 the
+  report claimed). Gold is unchanged; only the lumber line of `docs/ECONOMY_REPORT.md` moved.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -60,6 +64,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.10.0 the wave bonus was credited twice (raw `bonusGold` by `WaveInfo`, scaled by `InterestSystem`: up to 11460 instead of
   5730 gold over 40 waves on normal, and the hard/insane multipliers were void). It is paid once by `InterestSystem`;
   `onWaveComplete` carries no gold amount; a test wires the real `WaveInfo`; a guard keeps `src/ui/` away from gold, lives and lumber.
+- [x] v0.11.0 kill bounty, lumber yield and leak lives were paid only inside `GameScene` handlers and mirrored by hand in two harnesses
+  (lumber from golems and bosses missing: 8 reported, 186 real). `EnemyOutcomes` owns them; both harnesses build the real system.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
@@ -86,7 +92,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   describes; needs new content. A TODO test tracks it.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
-- [ ] Implement explicit ownership of EventBus subscriptions in every scene/UI component.
+- [x] Explicit ownership of EventBus subscriptions (v0.11.0): `Subscriptions` in every system and in `GameScene`; guard tests.
 - [ ] Usability pass: gamefield vs 560px panel, pause, keyboard, mobile and safe areas.
 
 ## P2 - game design / visual production
@@ -121,7 +127,7 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.10.0 apply the owner's mid-game decision
+## Next sprint (recommended): v0.12.0 apply the owner's mid-game decision
 
 - Objective: write the owner's pick of D, E or F (or other numbers) into the data. Priority: P0.
 - Precondition: the owner's pick and answers to decisions 2 and 3 of `docs/BALANCE_PROPOSALS.md`. Without a pick do
@@ -134,7 +140,7 @@ until the corresponding tasks are tested and accepted.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
   since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and the wave 10 boss
   once, noting the lives lost: the new opening may be easy for a human, and no catalogued build plans for the bosses.
-- Secondary candidates, in order: explicit EventBus subscription ownership in UI components; official Phaser type
+- Secondary candidates, in order: official Phaser type
   declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
   structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
   the deprecated `baseUrl` and TS5011 for `rootDir`; the project pins ^5.7.2 and is unaffected today).

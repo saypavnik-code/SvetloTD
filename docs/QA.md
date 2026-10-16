@@ -27,7 +27,8 @@ Manual browser smoke (still pending): start -> first wave -> place & upgrade ->
 pause and try building -> resume -> sell final watchtower -> lose all lives ->
 retry -> inspect fresh Q/W HUD and restored economy -> menu -> play -> confirm
 no duplicated dust, skills or listeners; finish wave 40 and retry after victory. After wave 1 the gold must grow by the
-wave bonus once ("+N бонус" is the only bonus; 20 on normal), not twice.
+wave bonus once ("+N бонус" is the only bonus; 20 on normal), not twice. After restarting the scene twice a kill must still
+pay its bounty once, a golem or boss kill must show its lumber, and a leaked enemy must cost its lives.
 Repeat on desktop Chrome/Firefox and mobile touch devices (including tap-to-cast Q/W).
 
 ## Browser smoke log
@@ -146,3 +147,16 @@ early-start bonus that nothing pays (owner decision needed). `docs/ECONOMY_REPOR
 the harness never had the UI payout, so the reports already described the single payment that the game now matches.
 
 Limits: the Phaser scene lifecycle and rendering are still untested; no browser run. The browser smoke was not run for v0.10.0.
+
+## v0.11.0 one owner for events and money
+
+`Subscriptions` owns the EventBus listeners of `EconomyManager`, `InterestSystem`, `WaveManager`, `EnemyOutcomes` and `GameScene`.
+`tests/ownership.test.mjs` checks that three create/destroy rounds leave the listener counts unchanged, that a second destroy is
+harmless, that nothing under `src/` outside `utils/` calls `EventBus.on`, `once` or `off`, that scenes never change gold, lives or lumber,
+and that `GameScene` creates `EnemyOutcomes` directly after `WaveManager`. The kill and leak rules moved from `GameScene` handlers into
+`EnemyOutcomes`; both harnesses now run that system, which brought the golem and boss lumber into the simulation (186 lumber in a full
+run instead of 8; the test failed on v0.10.0 with expected 186, actual 8). Gold and lives are unchanged: every gold figure in
+`docs/ECONOMY_REPORT.md` and all of `docs/BALANCE_PROPOSALS.md` are identical, only the lumber line was regenerated.
+
+Limits: `GameScene` itself is not instantiated by any test (its wiring is checked statically); no browser run. The browser smoke
+was not run for v0.11.0.

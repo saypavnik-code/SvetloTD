@@ -21,6 +21,7 @@ import { ALL_PATHS }            from '../data/pathData';
 import { GameConfig } from '../config/difficulty';
 import { ObjectPool }           from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
+import { Subscriptions }        from '../utils/Subscriptions';
 
 export type WaveState = 'idle' | 'countdown' | 'spawning' | 'fighting' | 'victory';
 
@@ -54,6 +55,8 @@ export class WaveManager {
   // Set by any GAME_OVER (victory or defeat): no further wave transitions happen.
   private _terminated = false;
 
+  private readonly _subs = new Subscriptions();
+
   onCountdownTick?: (secsLeft: number) => void;
   onWaveStart?:     (wave: WaveData) => void;
   onWaveComplete?:  (wave: WaveData) => void;
@@ -61,9 +64,9 @@ export class WaveManager {
 
   constructor(_scene: unknown, pool: ObjectPool<Enemy>) {
     this._pool = pool;
-    EventBus.on(GameEvents.ENEMY_KILLED,      this._onEnemyRemoved, this);
-    EventBus.on(GameEvents.ENEMY_REACHED_END, this._onEnemyRemoved, this);
-    EventBus.on(GameEvents.GAME_OVER,         this._onGameOver,     this);
+    this._subs.on(GameEvents.ENEMY_KILLED,      this._onEnemyRemoved);
+    this._subs.on(GameEvents.ENEMY_REACHED_END, this._onEnemyRemoved);
+    this._subs.on(GameEvents.GAME_OVER,         this._onGameOver);
   }
 
   get currentWaveData(): WaveData | null { return WAVES[this._waveIndex] ?? null; }
@@ -209,8 +212,6 @@ export class WaveManager {
   }
 
   destroy(): void {
-    EventBus.off(GameEvents.ENEMY_KILLED,      this._onEnemyRemoved, this);
-    EventBus.off(GameEvents.ENEMY_REACHED_END, this._onEnemyRemoved, this);
-    EventBus.off(GameEvents.GAME_OVER,         this._onGameOver,     this);
+    this._subs.dispose();
   }
 }

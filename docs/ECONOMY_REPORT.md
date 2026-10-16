@@ -28,7 +28,7 @@ wave, enemy, tower, difficulty or economy data. Browser smoke: not run. This rep
 4. **Pressure against income.** Enemy HP per gold of wave income is 4.3 in wave 1, 43.7 in wave 20 and 121.5 in wave 40;
    bounties do not scale with the wave HP multiplier.
 5. **Difficulty bonus.** The wave bonus is `round(bonusGold x waveBonusMult)`; total bonus over 40 waves is 5730 / 4584 / 3438 gold on normal / hard / insane.
-6. **Lumber has no sink.** A full run earns 8 lumber and no system spends it (owner decision: a sink is added later).
+6. **Lumber has no sink.** A full run earns 186 lumber and no system spends it (owner decision: a sink is added later).
 
 ## Wave pressure and income envelope (normal)
 

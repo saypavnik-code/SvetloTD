@@ -15,8 +15,10 @@ import { BuildSystem }    from '../systems/BuildSystem';
 import { EconomyManager } from '../systems/EconomyManager';
 import { LumberManager }  from '../systems/LumberManager';
 import { InterestSystem } from '../systems/InterestSystem';
+import { EnemyOutcomes }  from '../systems/EnemyOutcomes';
 import { ObjectPool }     from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
+import { Subscriptions }  from '../utils/Subscriptions';
 import { TowerPanel }     from '../ui/TowerPanel';
 import { WaveInfo }       from '../ui/WaveInfo';
 import { HUD }            from '../ui/HUD';
@@ -37,6 +39,8 @@ export class GameScene extends Phaser.Scene {
   private _economy!:      EconomyManager;
   private _lumber!:       LumberManager;
   private _interest!:     InterestSystem;
+  private _outcomes!:     EnemyOutcomes;
+  private readonly _subs = new Subscriptions();
   private _waveManager!:  WaveManager;
   private _buildSystem!:  BuildSystem;
   private _auraSystem!:   AuraSystem;
@@ -217,24 +221,10 @@ export class GameScene extends Phaser.Scene {
     this._ambientMusic = null;
     this._sfx          = null;
     this._waveManager.destroy();
+    this._outcomes.destroy();
     this._interest.destroy();
     this._economy.destroy();
-    EventBus.off(GameEvents.ENEMY_KILLED,      this._onEnemyKilled,      this);
-    EventBus.off(GameEvents.ENEMY_REACHED_END, this._onEnemyLeaked,      this);
-    EventBus.off(GameEvents.LIVES_CHANGED,     this._onLivesChanged,     this);
-    EventBus.off(GameEvents.GOLD_CHANGED,      this._onGoldChanged,      this);
-    EventBus.off(GameEvents.GAME_OVER,         this._onGameOver,         this);
-    EventBus.off(GameEvents.LUMBER_CHANGED,    this._onLumberChanged,    this);
-    EventBus.off(GameEvents.INTEREST_AWARDED,  this._onInterestAwarded,  this);
-    EventBus.off(GameEvents.WAVE_BONUS_AWARDED,this._onWaveBonusAwarded, this);
-    EventBus.off(GameEvents.TOWER_PLACED,      this._onTowerPlacedSfx,   this);
-    EventBus.off(GameEvents.TOWER_SOLD,        this._onTowerSoldSfx,     this);
-    EventBus.off(GameEvents.TOWER_UPGRADED,    this._onTowerUpgradedSfx, this);
-    EventBus.off(GameEvents.WAVE_STARTED,      this._onWaveStartedSfx,   this);
-    EventBus.off(GameEvents.WAVE_COMPLETED,    this._onWaveCompletedSfx, this);
-    EventBus.off(GameEvents.TOWER_SHOT,        this._onTowerShotSfx,     this);
-    EventBus.off(GameEvents.HERO_SKILL_Q,      this._onHeroSkillQ,       this);
-    EventBus.off(GameEvents.HERO_SKILL_W,      this._onHeroSkillW,       this);
+    this._subs.dispose();
   }
 
   // ── Systems ────────────────────────────────────────────────────────────────
@@ -245,6 +235,8 @@ export class GameScene extends Phaser.Scene {
     this._enemyPool = new ObjectPool<Enemy>(() => new Enemy(), ENEMY_POOL_SIZE);
     this._projPool  = new ObjectPool<Projectile>(() => new Projectile(), PROJ_POOL_SIZE);
     this._waveManager = new WaveManager(this, this._enemyPool);
+    // Right after WaveManager: kill and leak rules run after it has counted the enemy, before the scene reacts.
+    this._outcomes    = new EnemyOutcomes(this._economy, this._lumber);
     this._buildSystem = new BuildSystem(this, this._economy, this._projPool,
       () => this._waveManager.activeEnemies,
       () => !this._isPaused && !this._gameOver && !this._tutorialActive);
@@ -790,28 +782,29 @@ export class GameScene extends Phaser.Scene {
 
   // ── Events ─────────────────────────────────────────────────────────────────
   private _bindEvents(): void {
-    EventBus.on(GameEvents.ENEMY_KILLED,      this._onEnemyKilled,     this);
-    EventBus.on(GameEvents.ENEMY_REACHED_END, this._onEnemyLeaked,     this);
-    EventBus.on(GameEvents.LIVES_CHANGED,     this._onLivesChanged,    this);
-    EventBus.on(GameEvents.GOLD_CHANGED,      this._onGoldChanged,     this);
-    EventBus.on(GameEvents.GAME_OVER,         this._onGameOver,        this);
+    this._subs.dispose(); // defensive: a restart that skipped shutdown must not stack listeners
+    this._subs.on(GameEvents.ENEMY_KILLED,      this._onEnemyKilled);
+    this._subs.on(GameEvents.ENEMY_REACHED_END, this._onEnemyLeaked);
+    this._subs.on(GameEvents.LIVES_CHANGED,     this._onLivesChanged);
+    this._subs.on(GameEvents.GOLD_CHANGED,      this._onGoldChanged);
+    this._subs.on(GameEvents.GAME_OVER,         this._onGameOver);
 
     // Phase 2 — economy extensions
-    EventBus.on(GameEvents.LUMBER_CHANGED,     this._onLumberChanged,    this);
-    EventBus.on(GameEvents.INTEREST_AWARDED,   this._onInterestAwarded,  this);
-    EventBus.on(GameEvents.WAVE_BONUS_AWARDED, this._onWaveBonusAwarded, this);
+    this._subs.on(GameEvents.LUMBER_CHANGED,     this._onLumberChanged);
+    this._subs.on(GameEvents.INTEREST_AWARDED,   this._onInterestAwarded);
+    this._subs.on(GameEvents.WAVE_BONUS_AWARDED, this._onWaveBonusAwarded);
 
-    // SFX — named handlers so they can be removed cleanly in shutdown()
-    EventBus.on(GameEvents.TOWER_PLACED,   this._onTowerPlacedSfx,  this);
-    EventBus.on(GameEvents.TOWER_SOLD,     this._onTowerSoldSfx,    this);
-    EventBus.on(GameEvents.TOWER_UPGRADED, this._onTowerUpgradedSfx,this);
-    EventBus.on(GameEvents.WAVE_STARTED,   this._onWaveStartedSfx,  this);
-    EventBus.on(GameEvents.WAVE_COMPLETED, this._onWaveCompletedSfx,this);
-    EventBus.on(GameEvents.TOWER_SHOT,     this._onTowerShotSfx,    this);
+    // SFX
+    this._subs.on(GameEvents.TOWER_PLACED,   this._onTowerPlacedSfx);
+    this._subs.on(GameEvents.TOWER_SOLD,     this._onTowerSoldSfx);
+    this._subs.on(GameEvents.TOWER_UPGRADED, this._onTowerUpgradedSfx);
+    this._subs.on(GameEvents.WAVE_STARTED,   this._onWaveStartedSfx);
+    this._subs.on(GameEvents.WAVE_COMPLETED, this._onWaveCompletedSfx);
+    this._subs.on(GameEvents.TOWER_SHOT,     this._onTowerShotSfx);
 
     // Hero skill VFX
-    EventBus.on(GameEvents.HERO_SKILL_Q,   this._onHeroSkillQ, this);
-    EventBus.on(GameEvents.HERO_SKILL_W,   this._onHeroSkillW, this);
+    this._subs.on(GameEvents.HERO_SKILL_Q,   this._onHeroSkillQ);
+    this._subs.on(GameEvents.HERO_SKILL_W,   this._onHeroSkillW);
   }
 
   private _onTowerPlacedSfx   = (): void => { this._sfx?.build(); };
@@ -864,18 +857,17 @@ export class GameScene extends Phaser.Scene {
   };
 
   private _onEnemyKilled = (data: unknown): void => {
+    // Presentation and run statistics only: EnemyOutcomes pays the bounty and the lumber.
     const {enemy, goldReward} = data as {enemy: Enemy; goldReward: number};
-    this._economy.addGold(goldReward);
     this._totalKills++;
     this._totalGoldEarned += goldReward;
     this._floatingText.show(enemy.x, enemy.y - 10, `+${goldReward}◆`, COLORS.textGold_css);
     this._sfx?.enemyDeath();
     this._sfx?.goldEarned();
 
-    // Phase 2: award lumber from enemy def
-    const lumberYield = (enemy.def as any)?.lumberYield ?? 0;
+    // Show the lumber EnemyOutcomes has just credited
+    const lumberYield = enemy.def?.lumberYield ?? 0;
     if (lumberYield > 0) {
-      this._lumber.add(lumberYield);
       this._floatingText.show(enemy.x, enemy.y - 26, `+${lumberYield}🪵`, '#7CBA5C');
     }
   };
@@ -896,9 +888,8 @@ export class GameScene extends Phaser.Scene {
     this._floatingText.show(680, 52, `+${n} бонус`, COLORS.textGold_css);
   };
 
-  private _onEnemyLeaked = (enemy: unknown): void => {
-    const e = enemy as Enemy;
-    this._economy.loseLife(e.def?.livesCost ?? 1);
+  // Presentation only: EnemyOutcomes has already taken the lives.
+  private _onEnemyLeaked = (): void => {
     this._sfx?.enemyLeak();
     // Screen shake + red flash
     this.cameras.main.shake(200, 0.0022);

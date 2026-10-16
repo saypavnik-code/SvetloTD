@@ -8,6 +8,7 @@ const game = loadModules(
   'src/ui/WaveInfo.ts',
   'src/systems/WaveManager.ts',
   'src/systems/EconomyManager.ts',
+  'src/systems/EnemyOutcomes.ts',
   'src/systems/InterestSystem.ts',
   'src/systems/LumberManager.ts',
   'src/entities/Enemy.ts',
@@ -32,7 +33,7 @@ const scene = {
 };
 
 // Plays wave 1 to its clear with the REAL WaveInfo wired to the WaveManager, exactly as GameScene does.
-// Kill bounties are credited here the way GameScene._onEnemyKilled credits them.
+// Kill bounties are credited by the real EnemyOutcomes, registered right after WaveManager as in GameScene.
 function playWaveOne(difficulty) {
   GameConfig.setDifficulty(difficulty);
   const economy = new game.EconomyManager();
@@ -40,12 +41,13 @@ function playWaveOne(difficulty) {
   const interest = new game.InterestSystem(economy, lumber);
   const pool = new game.ObjectPool(() => new game.Enemy(), 16);
   const waves = new game.WaveManager(null, pool);
+  const outcomes = new game.EnemyOutcomes(economy, lumber);
   // The third argument is ignored once WaveInfo no longer needs the economy.
   const info = new game.WaveInfo(scene, waves, economy);
   const start = economy.gold;
   const seen = { bounty: 0, interest: 0, bonus: 0, cleared: false };
   const handlers = [
-    [GameEvents.ENEMY_KILLED, ({ goldReward }) => { seen.bounty += goldReward; economy.addGold(goldReward); }],
+    [GameEvents.ENEMY_KILLED, ({ goldReward }) => { seen.bounty += goldReward; }],
     [GameEvents.INTEREST_AWARDED, (amount) => { seen.interest += amount; }],
     [GameEvents.WAVE_BONUS_AWARDED, (amount) => { seen.bonus += amount; }],
     [GameEvents.WAVE_COMPLETED, () => { seen.cleared = true; }],
@@ -61,7 +63,7 @@ function playWaveOne(difficulty) {
     return { start, gold: economy.gold, seen, info };
   } finally {
     for (const [event, handler] of handlers) EventBus.off(event, handler);
-    waves.destroy(); interest.destroy(); economy.destroy();
+    waves.destroy(); outcomes.destroy(); interest.destroy(); economy.destroy();
     GameConfig.setDifficulty('normal');
   }
 }

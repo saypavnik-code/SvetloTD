@@ -49,6 +49,8 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 - Economy and balance work starts from `docs/ECONOMY_REPORT.md`. `tests/support/simulate.mjs` runs all 40 waves
   headlessly; regenerate the report with `npm run report:economy -- --write` whenever wave, enemy, tower,
   difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
+- Kill bounty, lumber yield and leak lives are paid by the real `EnemyOutcomes`: a harness builds it right after
+  `WaveManager` and registers only its own bookkeeping after that, instead of copying the scene's handlers.
 - A balance proposal is a scenario (`withScenario`), never an edit of the data files, until the owner picks one;
   `npm run report:balance -- --write` regenerates `docs/BALANCE_PROPOSALS.md` and a test compares it.
 - Do not hardcode balance numbers (counts, gold, bounties) in unrelated tests: read them from the data, so a rebalance
@@ -76,6 +78,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 8. Money changed outside its owning system (v0.10.0): `WaveInfo` credited the raw wave bonus next to the scaled
    `InterestSystem` payout. A harness that leaves the UI out cannot see this: wire the real UI class into the test
    (`tests/ui_wiring.test.mjs`) and assert that every unit of gold is explained by an event.
+9. A rule inside a scene handler gets copied by hand into harnesses and drifts (v0.11.0: golem and boss lumber was missing
+   from the simulation, the report said 8 where the data gives 186). Keep rules in a system and build that system in the
+   test. Components register EventBus listeners only through `Subscriptions` (guard: `tests/ownership.test.mjs`).
 
 ## Resuming in a new session
 

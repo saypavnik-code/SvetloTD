@@ -18,7 +18,7 @@ export const GameEvents = {
 
   // Waves
   WAVE_STARTED:        'wave:started',       // payload: number (wave index)
-  WAVE_COMPLETED:      'wave:completed',     // payload: number (wave index)
+  WAVE_COMPLETED:      'wave:completed',     // payload: wave number (1-based), WaveData
   ENEMY_SPAWNED:       'enemy:spawned',      // payload: Enemy instance
   ENEMY_KILLED:        'enemy:killed',       // payload: { enemy, goldReward }
   ENEMY_REACHED_END:   'enemy:reachedEnd',   // payload: Enemy instance
@@ -27,7 +27,7 @@ export const GameEvents = {
   TOWER_PLACED:        'tower:placed',       // payload: Tower instance
   TOWER_SELECTED:      'tower:selected',     // payload: Tower | null
   TOWER_UPGRADED:      'tower:upgraded',     // payload: Tower instance
-  TOWER_SOLD:          'tower:sold',         // payload: { tower, refund }
+  TOWER_SOLD:          'tower:sold',         // payload: { refund }
   TOWER_SHOT:          'tower:shot',         // payload: TowerId
 
   // Hero
@@ -62,9 +62,9 @@ class EventBusClass extends Phaser.Events.EventEmitter {
   }
 
   /**
-   * Subscribe with automatic cleanup via the returned unsubscribe fn.
-   * @example const off = EventBus.on(GameEvents.GOLD_CHANGED, handler);
-   *          // later: off();
+   * Raw subscription: it returns the bus, not an unsubscribe function. Components register through
+   * `Subscriptions` (utils/Subscriptions.ts) and remove everything with one dispose(); only
+   * Subscriptions itself and tests call this directly (guarded by tests/ownership.test.mjs).
    */
   override on(
     event: GameEventKey,

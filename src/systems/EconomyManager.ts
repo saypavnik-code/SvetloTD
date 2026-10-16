@@ -6,17 +6,19 @@
 import { STARTING_LIVES } from '../config';
 import { GameConfig }     from '../config/difficulty';
 import { EventBus, GameEvents } from '../utils/EventBus';
+import { Subscriptions } from '../utils/Subscriptions';
 
 export class EconomyManager {
   private _gold:  number;
   private _lives  = STARTING_LIVES;
   // 1.0 during build phase (100% refund), 0.7 during combat (70% refund)
   private _sellRefundRate = 0.7;
+  private readonly _subs = new Subscriptions();
 
   constructor() {
     this._gold = GameConfig.difficulty.startingGold;
-    EventBus.on(GameEvents.BUILD_PHASE_START, this._onBuildStart, this);
-    EventBus.on(GameEvents.BUILD_PHASE_END,   this._onBuildEnd,   this);
+    this._subs.on(GameEvents.BUILD_PHASE_START, this._onBuildStart);
+    this._subs.on(GameEvents.BUILD_PHASE_END,   this._onBuildEnd);
   }
 
   get gold():           number { return this._gold; }
@@ -49,7 +51,6 @@ export class EconomyManager {
   private _onBuildEnd   = (): void => { this._sellRefundRate = 0.7; };
 
   destroy(): void {
-    EventBus.off(GameEvents.BUILD_PHASE_START, this._onBuildStart, this);
-    EventBus.off(GameEvents.BUILD_PHASE_END,   this._onBuildEnd,   this);
+    this._subs.dispose();
   }
 }

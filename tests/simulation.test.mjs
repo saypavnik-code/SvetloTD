@@ -9,6 +9,7 @@ const game = loadModules(
   'src/systems/WaveManager.ts',
   'src/systems/EconomyManager.ts',
   'src/systems/InterestSystem.ts',
+  'src/systems/EnemyOutcomes.ts',
   'src/systems/LumberManager.ts',
   'src/entities/Enemy.ts',
   'src/data/pathData.ts',
@@ -126,17 +127,18 @@ test('static wiring: Tower routes on-hit specials through applyHitSpecials', () 
 
 // ── Wave lifecycle simulation (headless, deterministic) ─────────────────────
 
-// Mirrors GameScene: WaveManager subscribes first, scene-level handlers after it.
+// Same wiring as GameScene: WaveManager first, then EnemyOutcomes (the real kill and leak rules), then scene-level handlers.
 function createWorld() {
   const economy = new game.EconomyManager();
   const lumber = new game.LumberManager();
   const interest = new game.InterestSystem(economy, lumber);
   const pool = new game.ObjectPool(() => new game.Enemy(), 8);
   const waves = new game.WaveManager(null, pool);
+  const outcomes = new game.EnemyOutcomes(economy, lumber);
   const log = { completed: [], terminal: [], bonuses: 0, kills: 0, leaks: 0 };
   const handlers = [
-    [GameEvents.ENEMY_REACHED_END, (enemy) => { log.leaks++; economy.loseLife(enemy.def.livesCost); }],
-    [GameEvents.ENEMY_KILLED, ({ goldReward }) => { log.kills++; economy.addGold(goldReward); }],
+    [GameEvents.ENEMY_REACHED_END, () => { log.leaks++; }],
+    [GameEvents.ENEMY_KILLED, () => { log.kills++; }],
     [GameEvents.WAVE_COMPLETED, (waveNumber) => log.completed.push(waveNumber)],
     [GameEvents.WAVE_BONUS_AWARDED, () => { log.bonuses++; }],
     // Same first-wins arbitration as GameScene._onGameOver.
@@ -150,7 +152,7 @@ function createWorld() {
     },
     dispose() {
       for (const [event, handler] of handlers) EventBus.off(event, handler);
-      waves.destroy(); interest.destroy(); economy.destroy();
+      waves.destroy(); outcomes.destroy(); interest.destroy(); economy.destroy();
     },
   };
 }

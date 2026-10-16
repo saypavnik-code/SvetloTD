@@ -14,6 +14,7 @@ const game = loadModules(
   'src/systems/WaveManager.ts',
   'src/systems/EconomyManager.ts',
   'src/systems/InterestSystem.ts',
+  'src/systems/EnemyOutcomes.ts',
   'src/systems/LumberManager.ts',
   'src/systems/StatusEffectSystem.ts',
   'src/systems/HitEffects.ts',
@@ -158,6 +159,8 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
   if (startDelta > 0) economy.addGold(startDelta);
   else if (startDelta < 0) economy.spendGold(-startDelta);
   const waves = new game.WaveManager(null, enemyPool);
+  // The real kill and leak rules (bounty, lumber, lives), registered right after WaveManager exactly as in GameScene.
+  const outcomes = new game.EnemyOutcomes(economy, lumber);
   const { scene, click } = createScene();
   const builder = new game.BuildSystem(scene, economy, projectilePool, () => waves.activeEnemies);
   const slots = rankedSlots().slice(0, slotCap);
@@ -182,8 +185,8 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
       spentPending = 0;
       rows.push(current);
     }],
-    [GameEvents.ENEMY_KILLED, ({ goldReward }) => { economy.addGold(goldReward); if (current) { current.kills++; current.bounty += goldReward; } }],
-    [GameEvents.ENEMY_REACHED_END, (enemy) => { economy.loseLife(enemy.def.livesCost); if (current) { current.leaks++; current.livesLost += enemy.def.livesCost; } }],
+    [GameEvents.ENEMY_KILLED, ({ goldReward }) => { if (current) { current.kills++; current.bounty += goldReward; } }],
+    [GameEvents.ENEMY_REACHED_END, (enemy) => { if (current) { current.leaks++; current.livesLost += enemy.def.livesCost; } }],
     [GameEvents.INTEREST_AWARDED, (amount) => { if (current) current.interest += amount; }],
     [GameEvents.WAVE_BONUS_AWARDED, (amount) => { if (current) current.bonus += amount; }],
     [GameEvents.WAVE_COMPLETED, (n) => { if (current && current.wave === n) { current.cleared = true; current.clearSecs = time - current.startedAt; current.goldAfterAward = economy.gold; } }],
@@ -263,7 +266,7 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
     };
   } finally {
     for (const [event, handler] of handlers) EventBus.off(event, handler);
-    waves.destroy(); interest.destroy(); economy.destroy();
+    waves.destroy(); outcomes.destroy(); interest.destroy(); economy.destroy();
     for (const t of [...builder.towers]) t.destroy();
     GameConfig.setDifficulty('normal');
   }

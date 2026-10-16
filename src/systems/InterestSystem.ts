@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { EventBus, GameEvents }      from '../utils/EventBus';
+import { Subscriptions }             from '../utils/Subscriptions';
 import { EconomyManager }            from './EconomyManager';
 import { LumberManager }             from './LumberManager';
 import { GameConfig }                from '../config/difficulty';
@@ -20,11 +21,12 @@ import { type WaveData }             from '../data/waves';
 export class InterestSystem {
   private readonly _economy: EconomyManager;
   private readonly _lumber:  LumberManager;
+  private readonly _subs = new Subscriptions();
 
   constructor(economy: EconomyManager, lumber: LumberManager) {
     this._economy = economy;
     this._lumber  = lumber;
-    EventBus.on(GameEvents.WAVE_COMPLETED, this._onWaveCompleted, this);
+    this._subs.on(GameEvents.WAVE_COMPLETED, this._onWaveCompleted);
   }
 
   private _onWaveCompleted = (...args: unknown[]): void => {
@@ -52,6 +54,6 @@ export class InterestSystem {
   };
 
   destroy(): void {
-    EventBus.off(GameEvents.WAVE_COMPLETED, this._onWaveCompleted, this);
+    this._subs.dispose();
   }
 }
