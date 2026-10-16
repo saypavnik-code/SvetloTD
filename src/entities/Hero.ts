@@ -175,7 +175,8 @@ export class Hero {
 
   // ── Rendering ──────────────────────────────────────────────────────────────
 
-  drawTo(g: Phaser.GameObjects.Graphics): void {
+  /** `withBody` false skips the placeholder triangle: ui/SpriteViews draws the hero sprite. */
+  drawTo(g: Phaser.GameObjects.Graphics, withBody = true): void {
     const cx = this.x;
     const cy = this.y;
 
@@ -184,11 +185,13 @@ export class Hero {
     g.fillStyle(COLORS.amberGlow, pulse);
     g.fillCircle(cx, cy, 20);
 
-    // Body triangle
-    g.fillStyle(COLORS.amberGlow, 1);
-    g.fillTriangle(cx, cy - 12, cx - 8, cy + 6, cx + 8, cy + 6);
-    g.lineStyle(2, COLORS.amberDeep, 1);
-    g.strokeTriangle(cx, cy - 12, cx - 8, cy + 6, cx + 8, cy + 6);
+    // Body triangle (placeholder body, replaced by the sprite)
+    if (withBody) {
+      g.fillStyle(COLORS.amberGlow, 1);
+      g.fillTriangle(cx, cy - 12, cx - 8, cy + 6, cx + 8, cy + 6);
+      g.lineStyle(2, COLORS.amberDeep, 1);
+      g.strokeTriangle(cx, cy - 12, cx - 8, cy + 6, cx + 8, cy + 6);
+    }
 
     // Attack flash line
     if (this._flashTimer > 0 && this._attackTarget?.isActive && !this._attackTarget.isDead) {

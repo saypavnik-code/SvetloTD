@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.13.0)
+## Current state (v0.14.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -35,6 +35,9 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   (`OPENING_TAPER` renamed) is 40% HP / 80% count at wave 1 moving linearly to 30% at wave 40, and `WAVE_BONUS_FACTOR` doubles the
   written `bonusGold`. On normal the best catalogued build holds waves 1-20 with 10 lives at wave 21 in both hero modes and is
   defeated in wave 28 (skills) / 25 (idle): waves 21-40 still have no acceptance bar. Reports regenerated.
+- v0.14.0 art pass 2: authored, outlined sprites for the 10 tower kinds, the 5 enemies and the hero (`scripts/generate_sprite_art.py`),
+  drawn by the new `ui/SpriteViews` (one Image per live entity); the entities keep pads, shadows, status overlays and health bars as
+  vector drawing (`drawTo(g, false)`), logic and tests are unchanged. The base is still the vector hexagon.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -108,9 +111,9 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [ ] Tower schools and counters; at least three viable strategies for waves 10/20/30/40.
 - [ ] Art bible: silhouette language, scale, palette, contrast and animations.
 - [ ] Replace prototypes with authored 2D sprite atlases, 2-4 animation states each.
-- [ ] Art pass 2: towers, enemies, hero and the base are still vector shapes (v0.12.0 did icons, terrain and layout);
-  next: authored sprites, panel and button frames, menu background, projectile and hit effects. Regenerate with
-  `python3 scripts/generate_ui_art.py` (the PNGs are committed).
+- [x] v0.14.0 art pass 2: sprites for the 10 tower kinds, 5 enemies and the hero, drawn by `ui/SpriteViews`.
+- [ ] Art pass 3: the base, panel and button frames (nine-slice), menu background, projectiles and hit effects, walk-cycle frames.
+  Regenerate with `python3 scripts/generate_ui_art.py` and `python3 scripts/generate_sprite_art.py` (the PNGs are committed).
 - [ ] SFX mixing/ducking, captions, color-blind modes, reduced-motion option.
 - [ ] Hero depth and active abilities; wave modifiers with comprehensible telegraphs.
 
@@ -138,14 +141,12 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.14.0 art pass 2
-- Objective: the owner asked for good graphics. Replace the vector shapes of towers (6 kinds x tiers), enemies (5), the hero and
-  the base with authored sprites; panel and button frames (nine-slice), a menu background, projectile and hit effects. Verify every
-  step with headless-browser screenshots (see `AGENTS.md`). Priority: P1.
-- Scope: extend `scripts/generate_ui_art.py` (or a sibling), load the textures in `BootScene`, draw sprites from `Tower`/`Enemy`
-  views while keeping the logic classes unchanged and the tests green; no balance data change.
-- Acceptance: all gates; screenshots of the menu, an empty field, a built field and a boss wave look consistent; the stale
-  "v0.1.0" label of the menu shows the real version.
+## Next sprint (recommended): v0.15.0 art pass 3
+- Objective: finish the visual overhaul. A sprite for the base, nine-slice panel and button frames, a menu background with the real
+  version label (the menu still prints a hard-coded "v0.1.0"), projectile and hit effects, two-frame walk cycles. Verify every step
+  with headless-browser screenshots (see `AGENTS.md`). Priority: P1.
+- Scope: extend the two generator scripts, load the textures in `BootScene`, keep the logic classes and the economy untouched.
+- Acceptance: all gates; screenshots of the menu, an empty field, a built field and a boss wave look consistent.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
   since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and the wave 10 boss
   once, noting the lives lost: the new opening may be easy for a human, and no catalogued build plans for the bosses.

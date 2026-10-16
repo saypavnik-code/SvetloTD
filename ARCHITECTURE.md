@@ -9,6 +9,8 @@ UI components never change gold, lives or lumber: the economy systems own them (
 Kill bounty, lumber yield and leak lives belong to `EnemyOutcomes`, created right after `WaveManager`; `GameScene` keeps only
 presentation for those events. A component registers EventBus listeners through `Subscriptions` (`src/utils/Subscriptions.ts`)
 and disposes it once on shutdown (guards: `tests/ownership.test.mjs`).
+Towers, enemies and the hero are drawn as sprites by `ui/SpriteViews` (one Image per live entity, created lazily, destroyed when the
+entity leaves); entities keep only pads, shadows, status overlays and health bars as vector drawing (`drawTo(g, false)`).
 `EventBus` is an event contract, not a place to store mutable game state.
 
 ## Geometry (one source of truth)

@@ -25,6 +25,11 @@ export class Enemy implements Poolable {
   isActive = false;
   private _isDead = false;
   get isDead(): boolean { return this._isDead; }
+  get isDying(): boolean { return this._isDying; }
+  /** 1 while alive, falling to 0 during the death animation. */
+  get dyingFraction(): number { return this._isDying ? Math.max(0, Math.min(1, this._dyingTimer / Enemy.DYING_DURATION)) : 1; }
+  get isFlashing(): boolean { return this._flashTimer > 0; }
+  get flying(): boolean { return this._isFlying; }
 
   // Dying animation — brief scale-down + flash before pool return
   private _isDying    = false;
@@ -213,9 +218,11 @@ export class Enemy implements Poolable {
   }
 
   // ── Batch draw ─────────────────────────────────────────────────────────────
-  drawTo(g: Phaser.GameObjects.Graphics): void {
+  /** `withBody` false draws only the ground shadow and the status overlays: ui/SpriteViews draws the enemy itself. */
+  drawTo(g: Phaser.GameObjects.Graphics, withBody = true): void {
     // Dying animation — shrink + white flash, then hidden
     if (this._isDying) {
+      if (!withBody) return;
       const t     = this._dyingTimer / Enemy.DYING_DURATION;   // 1→0
       const scale = t;
       const r     = this.radius * scale;
@@ -236,7 +243,7 @@ export class Enemy implements Poolable {
     // Ground contact shadow: lifts the enemy off the cobbles
     if (!this._isFlying) { g.fillStyle(0x000000, 0.28); g.fillEllipse(cx + 1, cy + r * 0.75, r * 2.0, r * 0.85); }
 
-    switch (this.def.id) {
+    switch (withBody ? this.def.id : null) {
       case 'grunt':
         g.fillStyle(c, 1); g.fillCircle(cx, cy, r);
         g.lineStyle(1.5, cd, 0.9); g.strokeCircle(cx, cy, r);

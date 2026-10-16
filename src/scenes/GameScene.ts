@@ -19,6 +19,7 @@ import { EnemyOutcomes }  from '../systems/EnemyOutcomes';
 import { ObjectPool }     from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { Subscriptions }  from '../utils/Subscriptions';
+import { SpriteViews }    from '../ui/SpriteViews';
 import { TowerPanel }     from '../ui/TowerPanel';
 import { WaveInfo }       from '../ui/WaveInfo';
 import { HUD }            from '../ui/HUD';
@@ -40,6 +41,7 @@ export class GameScene extends Phaser.Scene {
   private _lumber!:       LumberManager;
   private _interest!:     InterestSystem;
   private _outcomes!:     EnemyOutcomes;
+  private _views!:        SpriteViews;
   private readonly _subs = new Subscriptions();
   private _waveManager!:  WaveManager;
   private _buildSystem!:  BuildSystem;
@@ -225,6 +227,7 @@ export class GameScene extends Phaser.Scene {
     this._interest.destroy();
     this._economy.destroy();
     this._subs.dispose();
+    this._views.destroy();
   }
 
   // ── Systems ────────────────────────────────────────────────────────────────
@@ -247,6 +250,7 @@ export class GameScene extends Phaser.Scene {
     this._shadowGfx = this.add.graphics().setDepth(DEPTH.ENEMY_SHADOW);
     this._towerGfx  = this.add.graphics().setDepth(DEPTH.TOWER);
     this._enemyGfx  = this.add.graphics().setDepth(DEPTH.ENEMY);
+    this._views     = new SpriteViews(this);   // sprites above the vector layers: pads, overlays and shadows stay vector
     this._hpGfx     = this.add.graphics().setDepth(DEPTH.ENEMY_HEALTHBAR);
     this._projGfx   = this.add.graphics().setDepth(DEPTH.PROJECTILE);
     this._effectGfx = this.add.graphics().setDepth(DEPTH.EFFECT);
@@ -272,14 +276,14 @@ export class GameScene extends Phaser.Scene {
     this._effectGfx.clear();
 
     // Towers
-    for (const t of this._buildSystem.towers) t.drawTo(this._towerGfx);
+    for (const t of this._buildSystem.towers) t.drawTo(this._towerGfx, false);
 
     // Enemies + shadows
     const enemies = this._waveManager.activeEnemies;
     for (const e of enemies) {
       if (!e.isActive) continue;
       e.drawShadowTo(this._shadowGfx);
-      e.drawTo(this._enemyGfx);
+      e.drawTo(this._enemyGfx, false);
       e.drawHealthbarTo(this._hpGfx);
     }
 
@@ -291,7 +295,8 @@ export class GameScene extends Phaser.Scene {
 
     // Hero — drawn above projectiles, below HUD
     this._heroGfx.clear();
-    this._hero.drawTo(this._heroGfx);
+    this._hero.drawTo(this._heroGfx, false);
+    this._views.update(this._buildSystem.towers, enemies, this._hero, this.time.now);
 
     // VFX rings (skill Q expand, skill W pulse)
     this._drawVFX();

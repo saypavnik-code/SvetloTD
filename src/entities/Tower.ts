@@ -153,6 +153,10 @@ export class Tower {
     }
   }
 
+  /** Scale pulse of a freshly built tower (1 when settled). */
+  get spawnBounce(): number {
+    return this._spawnTimer > 0 ? 1 + 0.20 * Math.sin((this._spawnTimer / 0.25) * Math.PI) : 1;
+  }
   get isBuffed(): boolean { return this._buffs.length > 0 || this._auraBuff > 0; }
 
   // ── Aura API (called by AuraSystem 1×/sec) ─────────────────────────────────
@@ -238,7 +242,8 @@ export class Tower {
   //   • Buff rings (hero W = amber glow, aura = teal ring)
   //   • Spawn-bounce scale animation
   // ══════════════════════════════════════════════════════════════════════════
-  drawTo(g: Phaser.GameObjects.Graphics): void {
+  /** `withBody` false draws only the pad and the overlays: the sprite layer (ui/SpriteViews) draws the tower itself. */
+  drawTo(g: Phaser.GameObjects.Graphics, withBody = true): void {
     const cx = this.x, cy = this.y, c = this.data.color;
     const bounce = this._spawnTimer > 0
       ? 1 + 0.20 * Math.sin((this._spawnTimer / 0.25) * Math.PI) : 1;
@@ -266,7 +271,7 @@ export class Tower {
     }
 
     // ── Per-tower models ────────────────────────────────────────────────────
-    switch (this.towerId) {
+    switch (withBody ? this.towerId : null) {
 
       // Arrow T1: compact square keep with a single forward barrel
       case 'arrow_t1': {

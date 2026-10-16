@@ -182,3 +182,14 @@ at wave 21 in both hero modes, defeated in wave 28 with the skills and wave 25 i
 `docs/ECONOMY_REPORT.md` now reports 98 lumber for a full run. Waves 21-40 are not under an acceptance bar yet, hard and insane are
 measured for waves 1-11 only, and no human has played the new curve: it may be easy for someone who plans for the bosses.
 The browser smoke was not run for v0.13.0.
+
+## v0.14.0 art pass 2 (sprites)
+
+`scripts/generate_sprite_art.py` (Pillow, 4x supersampling, outline, deterministic) writes 16 sprites of 128 px to `public/assets/art/`: arrow,
+cannon, magic and slow towers in tiers 1-2, the alchemist and the watchtower, five enemies and the hero. `ui/SpriteViews` owns one Image per live
+entity: towers are swapped on upgrade and pulse when built, ground enemies are mirrored by walking direction and wobble, flyers rotate to
+their heading, hits flash white, dying enemies fade, pooled enemies get a fresh image. `tests/sprites.test.mjs` checks the files, the image
+lifecycle (create, flip, flash, fade, upgrade, sell, kill, pooled reuse, destroy), the bodiless `Enemy.drawTo` and the `GameScene` wiring.
+Browser check (headless Chromium, 1280x720): four towers placed by hotkey, wave 1 running, the hero on the base, no console messages or page
+errors. Not covered: boss and flying enemies on screen, upgrade and sell flows, restart, long sessions. The base is still a vector hexagon.
+The browser smoke was not run for v0.14.0.
