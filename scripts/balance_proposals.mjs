@@ -11,7 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { BUILDS, game, simulate, waveTable, withScenario } from '../tests/support/simulate.mjs';
 
 const DOC_PATH = 'docs/BALANCE_PROPOSALS.md';
-const { BASE_WAVES, TOWER_DEFS, DAMAGE_MATRIX, DIFFICULTY_PRESETS, ENEMY_DEFS, OPENING_TAPER, taperWave } = game;
+const { BASE_WAVES, TOWER_DEFS, DAMAGE_MATRIX, DIFFICULTY_PRESETS, ENEMY_DEFS, WAVE_TAPER, WAVE_BONUS_FACTOR, taperWave } = game;
 const BUILD_NAMES = Object.keys(BUILDS);
 const MIN_LIVES = 3;          // acceptance: lives left when the wave after the bar starts
 const OPENING_BAR = 11;       // "held waves 1-10": lives when wave 11 starts
@@ -25,7 +25,7 @@ const table = (header, rows) => [
 ].join('\n');
 
 // Scenario building blocks. `retaper` re-derives the HP and count of every wave from BASE_WAVES (the waves as written)
-// with the same rule that `taperWave` applies to the data, so retaper(OPENING_TAPER) is the identity on current data.
+// with the same rule that `taperWave` applies to the data, so retaper(WAVE_TAPER) is the identity on current data.
 export const retaper = (taper) => (wave) => {
   const tapered = taperWave(BASE_WAVES[wave.wave - 1], taper);
   return { hpMult: tapered.hpMult, count: tapered.count };
@@ -35,13 +35,8 @@ export const upgradeCostTimes = (factor) => (id, def) => (/_t[23]$/.test(id) ? {
 const both = (...tweaks) => (wave) => Object.assign({}, ...tweaks.map((tweak) => tweak(wave)));
 const pct = (x) => `${Math.round(x * 100)}%`;
 
-// Open proposals for the mid game, each { id, name, note, changes, scenario }. `changes` is what the table shows.
+// Mid-game alternatives that were not taken (D is applied in the data), each { id, name, note, changes, scenario }. `changes` is what the table shows.
 export const CANDIDATES = [
-  {
-    id: 'D', name: 'Softer curve and doubled wave bonus',
-    note: 'Waves keep getting harder, but a lot slower; the wave bonus pays twice. Towers and upgrades are untouched.',
-    taper: { hp: 0.4, count: 0.8, until: 40, end: 0.3 }, bonus: 2, upgrades: 1,
-  },
   {
     id: 'E', name: 'Moderate curve, 1.5x bonus, cheaper upgrades',
     note: 'The curve is only half as soft as in D; the economy answers with a 1.5x bonus and tier-2/3 upgrades that cost 30% less.',
@@ -49,7 +44,7 @@ export const CANDIDATES = [
   },
   {
     id: 'F', name: 'Waves only',
-    note: 'Same softness as D at the end, but no economy change. Shows how far the curve alone can go.',
+    note: 'Softer than the applied D at the end (20% instead of 30%) but with the wave bonus unchanged. Shows how far the curve alone can go.',
     taper: { hp: 0.4, count: 0.8, until: 40, end: 0.2 }, bonus: 1, upgrades: 1,
   },
 ].map((c) => ({
@@ -151,11 +146,14 @@ export function buildProposals() {
   lines.push('`tests/balance.test.mjs` fails when this file is stale. A proposal is a temporary scenario that changes no game data; the');
   lines.push('owner picks one and a later patch writes the numbers into the data files. Browser smoke: not run.');
   lines.push('');
-  lines.push('## Decisions applied (owner, 2026-10-11, patch v0.8.0)');
+  lines.push('## Decisions applied');
   lines.push('');
-  lines.push(`- **Opening, candidate C.** Starting gold ${presets.map((p) => `${p.startingGold} (${p.id})`).join(', ')}, which is twice the old values. Bounties x1.5, rounded:`);
-  lines.push(`  ${bounties}. Waves 1-${OPENING_TAPER.until - 1} start at ${pct(OPENING_TAPER.hp)} HP and ${pct(OPENING_TAPER.count)} count and return linearly to`);
-  lines.push(`  100% at wave ${OPENING_TAPER.until} (\`OPENING_TAPER\` in \`src/data/waves.ts\`); single-enemy waves keep their count of 1.`);
+  lines.push(`- **Opening, candidate C** (owner, 2026-10-11, patch v0.8.0). Starting gold ${presets.map((p) => `${p.startingGold} (${p.id})`).join(', ')}, which is twice the old values. Bounties x1.5, rounded:`);
+  lines.push(`  ${bounties}.`);
+  lines.push(`- **Mid game, proposal D** (assistant under the owner's delegation of 2026-10-14, patch v0.13.0). HP and count start at ${pct(WAVE_TAPER.hp)} and ${pct(WAVE_TAPER.count)} at wave 1`);
+  lines.push(`  and move linearly to ${pct(WAVE_TAPER.end)} at wave ${WAVE_TAPER.until} (\`WAVE_TAPER\` in \`src/data/waves.ts\`); single-enemy waves keep their count of 1. The wave bonus pays`);
+  lines.push(`  x${WAVE_BONUS_FACTOR} the written \`bonusGold\` (\`WAVE_BONUS_FACTOR\`). Towers and upgrade costs are untouched. Why D: it leaves the best build the most lives at wave 21`);
+  lines.push('  in both hero modes (see "Current data" and the alternatives below).');
   lines.push(`- **Difficulty bonus.** \`round(bonusGold x waveBonusMult)\` with ${presets.map((p) => `${p.waveBonusMult.toFixed(1)} (${p.id})`).join(', ')}. The old dead \`waveBonusBase/Scale\` fields are gone.`);
   lines.push('- **Lumber.** Stays earned and unspent; a sink is added later (tracked by a TODO test).');
   lines.push('');
@@ -202,7 +200,9 @@ export function buildProposals() {
     leaking.map((row) => [row.wave, row.enemyType, `${row.leaks} of ${row.count}`, row.livesLost, row.towers, row.invested]),
   ));
   lines.push('');
-  lines.push('## Open proposals for the mid game (waves 11-40)');
+  lines.push('## Mid-game alternatives that were not taken (E and F)');
+  lines.push('');
+  lines.push('Scenarios against the waves as written; the applied data is proposal D (see "Decisions applied").');
   lines.push('');
   lines.push(table(
     ['proposal', 'what changes', 'idle hero', 'scripted skills'],
@@ -266,7 +266,7 @@ export function buildProposals() {
     return `\`${top[0]}\` at ${top[1].toFixed(3)} dps per gold`;
   })()}.`);
   lines.push('');
-  lines.push('## Pressure index (analytic aid, waves 1-20, current data and open proposals)');
+  lines.push('## Pressure index (analytic aid, waves 1-20, current data and the alternatives)');
   lines.push('');
   lines.push(`Affordable damage per second divided by the damage per second needed to kill the wave in ${WINDOW_SECONDS} s. Affordable = every gold`);
   lines.push(`earned so far (starting gold plus bounty and bonus of all earlier waves, nothing wasted) spent on tier-1 arrow towers at`);
@@ -282,9 +282,8 @@ export function buildProposals() {
   lines.push('');
   lines.push('## Open decisions');
   lines.push('');
-  lines.push('1. **Mid game.** Pick proposal D, E or F, or name other numbers. Applying D or F edits `OPENING_TAPER` in `src/data/waves.ts` (`until` and');
-  lines.push('   `end`) and the `bonusGold` values; E also lowers the `cost` of the tier-2/3 towers in `src/data/towers.ts`. The bars only cover waves');
-  lines.push('   1-20: waves 21-40 follow the same curve but are not part of an acceptance bar yet.');
+  lines.push(`1. **Late game (waves 21-40).** The bars cover waves 1-20 only. With the applied curve the best build is ${fate(best)} with the scripted skills and`);
+  lines.push(`   ${fate(bestOf(normal.idle, MID_BAR))} with an idle hero. A late-game bar, the boss waves and a lumber sink are the next design decisions.`);
   lines.push('2. **Upgrades and damage types.** The what-if rows give the numbers: cheaper upgrades and a `normal`-damage tower are each a');
   lines.push('   design decision, not a tuning detail. See the efficiency table.');
   lines.push('3. **Lumber sink.** Lumber is earned and never spent. The `LumberManager` header comment describes the intended sink (mercenaries');

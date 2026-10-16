@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.12.0)
+## Current state (v0.13.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -31,6 +31,10 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   into the field (the side panel covered them) and the hero skill slots no longer sit on the wave text. The start-now button no
   longer advertises an early-start bonus nobody paid (decided by the assistant under the owner's delegation of mechanics decisions).
   First real browser run (headless Chromium): menu to wave 1 with towers placed, no console or page errors.
+- v0.13.0 wrote the mid-game decision into the data (proposal D, chosen by the assistant under the owner's delegation): `WAVE_TAPER`
+  (`OPENING_TAPER` renamed) is 40% HP / 80% count at wave 1 moving linearly to 30% at wave 40, and `WAVE_BONUS_FACTOR` doubles the
+  written `bonusGold`. On normal the best catalogued build holds waves 1-20 with 10 lives at wave 21 in both hero modes and is
+  defeated in wave 28 (skills) / 25 (idle): waves 21-40 still have no acceptance bar. Reports regenerated.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -86,11 +90,10 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 
 - [ ] Replace legacy Phaser type shim with official package declarations.
 - [ ] Remaining tests: HUD/panel/scene flows, pause/resume and restart lifecycle, audio, persistence (covered so far: waves v0.3.0; towers, projectiles, hero skills, build/upgrade/sell v0.4.0; economy ledger and wave pressure v0.6.0).
-- [ ] Mid game: pick one of the proposals D, E, F of `docs/BALANCE_PROPOSALS.md` (or other numbers) and write it into the
-  data; hard and insane still fail the opening bar. Numbers behind the design questions: cheaper tier-2/3 upgrades
-  (-30%) or an arrow tower with `normal` damage each take the best build from wave 11 to waves 15-16 on their own;
-  none of the four catalogued builds kills the fortified wave bosses (waves 10 and 15 cost 5 lives each). Also
-  open: interest is worth 56% of income when nothing is spent and bounties do not scale with wave HP.
+- [x] v0.13.0 mid game: proposal D is in the data (see the current state). Still open: hard and insane were measured for waves
+  1-11 only and failed that bar before D; waves 21-40 have no acceptance bar (best build defeated in wave 28); none of the four
+  catalogued builds kills the fortified wave bosses; interest is worth 56% of income when nothing is spent (measured before D)
+  and bounties do not scale with wave HP. The what-ifs (cheaper upgrades, `normal`-damage arrows) remain design questions.
 - [x] v0.12.0 early-start bonus: the label no longer promises it; a test keeps `WaveInfo` from advertising gold no system pays.
   A real early bonus may return as a designed, measured feature.
 - [ ] Lumber sink (owner decision 2026-10-11: later): mercenaries and tier-3 towers as the `LumberManager` header
@@ -135,21 +138,18 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.13.0 apply the mid-game decision
-
-- Objective: write the mid-game pick into the data. The owner delegated mechanics decisions on 2026-10-14; the planned pick
-  is D (waves 1-20 hold with 10 lives to spare for both hero modes). Priority: P0.
-- Precondition: the owner's pick and answers to decisions 2 and 3 of `docs/BALANCE_PROPOSALS.md`. Without a pick do
-  the first secondary candidate below instead; no balance data changes.
-- Scope: change `OPENING_TAPER` (rename it if its meaning grows) and `bonusGold` in `src/data/waves.ts`, and for E the
-  tier-2/3 `cost` in `src/data/towers.ts`; turn the proposal tests of `tests/balance.test.mjs` into regression tests of the
-  data; regenerate both documents; extend the acceptance bar to waves 1-30.
-- Acceptance: on the new data the best catalogued build holds waves 1-20 on normal with an idle and with a scripted hero;
-  both generated documents are in sync; every changed number is traceable to the pick.
+## Next sprint (recommended): v0.14.0 art pass 2
+- Objective: the owner asked for good graphics. Replace the vector shapes of towers (6 kinds x tiers), enemies (5), the hero and
+  the base with authored sprites; panel and button frames (nine-slice), a menu background, projectile and hit effects. Verify every
+  step with headless-browser screenshots (see `AGENTS.md`). Priority: P1.
+- Scope: extend `scripts/generate_ui_art.py` (or a sibling), load the textures in `BootScene`, draw sprites from `Tower`/`Enemy`
+  views while keeping the logic classes unchanged and the tests green; no balance data change.
+- Acceptance: all gates; screenshots of the menu, an empty field, a built field and a boss wave look consistent; the stale
+  "v0.1.0" label of the menu shows the real version.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
   since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and the wave 10 boss
   once, noting the lives lost: the new opening may be easy for a human, and no catalogued build plans for the bosses.
-- Secondary candidates, in order: official Phaser type
-  declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
+- Secondary candidates, in order: late-game acceptance bar for waves 21-40 (the best build is defeated in wave 28 today);
+  official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
   structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
   the deprecated `baseUrl` and TS5011 for `rootDir`; the project pins ^5.7.2 and is unaffected today).

@@ -4,23 +4,27 @@ import test from 'node:test';
 import { CANDIDATES, WHAT_IFS, bestOf, bonusTimes, buildProposals, evaluate, passes, retaper, upgradeCostTimes } from '../scripts/balance_proposals.mjs';
 import { castSkills, game, simulate, withScenario } from './support/simulate.mjs';
 
-const { BASE_WAVES, DIFFICULTY_PRESETS, ENEMY_DEFS, OPENING_TAPER, TOWER_DEFS, WAVES, Hero, Enemy, PATH_TOP, taperWave } = game;
+const { BASE_WAVES, DIFFICULTY_PRESETS, ENEMY_DEFS, WAVE_TAPER, WAVE_BONUS_FACTOR, TOWER_DEFS, WAVES, Hero, Enemy, PATH_TOP, taperWave } = game;
 const sum = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
 const snapshot = () => JSON.stringify({ WAVES, ENEMY_DEFS, TOWER_DEFS, DIFFICULTY_PRESETS });
 
 // ── The owner's decisions of v0.8.0 are in the data ─────────────────────────
 
-test('opening candidate C is in the data: starting gold, bounties and the wave taper', () => {
+test('the decisions are in the data: opening C (v0.8.0) and mid-game proposal D (v0.13.0)', () => {
   assert.deepEqual(['normal', 'hard', 'insane'].map((d) => DIFFICULTY_PRESETS[d].startingGold), [300, 260, 200]);
   assert.deepEqual(
     Object.fromEntries(Object.entries(ENEMY_DEFS).map(([id, def]) => [id, def.bounty])),
     { grunt: 6, runner: 5, golem: 21, wyvern: 11, boss_goliath: 90 },
   );
-  assert.deepEqual({ ...OPENING_TAPER }, { hp: 0.4, count: 0.8, until: 30 });
+  assert.deepEqual({ ...WAVE_TAPER }, { hp: 0.4, count: 0.8, until: 40, end: 0.3 });
+  assert.equal(WAVE_BONUS_FACTOR, 2);
   assert.equal(WAVES.length, 40);
   assert.deepEqual([WAVES[0].count, WAVES[0].hpMult], [6, 0.4], 'wave 1: 8 enemies at 100% HP become 6 at 40%');
-  assert(WAVES[28].hpMult > 8.9 && WAVES[28].hpMult < 9.2, 'wave 29 is softened only slightly');
-  assert.deepEqual([WAVES[29].hpMult, WAVES[39].hpMult, WAVES[30].count], [16, 26, 38], 'waves from 30 on are untouched');
+  assert.deepEqual([WAVES[10].count, WAVES[10].hpMult], [12, 1.12], 'wave 11 is pinned');
+  assert.deepEqual([WAVES[20].count, WAVES[20].hpMult], [10, 1.39], 'wave 21 is pinned');
+  assert.deepEqual([WAVES[39].count, WAVES[39].hpMult], [1, 7.8], 'the final boss is 30% of its written HP');
+  WAVES.forEach((wave, i) => assert.equal(wave.bonusGold, BASE_WAVES[i].bonusGold * WAVE_BONUS_FACTOR, `wave ${wave.wave} pays the doubled bonus`));
+  assert.deepEqual([WAVES[0].bonusGold, WAVES[39].bonusGold], [40, 676]);
   for (const wave of WAVES) if (wave.isBoss) assert.equal(wave.count, 1, `boss wave ${wave.wave} keeps one enemy`);
   for (let i = 1; i < 10; i++) assert(WAVES[i].hpMult * WAVES[i].count > 0);
 });
@@ -62,10 +66,10 @@ test('scenario levers reach the real systems: starting gold, bounty and wave siz
   assert.equal(poorer.rows[0].goldAtStart, 100, 'starting gold can be lowered as well');
 });
 
-test('taperWave: the data is BASE_WAVES tapered by OPENING_TAPER, and retaper of it changes nothing', () => {
+test('taperWave: the data is BASE_WAVES tapered by WAVE_TAPER, and retaper of it changes nothing', () => {
   assert.equal(BASE_WAVES.length, 40);
-  WAVES.forEach((wave, i) => assert.deepEqual(wave, taperWave(BASE_WAVES[i]), `wave ${wave.wave} is the tapered base wave`));
-  const identity = retaper(OPENING_TAPER);
+  WAVES.forEach((wave, i) => assert.deepEqual(wave, { ...taperWave(BASE_WAVES[i]), bonusGold: BASE_WAVES[i].bonusGold * WAVE_BONUS_FACTOR }, `wave ${wave.wave} is the tapered base wave with the doubled bonus`));
+  const identity = retaper(WAVE_TAPER);
   for (const wave of WAVES) assert.deepEqual(identity(wave), { hpMult: wave.hpMult, count: wave.count }, `wave ${wave.wave}`);
 });
 
@@ -174,19 +178,21 @@ test('skills are off by default, cost nothing when off and respect the cooldowns
 
 // ── Mid-game proposals ──────────────────────────────────────────────────────
 
-test('proposals D and E meet the mid-game bar with an idle hero and with the scripted skills; F with the skills', () => {
+test('the applied data (D) and alternative E meet the mid-game bar with an idle hero and with the scripted skills; F with the skills', () => {
   const MID = 21;
+  const applied = evaluate(null, MID);
+  assert(passes(applied.idle, MID) && passes(applied.skills, MID), 'applied data: idle and skills');
   const byId = Object.fromEntries(CANDIDATES.map((c) => [c.id, evaluate(c.scenario, MID)]));
-  for (const id of ['D', 'E']) {
+  for (const id of ['E']) {
     assert(passes(byId[id].idle, MID), `${id} idle: best build has ${bestOf(byId[id].idle, MID).lives21} lives at wave 21`);
     assert(passes(byId[id].skills, MID), `${id} skills: best build has ${bestOf(byId[id].skills, MID).lives21} lives at wave 21`);
   }
   assert(passes(byId.F.skills, MID), 'F skills');
 });
 
-test('current data does not meet the mid-game bar, and the what-ifs are measured against it', () => {
+test('the what-ifs are measured against the applied data, which meets the mid-game bar', () => {
   const current = evaluate(WHAT_IFS[0].scenario, 21);
-  assert(!passes(current.idle, 21) && !passes(current.skills, 21), 'the wall in the mid game is the finding the proposals answer');
+  assert(passes(current.idle, 21) && passes(current.skills, 21), 'proposal D holds waves 1-20 with both hero modes');
   assert.equal(WHAT_IFS[0].scenario, null);
   assert(WHAT_IFS.length >= 3);
 });

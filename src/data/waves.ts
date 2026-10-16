@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// waves.ts — All 40 wave definitions (20 hand-made, 20 generated), softened by OPENING_TAPER.
+// waves.ts — All 40 wave definitions (20 hand-made, 20 generated), shaped by WAVE_TAPER and WAVE_BONUS_FACTOR.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { EnemyId } from './enemies';
@@ -69,10 +69,13 @@ const LATE_WAVES: WaveData[] = Array.from({ length: 20 }, (_, index) => {
     preview: isBoss ? `Citadel guardian ${wave}` : `Reinforcements ${wave}`,
   };
 });
-// Opening taper (v0.8.0, candidate C of docs/BALANCE_PROPOSALS.md, chosen by the owner): wave 1 starts at
-// 40% HP and 80% count and both return linearly to the values above at wave 30. Single-enemy (boss) waves keep
-// their count of 1. Edit the constants to retune the opening; waves from `until` on are untouched.
-export const OPENING_TAPER = { hp: 0.4, count: 0.8, until: 30 } as const;
+// Wave shape. v0.8.0 chose the opening (candidate C of docs/BALANCE_PROPOSALS.md); v0.13.0 chose the mid game (proposal D; the owner
+// delegated the choice). HP and count start at 40% / 80% at wave 1 and move linearly to 30% at wave 40: the curve keeps rising but far
+// slower than the numbers as written. Single-enemy (boss) waves keep their count of 1. The wave bonus pays WAVE_BONUS_FACTOR times the
+// `bonusGold` written above, before the difficulty multiplier. Edit these constants to retune; the report scripts re-derive every
+// alternative from BASE_WAVES (the waves as written).
+export const WAVE_TAPER = { hp: 0.4, count: 0.8, until: 40, end: 0.3 } as const;
+export const WAVE_BONUS_FACTOR = 2;
 
 export interface WaveTaper {
   hp: number;      // HP fraction at wave 1
@@ -82,7 +85,7 @@ export interface WaveTaper {
 }
 
 // Pure function so balance proposals can try other tapers on BASE_WAVES (see tests/support/simulate.mjs).
-export function taperWave(wave: WaveData, taper: WaveTaper = OPENING_TAPER): WaveData {
+export function taperWave(wave: WaveData, taper: WaveTaper = WAVE_TAPER): WaveData {
   const end = taper.end ?? 1;
   const t = Math.min(1, (wave.wave - 1) / (taper.until - 1));
   if (t >= 1 && end === 1) return wave;
@@ -98,4 +101,8 @@ export function taperWave(wave: WaveData, taper: WaveTaper = OPENING_TAPER): Wav
 // The waves as written, before the taper.
 export const BASE_WAVES: WaveData[] = [...EARLY_WAVES, ...LATE_WAVES];
 
-export const WAVES: WaveData[] = BASE_WAVES.map((wave) => taperWave(wave));
+function shapeWave(wave: WaveData): WaveData {
+  return { ...taperWave(wave), bonusGold: Math.round(wave.bonusGold * WAVE_BONUS_FACTOR) };
+}
+
+export const WAVES: WaveData[] = BASE_WAVES.map((wave) => shapeWave(wave));

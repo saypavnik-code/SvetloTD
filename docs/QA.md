@@ -171,3 +171,14 @@ Layout fixes: speed buttons moved inside the field, hero skill slots no longer o
 Browser check (headless Chromium under SwiftShader, 1280x720): menu, scene change, tutorial, three towers placed by hotkey and click,
 wave 1 started and running; no console messages and no page errors. This is the first real browser run since v0.2.1 but not the
 full smoke: waves 1-40, victory, defeat, pause and restart are still unplayed. The hard-coded "v0.1.0" label of the menu is stale.
+
+## v0.13.0 mid-game decision (proposal D)
+
+`WAVE_TAPER` (renamed from `OPENING_TAPER`) is `{ hp: 0.4, count: 0.8, until: 40, end: 0.3 }` and `WAVE_BONUS_FACTOR` is 2; the data is
+`BASE_WAVES` shaped by both. `tests/balance.test.mjs` pins waves 1, 11, 21 and 40 and the doubled bonus of every wave, requires the
+applied data to meet the mid-game bar (waves 1-20, at least 3 lives when wave 21 starts) with an idle and with a scripted hero, and
+keeps E and F as measured alternatives (E meets the bar, F only with the skills). Measured on normal: best build `arrow`, 10 lives
+at wave 21 in both hero modes, defeated in wave 28 with the skills and wave 25 idle. Both generated documents were rewritten;
+`docs/ECONOMY_REPORT.md` now reports 98 lumber for a full run. Waves 21-40 are not under an acceptance bar yet, hard and insane are
+measured for waves 1-11 only, and no human has played the new curve: it may be easy for someone who plans for the bosses.
+The browser smoke was not run for v0.13.0.
