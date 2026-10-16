@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.14.0)
+## Current state (v0.15.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -38,6 +38,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - v0.14.0 art pass 2: authored, outlined sprites for the 10 tower kinds, the 5 enemies and the hero (`scripts/generate_sprite_art.py`),
   drawn by the new `ui/SpriteViews` (one Image per live entity); the entities keep pads, shadows, status overlays and health bars as
   vector drawing (`drawTo(g, false)`), logic and tests are unchanged. The base is still the vector hexagon.
+- v0.15.0 handoff, documentation only: the tooling and verification section of `docs/PATCH_POLICY.md`, process lessons in `AGENTS.md`,
+  the activation block and the owner checklist for v0.12.0-v0.15.0 in `docs/QA.md`.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## P0 - correctness / playable baseline
@@ -141,7 +143,7 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.15.0 art pass 3
+## Next sprint (recommended): v0.16.0 art pass 3
 - Objective: finish the visual overhaul. A sprite for the base, nine-slice panel and button frames, a menu background with the real
   version label (the menu still prints a hard-coded "v0.1.0"), projectile and hit effects, two-frame walk cycles. Verify every step
   with headless-browser screenshots (see `AGENTS.md`). Priority: P1.
@@ -150,6 +152,8 @@ until the corresponding tasks are tested and accepted.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
   since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and the wave 10 boss
   once, noting the lives lost: the new opening may be easy for a human, and no catalogued build plans for the bosses.
+- Owner action pending: apply v0.12.0-v0.15.0 (block in `docs/QA.md`), look at the new art in a real browser and list what looks wrong
+  (upgrade and sell, the boss wave, flyers, restart): the assistant only saw 1280x720 headless frames of wave 1.
 - Secondary candidates, in order: late-game acceptance bar for waves 21-40 (the best build is defeated in wave 28 today);
   official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
   structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for

@@ -89,3 +89,12 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 Read `README.md`, `ARCHITECTURE.md`, `DESIGN.md`, `ROADMAP.md`, `docs/GAME_DESIGN.md`, `docs/QA.md`,
 `docs/PATCH_POLICY.md` and `docs/PATCH_HISTORY.md`. Take the baseline from the last history row and `git log`,
 not from an old chat or snapshot, and start from the "Next sprint" section of `ROADMAP.md`.
+
+Process lessons (v0.10.0 to v0.15.0):
+- Reasoning and code in English (owner request, saves tokens); replies to the owner in Russian. The owner delegated game-mechanics
+  decisions to the assistant on 2026-10-14: decide, measure, and write the reasoning into `docs/BALANCE_PROPOSALS.md` and `ROADMAP.md`.
+- One sandbox command is limited to 300 s: run patch chains in the background (`setsid nohup ... &`) and poll the log.
+- Headless browser checks: the static server started in an earlier command is gone, start it in the same command as the screenshot;
+  the scene needs 9-13 s to load under SwiftShader and the tutorial needs 3-4 clicks before towers can be placed.
+- Art lives in two generator scripts (`scripts/generate_ui_art.py`, `scripts/generate_sprite_art.py`); edit the script, regenerate,
+  look at a contact sheet and a game screenshot, commit the PNGs. Never hand-edit a PNG.

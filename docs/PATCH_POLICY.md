@@ -39,3 +39,19 @@ A new patch version is required for any post-release fix, including a fix to a p
   `.git/svetlo-patch/<version>_report.txt`. If only the push failed, do not rerun: push the commit manually.
 - Existing line endings (LF or CRLF) are preserved per file; new files follow the repository style.
 - Each patch also sets the `package.json` version to its own version.
+
+## Tooling and verification (since v0.10.0)
+
+- A patch is generated, not hand-written: the generator diffs a prepared working tree against the base commit into anchored
+  edits (each `old` text must occur exactly once), new text files and new binary files (base64, never overwriting an existing
+  file). The history row is inserted at run time with the real base hash; generated documents (the two reports) are rebuilt at
+  run time by the commands the patch lists, so they always match the data the patch just wrote.
+- The tooling lives in the assistant's project knowledge, not in the repository: `patch_engine.py` (the transactional engine that
+  is embedded in every patch), `patch_gen.py` (diff to patch file), `patch_e2e.sh` (verification), `shot.mjs` (headless browser
+  screenshots). A patch is self-contained: the owner never needs them.
+- Before delivery every patch is applied on fresh clones with LF and with CRLF checkouts, a local bare remote whose path contains
+  `saypavnik-code/SvetloTD.git`, the whole pending chain starting from the owner's base commit; the resulting tree must equal the
+  prepared tree except for `docs/PATCH_HISTORY.md`. A deliberately red test must make a patch restore everything and leave no commit.
+- One sandbox command is limited to 300 s and one patch takes about a minute of gates: run chains in the background and poll a log.
+- A patch whose version row already exists in `docs/PATCH_HISTORY.md` refuses to run, so an applied patch can never be applied twice;
+  the activation block in `docs/QA.md` skips such patches.

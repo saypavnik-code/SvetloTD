@@ -193,3 +193,26 @@ lifecycle (create, flip, flash, fade, upgrade, sell, kill, pooled reuse, destroy
 Browser check (headless Chromium, 1280x720): four towers placed by hotkey, wave 1 running, the hero on the base, no console messages or page
 errors. Not covered: boss and flying enemies on screen, upgrade and sell flows, restart, long sessions. The base is still a vector hexagon.
 The browser smoke was not run for v0.14.0.
+
+## v0.15.0 handoff: activation block and owner checklist
+
+Activation (repository root `/workspaces/SvetloTD`, patch files in the root, clean tree on `main`; applied patches are skipped):
+
+```bash
+cd /workspaces/SvetloTD && set -e
+for P in $(ls patch_svetlogorsk_td_v0_*.py | sort -V); do
+  V=$(echo "$P" | sed -E 's/patch_svetlogorsk_td_v([0-9]+)_([0-9]+)_([0-9]+)_.*/\1.\2.\3/')
+  if grep -q "| v$V |" docs/PATCH_HISTORY.md; then echo "skip v$V (already applied)"; continue; fi
+  python "$P" --dry-run
+  python "$P" --commit --push --self-delete
+done
+git log --oneline -8 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
+```
+
+Expected after v0.15.0: 83 unit tests, 82 pass, 1 TODO (lumber sink), 0 fail; `git log` shows one commit per version.
+
+Browser checklist (`npm run dev`, then record the result in the smoke log): menu to game; tutorial; hotkeys 1-6 build every tower kind and each
+shows its own sprite on a stone pad; start wave 1 (6 goblins at 40% HP, wave bonus 40 gold on normal, paid once); enemies are mirrored by
+walking direction and flash on a hit; right click moves the hero, Q and W work; upgrade with U swaps the sprite; sell refunds in full during
+the countdown and 70% in combat; speed buttons x1-x3 and pause; the wyvern waves and the wave 10 boss look right; defeat, victory and
+restart leave no duplicated rewards or sprites. Note anything that looks wrong or unreadable: it becomes the v0.16.0 art pass.
