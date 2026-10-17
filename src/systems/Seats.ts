@@ -8,10 +8,13 @@ import { SEAT_COUNTS, seatOfCell, type SeatCount, type SeatId } from '../data/se
 
 export class Seats {
   readonly count: SeatCount;
+  /** Shared income: a kill pays every seat the same share instead of the seat that made it (same total). */
+  readonly sharedIncome: boolean;
   private _active: SeatId = 0;
 
-  constructor(count: SeatCount = 1) {
+  constructor(count: SeatCount = 1, sharedIncome = false) {
     this.count = count;
+    this.sharedIncome = sharedIncome;
   }
 
   get active(): SeatId { return this._active; }
@@ -34,4 +37,9 @@ export class Seats {
 export function parseSeatCount(search: string): SeatCount {
   const value = Number(new URLSearchParams(search).get('seats'));
   return (SEAT_COUNTS as readonly number[]).includes(value) ? (value as SeatCount) : 1;
+}
+
+/** `?income=shared` pays kill bounties to all seats equally. */
+export function parseSharedIncome(search: string): boolean {
+  return new URLSearchParams(search).get('income') === 'shared';
 }

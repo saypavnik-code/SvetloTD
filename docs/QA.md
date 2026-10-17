@@ -253,3 +253,15 @@ tinted in four colours; seat I builds in the north-west zone only (a tile in ano
 press X), build in the north-east zone; each tower carries a dot in its owner's colour; seat II cannot sell or upgrade seat I's tower; kills
 pay the seat whose tower made them; after wave 5 every seat has 1 lumber; `?seats=2` gives each seat two zones. The browser smoke for 1-40
 was not run for v0.18.0.
+
+## v0.19.0 handoff: activation block and owner checklist
+
+Activation: the block of the v0.15.0 handoff above (it skips applied patches); v0.19.0 follows v0.18.0.
+
+Expected after v0.19.0: 104 unit tests, 103 pass, 1 TODO (lumber sink), 0 fail.
+
+Browser checklist (`?seats=4`): under each seat chip except the active one there are three small buttons: `+25◆` gives 25 gold, `+1д` gives
+1 lumber, `⇄` cedes the selected tower. Build a tower with seat I, click it, press `⇄` under chip II: the owner dot changes to seat II's colour,
+the selection closes, and only seat II can sell or upgrade it (switch seats and try). `+25◆` moves exactly 25 gold (the sum of the chips stays
+the same); the buttons are dimmed when the active seat has too little or no tower selected. With `?seats=4&income=shared` a kill raises all
+four chips. The normal game (no parameter) shows no seat controls. The browser smoke for 1-40 was not run for v0.19.0.

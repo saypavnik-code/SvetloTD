@@ -49,6 +49,17 @@ export class EconomyManager {
     return true;
   }
 
+  /** Give gold to another seat. Nothing is created or lost; returns false (and moves nothing) for a bad request. */
+  transferGold(amount: number, from: number, to: number): boolean {
+    if (!this._validSeat(from) || !this._validSeat(to) || from === to) return false;
+    if (!Number.isSafeInteger(amount) || amount <= 0 || this._gold[from] < amount) return false;
+    this._gold[from] -= amount;
+    this._gold[to]   += amount;
+    EventBus.emit(GameEvents.GOLD_CHANGED, this._gold[from], from);
+    EventBus.emit(GameEvents.GOLD_CHANGED, this._gold[to], to);
+    return true;
+  }
+
   loseLife(amount = 1): void {
     if (!Number.isSafeInteger(amount) || amount <= 0 || this._lives === 0) return;
     this._lives = Math.max(0, this._lives - amount);

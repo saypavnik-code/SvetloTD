@@ -29,6 +29,7 @@ export const GameEvents = {
   TOWER_SELECTED:      'tower:selected',     // payload: Tower | null
   TOWER_UPGRADED:      'tower:upgraded',     // payload: Tower instance
   TOWER_SOLD:          'tower:sold',         // payload: { refund }
+  TOWER_CEDED:         'tower:ceded',        // payload: { tower, from, to } (seats)
   TOWER_SHOT:          'tower:shot',         // payload: TowerId
 
   // Hero

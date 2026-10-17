@@ -9,6 +9,7 @@ import { Enemy } from '../entities/Enemy';
 import { ObjectPool } from '../utils/ObjectPool';
 import { EconomyManager } from './EconomyManager';
 import { Seats } from './Seats';
+import type { SeatId } from '../data/seats';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { TILE_SIZE, GRID_COLS, GRID_ROWS, DEPTH, COLORS } from '../config';
 
@@ -139,6 +140,18 @@ export class BuildSystem {
     this._economy.addGold(refund, owner);
     EventBus.emit(GameEvents.TOWER_SOLD, { refund });
     this._selectTower(null);
+  }
+
+  /** Cede the selected tower to another seat (owner only, free). It keeps its cell, level and investment. */
+  cedeSelected(toSeat: number): boolean {
+    const tower = this._selectedTower;
+    if (!this._canInteract() || !tower || tower.ownerSeat !== this._seats.active) return false;
+    if (!Number.isInteger(toSeat) || toSeat < 0 || toSeat >= this._seats.count || toSeat === tower.ownerSeat) return false;
+    const from = tower.ownerSeat;
+    tower.transferTo(toSeat as SeatId);
+    EventBus.emit(GameEvents.TOWER_CEDED, { tower, from, to: toSeat });
+    this._selectTower(null);
+    return true;
   }
 
   toggleAllRanges(): void {

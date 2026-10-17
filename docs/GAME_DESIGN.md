@@ -136,3 +136,16 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
   tint in its seat colour and every tower an owner dot. A menu choice is still to do.
 - Measured: with one seat the economy and the reports are identical to v0.17.0 (the report tests did not change); the multi-seat balance is
   not measured before B6.
+
+## Give, cede and shared income (v0.19.0)
+
+- Give: one click moves 25 gold or 1 lumber from the active seat to another seat. It is a transfer: the sum of all wallets does not change,
+  both wallets announce the change, and a request that cannot be met (same seat, no such seat, not enough, not a whole positive number) moves
+  nothing and announces nothing.
+- Cede: the owner of the selected tower hands it to another seat for free. The tower stays in its cell (so it may stand in the former owner's
+  zone), keeps its level and `totalInvested`, and from then on its kills, upgrades and sell refunds belong to the new owner. The old owner can
+  no longer upgrade or sell it. The previous selection is dropped.
+- Shared income (`?income=shared`): a kill pays every seat an equal share of the bounty; the odd coins rotate round the seats so that nobody is
+  favoured; lumber still goes to the seat that made the kill. The default pays the killer.
+- Controls: under the chip of every other seat three small buttons give gold, give lumber and cede the selected tower (dimmed when the active
+  seat cannot). The buttons only call actions; the rules live in `EconomyManager`, `LumberManager` and `BuildSystem`.

@@ -45,5 +45,16 @@ export class LumberManager {
     return true;
   }
 
+  /** Give lumber to another seat. Nothing is created or lost; returns false (and moves nothing) for a bad request. */
+  transfer(amount: number, from: number, to: number): boolean {
+    if (!this._validSeat(from) || !this._validSeat(to) || from === to) return false;
+    if (!Number.isSafeInteger(amount) || amount <= 0 || this._lumber[from] < amount) return false;
+    this._lumber[from] -= amount;
+    this._lumber[to]   += amount;
+    EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber[from], from);
+    EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber[to], to);
+    return true;
+  }
+
   canAfford(amount: number, seat = 0): boolean { return this.lumberOf(seat) >= amount; }
 }

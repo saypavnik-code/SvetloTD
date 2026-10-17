@@ -55,7 +55,7 @@ export class Tower {
   private _target:          Enemy | null = null;
   private _targetTick       = 0;
   /** The seat that built it: its kills pay this seat, only this seat may upgrade or sell it. */
-  readonly ownerSeat: SeatId;
+  private _ownerSeat: SeatId;
   private _fireCooldown     = 0;
   private _projPool:        ObjectPool<Projectile>;
   private _activeEnemiesFn: () => Enemy[];
@@ -72,7 +72,7 @@ export class Tower {
     this.x                = col * TILE_SIZE + TILE_SIZE / 2;
     this.y                = row * TILE_SIZE + TILE_SIZE / 2;
     this.totalInvested    = invested ?? this.data.cost;
-    this.ownerSeat        = ownerSeat;
+    this._ownerSeat       = ownerSeat;
     this._projPool        = projPool;
     this._activeEnemiesFn = activeEnemies;
 
@@ -82,6 +82,11 @@ export class Tower {
     this._rangeCircle.setScale(0);
     scene.tweens.add({ targets: this._rangeCircle, scaleX: 1, scaleY: 1, duration: 220, ease: 'Back.easeOut' });
   }
+
+  get ownerSeat(): SeatId { return this._ownerSeat; }
+
+  /** Cede: the tower stays where it is, with its level and investment, and works for another seat from now on. */
+  transferTo(seat: SeatId): void { this._ownerSeat = seat; }
 
   private _buildRangeCircle(): void {
     this._rangeCircle = this._scene.add.graphics()

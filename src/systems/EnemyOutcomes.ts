@@ -17,15 +17,19 @@ import { GameEvents } from '../utils/EventBus';
 import { Subscriptions } from '../utils/Subscriptions';
 import type { EconomyManager } from './EconomyManager';
 import type { LumberManager } from './LumberManager';
+import { splitEvenly } from '../data/seats';
 
 export class EnemyOutcomes {
   private readonly _economy: EconomyManager;
   private readonly _lumber:  LumberManager;
   private readonly _subs = new Subscriptions();
+  private readonly _sharedIncome: boolean;
+  private _kills = 0;
 
-  constructor(economy: EconomyManager, lumber: LumberManager) {
+  constructor(economy: EconomyManager, lumber: LumberManager, sharedIncome = false) {
     this._economy = economy;
     this._lumber  = lumber;
+    this._sharedIncome = sharedIncome;
     this._subs.on(GameEvents.ENEMY_KILLED,      this._onKilled);
     this._subs.on(GameEvents.ENEMY_REACHED_END, this._onLeaked);
   }
@@ -33,7 +37,13 @@ export class EnemyOutcomes {
   private _onKilled = (data: unknown): void => {
     const { enemy, goldReward } = data as { enemy: Enemy; goldReward: number };
     const seat = enemy.creditSeat;            // the seat whose tower hit it last (seat 0 when nobody did)
-    this._economy.addGold(goldReward, seat);
+    if (this._sharedIncome) {
+      // Everyone gets the same share; the odd coins go round the seats so that nobody is favoured.
+      const seats = this._economy.seatCount, offset = this._kills++ % seats;
+      splitEvenly(goldReward, seats).forEach((share, index) => this._economy.addGold(share, (index + offset) % seats));
+    } else {
+      this._economy.addGold(goldReward, seat);
+    }
     const lumberYield = enemy.def?.lumberYield ?? 0;
     if (lumberYield > 0) this._lumber.add(lumberYield, seat);
   };

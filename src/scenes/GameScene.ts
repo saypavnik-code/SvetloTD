@@ -17,7 +17,8 @@ import { EconomyManager } from '../systems/EconomyManager';
 import { LumberManager }  from '../systems/LumberManager';
 import { InterestSystem } from '../systems/InterestSystem';
 import { EnemyOutcomes }  from '../systems/EnemyOutcomes';
-import { Seats, parseSeatCount } from '../systems/Seats';
+import { Seats, parseSeatCount, parseSharedIncome } from '../systems/Seats';
+import { GIVE_GOLD_STEP, GIVE_LUMBER_STEP } from '../data/seats';
 import { ObjectPool }     from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { Subscriptions }  from '../utils/Subscriptions';
@@ -166,7 +167,13 @@ export class GameScene extends Phaser.Scene {
     this._hud          = new HUD(this, this._economy, this._waveManager);
     this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy, this._seats);
     if (this._seats.count > 1) {
-      this._seatOverlay = new SeatOverlay(this, this._seats, this._economy, this._lumber, () => this._buildSystem.towers);
+      const canAct = (): boolean => !this._isPaused && !this._gameOver && !this._tutorialActive;
+      this._seatOverlay = new SeatOverlay(this, this._seats, this._economy, this._lumber, () => this._buildSystem.towers, {
+        giveGold:   to => { if (canAct()) this._economy.transferGold(GIVE_GOLD_STEP, this._seats.active, to); },
+        giveLumber: to => { if (canAct()) this._lumber.transfer(GIVE_LUMBER_STEP, this._seats.active, to); },
+        cede:       to => { this._buildSystem.cedeSelected(to); },
+        canCede:    () => this._buildSystem.selectedTower?.ownerSeat === this._seats.active,
+      });
     }
     this._towerPanel.bindHotkeys(this);
     this._waveInfo     = new WaveInfo(this, this._waveManager);
@@ -244,7 +251,8 @@ export class GameScene extends Phaser.Scene {
   // ── Systems ────────────────────────────────────────────────────────────────
   private _buildSystems(): void {
     // `?seats=2` or `?seats=4` starts a shared-screen game (hot seat); the default is one seat that owns the whole field.
-    this._seats     = new Seats(parseSeatCount(window.location.search));
+    // `?income=shared` pays every kill to all seats equally.
+    this._seats     = new Seats(parseSeatCount(window.location.search), parseSharedIncome(window.location.search));
     this._economy   = new EconomyManager(this._seats.count);
     this._lumber    = new LumberManager(this._seats.count);
     this._interest  = new InterestSystem(this._economy, this._lumber);
@@ -252,7 +260,7 @@ export class GameScene extends Phaser.Scene {
     this._projPool  = new ObjectPool<Projectile>(() => new Projectile(), PROJ_POOL_SIZE);
     this._waveManager = new WaveManager(this, this._enemyPool);
     // Right after WaveManager: kill and leak rules run after it has counted the enemy, before the scene reacts.
-    this._outcomes    = new EnemyOutcomes(this._economy, this._lumber);
+    this._outcomes    = new EnemyOutcomes(this._economy, this._lumber, this._seats.sharedIncome);
     this._buildSystem = new BuildSystem(this, this._economy, this._projPool,
       () => this._waveManager.activeEnemies,
       () => !this._isPaused && !this._gameOver && !this._tutorialActive, this._seats);

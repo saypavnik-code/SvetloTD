@@ -9,6 +9,10 @@ export type ZoneId = 0 | 1 | 2 | 3;
 export const SEAT_COUNTS = [1, 2, 4] as const;
 export type SeatCount = typeof SEAT_COUNTS[number];
 
+/** What one click on a give button moves from the active seat to another seat. */
+export const GIVE_GOLD_STEP = 25;
+export const GIVE_LUMBER_STEP = 1;
+
 export const SEAT_NAMES = ['I', 'II', 'III', 'IV'] as const;
 export const SEAT_COLORS = [0x4aa3df, 0xe3b15a, 0xd9644f, 0x6dbf67] as const;   // blue, amber, red, green
 
