@@ -2,11 +2,23 @@
 
 ## Verified original traits (version dependent)
 
-Burbenog TD versions commonly feature four-player defense of a shared center,
-40 waves, governor/race specialization, heroes, distinctive abilities,
-and shared economy game modes. The 2.34m branch documents upgradeable towers.
-Other versions emphasize combining elemental specialties instead of direct upgrades.
-See the original map descriptions, not any one variant as universal truth:
+Read on 2026-10-16 (the original is a Warcraft III map with many versions; nothing below is true of every version):
+
+- Four players, co-operative, one team: the goal is to keep the monsters from reaching the centre (the village) for 40 levels; some versions
+  also run 2 players, 8 players, a 54-level blitz or 20 lives and 32 waves (wc3maps.com/map/8825, /map/360935, Softpedia review of v2.32).
+- Equal seats: "all player spots are 100% fair"; every player gets the same creeps and the same starting point; leaks run on into the
+  next player's area (Ralle's tower defence guide, Hive Workshop).
+- The monsters start from the corners and pass through all four players' areas before they head for the middle of the map (Softpedia).
+  No source gives the exact road layout.
+- Governors: 10 in v2.32, 12-15 later, each with a different element set and four builder types; the main builder is free, every further
+  builder costs 1 lumber; 1 lumber arrives after every 5th level; lumber also buys the hero, a tech building and the ultimate tower
+  (Softpedia, wc3maps). 80-120 towers across the governors.
+- The hero catches leaks and has special abilities.
+- Lives are shared: easy 50, normal 25, hard 1, expert 1 with random waves (v2.32).
+- Team play: towers can be ceded to another player (it changes colour), gold and lumber can be given; later versions add shared income, blitz
+  and endless-spawn modes and commands to list waves and armour types.
+
+Earlier references (not re-checked in v0.16.0):
 - https://www.wc3maps.com/map/279529
 - https://wc3maps.com/map/55
 - https://www.hiveworkshop.com/threads/burbenog-td-idea-for-24-players.306393/
@@ -28,9 +40,26 @@ See the original map descriptions, not any one variant as universal truth:
 
 ## Baseline today vs planned
 
-Today: a solo, four-lane 40-wave prototype; the final 20 waves are provisional,
-not a balanced campaign. Future: selectable tower schools, alternate paths,
+Today (v0.16.0): a solo prototype on a plus-shaped four-lane map, 40 waves; the final 20 waves are provisional,
+not a balanced campaign. Planned: the square map with four seats (next section), governors, a lumber sink,
 cooperative authority model and player-count scaling after measured playtests.
+
+## Target design: square map, four seats (owner decision 2026-10-16)
+
+The owner's reading of the original: everything is built around a square, and up to four players take part. The adaptation keeps that and
+stays inside the 18x18 board and the existing combat rules. Milestones: the Burbenog track in `ROADMAP.md`.
+
+- Map (B1, v0.17.0): a square road ring two tiles inside the field edge with a spawn portal on each corner and the shared 2x2 base in the
+  middle. Every enemy runs clockwise around the whole ring from its own corner, passes the zones of all four seats, leaves the ring on its
+  own one-tile spur and enters the base. The four routes are one route turned by 90 degrees: equal length, rotation symmetry, never a mirror.
+  Flyers fly straight from their corner to the base. "First" and "last" targeting use the walking distance left.
+- Seats (B2): the four quadrants are the zones of seats 1-4 (north-west, north-east, south-east, south-west); a seat builds only in its
+  own zone. Gold and lumber are per seat, lives are shared, a lone player owns all four seats and one wallet (today's economy).
+- Teamwork (B3): give gold or lumber to a seat; cede a tower (its refund then goes to the new owner); optional shared income.
+- Governors (B4): a governor is an element set over the 10 tower kinds. The first builder is free; an extra builder, the hero, a tech building
+  and the ultimate tower cost lumber (1 lumber per 5 waves, as now). This replaces the unfinished mercenary idea of the `LumberManager` header.
+- Lives and difficulty (B5): 50 / 25 / 1 / 1 with random waves, scaled by the number of seats; the current 20 lives are a placeholder.
+- Balance (B6): the first measurement on the square map (v0.17.0) is in `docs/ECONOMY_REPORT.md`; nothing is called balanced before B6.
 
 ## Implemented combat and economy rules (v0.3.0)
 

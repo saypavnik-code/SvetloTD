@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.15.0)
+## Current state (v0.16.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -40,7 +40,30 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   vector drawing (`drawTo(g, false)`), logic and tests are unchanged. The base is still the vector hexagon.
 - v0.15.0 handoff, documentation only: the tooling and verification section of `docs/PATCH_POLICY.md`, process lessons in `AGENTS.md`,
   the activation block and the owner checklist for v0.12.0-v0.15.0 in `docs/QA.md`.
+- v0.16.0 direction change, documentation only (owner, 2026-10-16: the game does not resemble Burbenog TD). The original was researched
+  again; the verified traits, the target design and the new milestone sequence are in `docs/GAME_DESIGN.md` and in the Burbenog track below.
+  The plus-shaped four-lane map is replaced in v0.17.0; art pass 3 moves behind the square map and the seat UI.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
+
+## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
+
+The owner's verdict on v0.15.0: the game does not resemble Burbenog TD. In the original everything is built around a square and up to four
+players take part. The original was researched again (`docs/GAME_DESIGN.md`, "Verified original traits"); the plus-shaped four-lane map with
+one anonymous player is replaced step by step. Each step is one patch with its own gates; nothing is claimed as balanced before B6.
+
+| Step | Version | What changes | Acceptance |
+| --- | --- | --- | --- |
+| B1 | v0.17.0 | Square road ring, four corner spawns, equal rotated routes, spurs into the shared base, walking-distance targeting | Rotation-symmetry and route invariants, screenshot, reports regenerated |
+| B2 | v0.18.0 | Four seats: one quadrant zone each, per-seat gold and lumber, tower owner and colour, shared lives, seat bar and hot-seat switch; one human owns all four seats | Per-seat ledger invariants, zone rule, a one-seat game equals today's economy |
+| B3 | v0.19.0 | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
+| B4 | v0.20.0 | Governors (element sets) over the 10 tower kinds, extra builder, hero, tech building and ultimate tower paid with lumber (this is the lumber sink) | The lumber TODO test turns green, every kind reachable |
+| B5 | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1 with random waves, scaled by seat count) | Data tests, per-seat-count scaling table |
+| B6 | v0.22.0 | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat | New acceptance bars, regenerated reports |
+| B7 | later | Art pass 3 on the square map: village base, seat-coloured pads, spawn gates, panel frames | Screenshots of menu, empty, built and boss field |
+| B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
+
+Open design questions (the assistant proposes, the owner decides): the exact road layout of the original (a screenshot would settle it);
+whether a lone player owns all four seats (proposed) or one; how many bosses a boss wave sends (today one, on one spawn).
 
 ## P0 - correctness / playable baseline
 
@@ -81,7 +104,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [x] v0.11.0 kill bounty, lumber yield and leak lives were paid only inside `GameScene` handlers and mirrored by hand in two harnesses
   (lumber from golems and bosses missing: 8 reported, 186 real). `EnemyOutcomes` owns them; both harnesses build the real system.
 
-- [x] Symmetric 18x18 four-lane map and routes ending at exact shared center.
+- [x] Symmetric 18x18 four-lane map and routes ending at exact shared center (replaced by the square map in v0.17.0, step B1).
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
 - [x] Correct high-speed travel across multiple enemy waypoints.
 - [x] Scene shutdown hook and scoped event cleanup.
@@ -101,8 +124,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   and bounties do not scale with wave HP. The what-ifs (cheaper upgrades, `normal`-damage arrows) remain design questions.
 - [x] v0.12.0 early-start bonus: the label no longer promises it; a test keeps `WaveInfo` from advertising gold no system pays.
   A real early bonus may return as a designed, measured feature.
-- [ ] Lumber sink (owner decision 2026-10-11: later): mercenaries and tier-3 towers as the `LumberManager` header
-  describes; needs new content. A TODO test tracks it.
+- [ ] Lumber sink (owner decision 2026-10-11: later): scheduled as step B4 of the Burbenog track (extra builders, hero, tech building and
+  ultimate tower cost lumber, as in the original). A TODO test tracks it.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
 - [x] Explicit ownership of EventBus subscriptions (v0.11.0): `Subscriptions` in every system and in `GameScene`; guard tests.
@@ -114,7 +137,8 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - [ ] Art bible: silhouette language, scale, palette, contrast and animations.
 - [ ] Replace prototypes with authored 2D sprite atlases, 2-4 animation states each.
 - [x] v0.14.0 art pass 2: sprites for the 10 tower kinds, 5 enemies and the hero, drawn by `ui/SpriteViews`.
-- [ ] Art pass 3: the base, panel and button frames (nine-slice), menu background, projectiles and hit effects, walk-cycle frames.
+- [ ] Art pass 3 (deferred behind B1-B3: terrain, base and pads depend on the square map and on seat colours): the base, panel and button
+  frames (nine-slice), menu background, projectiles and hit effects, walk-cycle frames.
   Regenerate with `python3 scripts/generate_ui_art.py` and `python3 scripts/generate_sprite_art.py` (the PNGs are committed).
 - [ ] SFX mixing/ducking, captions, color-blind modes, reduced-motion option.
 - [ ] Hero depth and active abilities; wave modifiers with comprehensible telegraphs.
@@ -122,7 +146,7 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 ## P3 - multiplayer and release
 
 - [ ] Design authoritative server simulation, reconnect and deterministic replays.
-- [ ] Coop 2-4 players with lane roles and fair player-count scaling.
+- [ ] Co-op 2-4 players, one seat per player on the square map, with fair player-count scaling (track steps B2, B3, B5, B8).
 - [ ] Platform adapter only after target-specific VK SDK agreement.
 - [ ] GitHub Pages beta, then validated VK Play HTML5 onboarding.
 - [ ] Vibe deploy after owner verifies account entitlement and authenticated /v1/me.
@@ -143,18 +167,18 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.16.0 art pass 3
-- Objective: finish the visual overhaul. A sprite for the base, nine-slice panel and button frames, a menu background with the real
-  version label (the menu still prints a hard-coded "v0.1.0"), projectile and hit effects, two-frame walk cycles. Verify every step
-  with headless-browser screenshots (see `AGENTS.md`). Priority: P1.
-- Scope: extend the two generator scripts, load the textures in `BootScene`, keep the logic classes and the economy untouched.
-- Acceptance: all gates; screenshots of the menu, an empty field, a built field and a boss wave look consistent.
-- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed
-  since v0.2.1); record it in the `docs/QA.md` smoke log. Also play waves 1-3 once with hero skills and the wave 10 boss
-  once, noting the lives lost: the new opening may be easy for a human, and no catalogued build plans for the bosses.
-- Owner action pending: apply v0.12.0-v0.15.0 (block in `docs/QA.md`), look at the new art in a real browser and list what looks wrong
-  (upgrade and sell, the boss wave, flyers, restart): the assistant only saw 1280x720 headless frames of wave 1.
-- Secondary candidates, in order: late-game acceptance bar for waves 21-40 (the best build is defeated in wave 28 today);
-  official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does);
-  structured save schema; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
-  the deprecated `baseUrl` and TS5011 for `rootDir`; the project pins ^5.7.2 and is unaffected today).
+## Next sprint (recommended): v0.17.0 square map (Burbenog track, step B1)
+- Objective: make the field look and play like Burbenog TD: a square road ring with four corner spawns, equal rotation-symmetric routes
+  and the shared base in the middle (`docs/GAME_DESIGN.md`, "Target design"). Priority: P0 (owner decision 2026-10-16).
+- Scope: `mapData`/`pathData` generate the routes from one rotated base route; "first" and "last" tower priorities use the walking
+  distance left (`Enemy.distanceToBase`), because the straight line to the base is wrong on a ring; spawn portals; validators, tests and
+  both generated reports follow the new geometry. No wave, enemy, tower or economy numbers change in that patch.
+- Acceptance: all gates; the rotation-symmetry and route invariants; a headless screenshot of the new field; the measured effect on the
+  catalogued builds is written into the reports, not hidden.
+- Then B2 (seats), B3 (give and cede), B4 (governors and the lumber sink), B5 (lives and difficulty), B6 (re-measure and rebalance).
+- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); record it in
+  the `docs/QA.md` smoke log. Also tell the assistant what is different from the real Burbenog map (a screenshot of the original helps): the
+  geometry in this track is inferred from text descriptions, not copied from the original.
+- Secondary candidates after the track starts: late-game acceptance bar for waves 21-40; official Phaser type declarations in a dedicated
+  patch; decide whether cannon splash may hit flying enemies (currently it does); structured save schema; `tsconfig.json` compatibility
+  with TypeScript 6 (a 6.0.3 compiler reports TS5101 for the deprecated `baseUrl` and TS5011 for `rootDir`; the project pins ^5.7.2).
