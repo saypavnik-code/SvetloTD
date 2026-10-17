@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.16.0)
+## Current state (v0.17.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -43,6 +43,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
 - v0.16.0 direction change, documentation only (owner, 2026-10-16: the game does not resemble Burbenog TD). The original was researched
   again; the verified traits, the target design and the new milestone sequence are in `docs/GAME_DESIGN.md` and in the Burbenog track below.
   The plus-shaped four-lane map is replaced in v0.17.0; art pass 3 moves behind the square map and the seat UI.
+- v0.17.0 square map (track step B1): a road ring two tiles inside the field edge, a spawn portal on each corner, four equal routes (one
+  route turned by 90 degrees; 52 road tiles each) that leave the ring on their own spur into the shared base; 72 road tiles, 248 buildable.
+  "First" and "last" tower priorities use `Enemy.distanceToBase` (walking distance). No wave, enemy, tower or economy number changed, but
+  the geometry did: the best catalogued build is now defeated in wave 31 (was 28 with skills, 25 idle) and has 15 lives at wave 21 (was 10).
+  The hero stays on the base, so its skills fire only on leaks. A headless Chromium run showed the ring, the four portals and the pinwheel
+  spurs, with no console or page errors. Waves 21-40 and the hard and insane presets still have no acceptance bar (B6).
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
@@ -53,7 +59,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 
 | Step | Version | What changes | Acceptance |
 | --- | --- | --- | --- |
-| B1 | v0.17.0 | Square road ring, four corner spawns, equal rotated routes, spurs into the shared base, walking-distance targeting | Rotation-symmetry and route invariants, screenshot, reports regenerated |
+| B1 | v0.17.0 (done) | Square road ring, four corner spawns, equal rotated routes, spurs into the shared base, walking-distance targeting | Rotation-symmetry and route invariants, screenshot, reports regenerated |
 | B2 | v0.18.0 | Four seats: one quadrant zone each, per-seat gold and lumber, tower owner and colour, shared lives, seat bar and hot-seat switch; one human owns all four seats | Per-seat ledger invariants, zone rule, a one-seat game equals today's economy |
 | B3 | v0.19.0 | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 | Governors (element sets) over the 10 tower kinds, extra builder, hero, tech building and ultimate tower paid with lumber (this is the lumber sink) | The lumber TODO test turns green, every kind reachable |
@@ -105,6 +111,7 @@ whether a lone player owns all four seats (proposed) or one; how many bosses a b
   (lumber from golems and bosses missing: 8 reported, 186 real). `EnemyOutcomes` owns them; both harnesses build the real system.
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center (replaced by the square map in v0.17.0, step B1).
+- [x] v0.17.0 square map with four equal rotated routes ending at the exact shared center; walking-distance targeting; spawn portals.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
 - [x] Correct high-speed travel across multiple enemy waypoints.
 - [x] Scene shutdown hook and scoped event cleanup.
@@ -167,18 +174,17 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.17.0 square map (Burbenog track, step B1)
-- Objective: make the field look and play like Burbenog TD: a square road ring with four corner spawns, equal rotation-symmetric routes
-  and the shared base in the middle (`docs/GAME_DESIGN.md`, "Target design"). Priority: P0 (owner decision 2026-10-16).
-- Scope: `mapData`/`pathData` generate the routes from one rotated base route; "first" and "last" tower priorities use the walking
-  distance left (`Enemy.distanceToBase`), because the straight line to the base is wrong on a ring; spawn portals; validators, tests and
-  both generated reports follow the new geometry. No wave, enemy, tower or economy numbers change in that patch.
-- Acceptance: all gates; the rotation-symmetry and route invariants; a headless screenshot of the new field; the measured effect on the
-  catalogued builds is written into the reports, not hidden.
-- Then B2 (seats), B3 (give and cede), B4 (governors and the lumber sink), B5 (lives and difficulty), B6 (re-measure and rebalance).
+## Next sprint (recommended): v0.18.0 four seats (Burbenog track, step B2)
+- Objective: the four players of the original. A seat is a quadrant zone with its own gold, lumber, tower colour and builder; lives stay
+  shared. A lone human owns all four seats and one wallet, so a one-seat game keeps today's economy. Priority: P0 (owner decision 2026-10-16).
+- Scope: `SeatId` and a pure zone lookup in `data/mapData`; per-seat wallets in `EconomyManager` and `LumberManager` (one owner of money,
+  see `AGENTS.md` classes 8-9); the tower records its owner and `BuildSystem` enforces the zone rule; kill bounty goes to the owner of the
+  killing tower; a seat bar in the HUD and a hot-seat switch (keys F1-F4). The HUD never touches money (guard test).
+- Acceptance: all gates; ledger invariants per seat and in total; a one-seat run reproduces the v0.17.0 report; zone and owner tests.
+- Then B3 (give and cede), B4 (governors and the lumber sink), B5 (lives and difficulty), B6 (re-measure and rebalance).
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); record it in
-  the `docs/QA.md` smoke log. Also tell the assistant what is different from the real Burbenog map (a screenshot of the original helps): the
-  geometry in this track is inferred from text descriptions, not copied from the original.
-- Secondary candidates after the track starts: late-game acceptance bar for waves 21-40; official Phaser type declarations in a dedicated
-  patch; decide whether cannon splash may hit flying enemies (currently it does); structured save schema; `tsconfig.json` compatibility
-  with TypeScript 6 (a 6.0.3 compiler reports TS5101 for the deprecated `baseUrl` and TS5011 for `rootDir`; the project pins ^5.7.2).
+  the `docs/QA.md` smoke log. Also compare the new field with the real Burbenog map and say what differs (a screenshot of the original
+  settles the road layout); play waves 1-3 and the wave 10 boss once and note the lives lost.
+- Secondary candidates: late-game acceptance bar for waves 21-40; official Phaser type declarations in a dedicated patch; decide whether
+  cannon splash may hit flying enemies (currently it does); structured save schema; the menu still prints a hard-coded "v0.1.0";
+  `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned).

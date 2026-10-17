@@ -83,6 +83,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 9. A rule inside a scene handler gets copied by hand into harnesses and drifts (v0.11.0: golem and boss lumber was missing
    from the simulation, the report said 8 where the data gives 186). Keep rules in a system and build that system in the
    test. Components register EventBus listeners only through `Subscriptions` (guard: `tests/ownership.test.mjs`).
+10. A rule that measures a straight line to the base (v0.17.0: "first" targeting) is wrong on any route that is not straight.
+    On the square map the enemy farthest along the ring can be the one farthest from the base in a straight line. Use the
+    walking distance (`Enemy.distanceToBase`) and test with an enemy that is far along the road but far from the base.
 
 ## Resuming in a new session
 

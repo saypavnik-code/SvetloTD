@@ -216,3 +216,27 @@ shows its own sprite on a stone pad; start wave 1 (6 goblins at 40% HP, wave bon
 walking direction and flash on a hit; right click moves the hero, Q and W work; upgrade with U swaps the sprite; sell refunds in full during
 the countdown and 70% in combat; speed buttons x1-x3 and pause; the wyvern waves and the wave 10 boss look right; defeat, victory and
 restart leave no duplicated rewards or sprites. Note anything that looks wrong or unreadable: it becomes the v0.16.0 art pass.
+
+## v0.16.0-v0.17.0 handoff: activation block and owner checklist
+
+v0.16.0 is documentation only (the Burbenog direction and the new roadmap); v0.17.0 is the square map. Activation (repository root
+`/workspaces/SvetloTD`, both patch files in the root, clean tree on `main`; applied patches are skipped):
+
+```bash
+cd /workspaces/SvetloTD && set -e
+for P in $(ls patch_svetlogorsk_td_v0_*.py | sort -V); do
+  V=$(echo "$P" | sed -E 's/patch_svetlogorsk_td_v([0-9]+)_([0-9]+)_([0-9]+)_.*/\1.\2.\3/')
+  if grep -q "| v$V |" docs/PATCH_HISTORY.md; then echo "skip v$V (already applied)"; continue; fi
+  python "$P" --dry-run
+  python "$P" --commit --push --self-delete
+done
+git log --oneline -8 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
+```
+
+Expected after v0.17.0: 85 unit tests, 84 pass, 1 TODO (lumber sink), 0 fail; `git log` shows one commit per version.
+
+Browser checklist for the square map (`npm run dev`): the field shows a stone ring with a portal on each corner and four one-tile spurs
+turning into the base in a pinwheel; towers can be placed inside, outside and beside the ring; wave 1 enemies appear on all four portals, run
+clockwise around the whole ring and then up their spur; a leak costs lives; "first" targeting shoots the enemy that is closest to the base by
+the road; flyers cross the field in a straight line; the hero sits on the base. Note anything that looks wrong or differs from the real
+Burbenog map: it becomes the next track step. The browser smoke for 1-40 was not run for v0.17.0.

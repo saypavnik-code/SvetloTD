@@ -167,13 +167,16 @@ test('Q is cast only when two or more enemies stand in its blast radius, W only 
 });
 
 test('skills are off by default, cost nothing when off and respect the cooldowns when on', () => {
-  const off = simulate({ build: 'arrow', extraGold: 600 });
+  // The hero guards the base, so the skills fire when enemies leak to it: two arrows beside the base are too
+  // little to stop the early waves (the ring itself is far from the base).
+  const layout = [{ col: 7, row: 7, id: 'arrow_t1' }, { col: 10, row: 7, id: 'arrow_t1' }];
+  const off = simulate({ layout, maxWave: 12 });
   assert.deepEqual(off.casts, { q: 0, w: 0 });
-  const on = simulate({ build: 'arrow', extraGold: 600, skills: true });
+  const on = simulate({ layout, maxWave: 12, skills: true });
   assert(on.casts.q > 0 && on.casts.w > 0, 'the rule fires in a real run');
   assert(on.casts.q <= Math.ceil(on.seconds / 12) + 1, 'Q cooldown is 12 s');
   assert(on.casts.w <= Math.ceil(on.seconds / 25) + 1, 'W cooldown is 25 s');
-  assert.deepEqual(simulate({ build: 'arrow', extraGold: 600, skills: true }), on, 'deterministic');
+  assert.deepEqual(simulate({ layout, maxWave: 12, skills: true }), on, 'deterministic');
 });
 
 // ── Mid-game proposals ──────────────────────────────────────────────────────

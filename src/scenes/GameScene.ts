@@ -6,6 +6,7 @@ import {
   COLORS, DEPTH, FONT_MAIN,
 } from '../config';
 import { MAP_DATA, BASE_TILE_COL, BASE_TILE_ROW } from '../data/mapData';
+import { SPAWN_POSITIONS } from '../data/pathData';
 import { Enemy }          from '../entities/Enemy';
 import { Projectile }     from '../entities/Projectile';
 import { Tower }          from '../entities/Tower';
@@ -545,6 +546,17 @@ export class GameScene extends Phaser.Scene {
         .setDisplaySize(TILE_SIZE, TILE_SIZE).setDepth(DEPTH.BACKGROUND);
     }
     this._drawPathEdges();
+    this._drawSpawnPortals();
+  }
+
+  // One portal per ring corner: the four equal starting points of the square map.
+  private _drawSpawnPortals(): void {
+    const g = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
+    for (const spawn of SPAWN_POSITIONS) {
+      g.fillStyle(COLORS.walnutDark, 0.85); g.fillCircle(spawn.x, spawn.y, TILE_SIZE * 0.42);
+      g.lineStyle(2, COLORS.danger, 0.9);   g.strokeCircle(spawn.x, spawn.y, TILE_SIZE * 0.42);
+      g.lineStyle(1.5, COLORS.dangerSoft, 0.7); g.strokeCircle(spawn.x, spawn.y, TILE_SIZE * 0.24);
+    }
   }
 
   private _drawPathEdges(): void {

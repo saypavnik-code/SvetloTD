@@ -35,9 +35,11 @@ function setupTower(towerId = 'arrow_t1', col = 5, row = 5) {
   return { tower, enemies, projectiles };
 }
 
-function addEnemy(enemies, tower, dx, dy = 0, { id = 'golem', hp = 1e9 } = {}) {
+// `index` is the route waypoint the enemy is heading for (a larger index is closer to the base by the road).
+function addEnemy(enemies, tower, dx, dy = 0, { id = 'golem', hp = 1e9, index = 0 } = {}) {
   const enemy = new game.Enemy();
   enemy.init(id, game.PATH_TOP);
+  enemy._wpIndex = index;
   enemy.x = tower.x + dx;
   enemy.y = tower.y + dy;
   enemy.hp = hp;
@@ -111,8 +113,8 @@ test('a shot is not wasted when the target dies between target ticks', () => {
 
 test('target priority rules pick the expected enemy and a change takes effect at once', () => {
   const { tower, enemies } = setupTower('arrow_t1');
-  const ahead = addEnemy(enemies, tower, 60, 0, { hp: 50 });    // closer to the base, weak
-  const behind = addEnemy(enemies, tower, -50, 0, { hp: 900 }); // farther from the base, strong
+  const ahead = addEnemy(enemies, tower, 60, 0, { hp: 50, index: 40 });    // closer to the base by the road, weak
+  const behind = addEnemy(enemies, tower, -50, 0, { hp: 900, index: 5 }); // farther from the base by the road, strong
   const pickedBy = (priority) => {
     tower.setTargetPriority(priority);
     tower.update(250);
@@ -129,7 +131,7 @@ test('a tower keeps its current target until it dies or leaves range', () => {
   const { tower, enemies } = setupTower('arrow_t1');
   const trailing = addEnemy(enemies, tower, -60);
   tower.update(250);
-  addEnemy(enemies, tower, 60);                                  // a leader (closer to the base) appears
+  addEnemy(enemies, tower, 60, 0, { index: 40 });                // a leader (closer to the base by the road) appears
   for (let i = 0; i < 20; i++) tower.update(50);
   assert.equal(tower._target, trailing);
   trailing.takeDamage(1e12, 'chaos');

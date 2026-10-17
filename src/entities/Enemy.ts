@@ -3,7 +3,7 @@
 
 import Phaser from 'phaser';
 import { type EnemyDef, type EnemyId, ENEMY_DEFS } from '../data/enemies';
-import { type Waypoint } from '../data/pathData';
+import { type Waypoint, routeSuffixLengths } from '../data/pathData';
 import { BASE_CENTER_X, BASE_CENTER_Y } from '../data/mapData';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { type Poolable } from '../utils/ObjectPool';
@@ -145,6 +145,16 @@ export class Enemy implements Poolable {
     const dist=Math.sqrt(dx*dx+dy*dy), step=this._speed*dt;
     if (dist<=step) { this.x=this._targetX; this.y=this._targetY; this._leak(); }
     else { this.x+=dx/dist*step; this.y+=dy/dist*step; }
+  }
+
+  // Distance still to walk before this enemy reaches the base: along the route for walkers, straight for flyers.
+  // Used for the "first" / "last" tower priorities (the Euclidean distance to the base is wrong on a ring).
+  get distanceToBase(): number {
+    if (this._isFlying) return Math.hypot(this._targetX - this.x, this._targetY - this.y);
+    const route = this._waypoints;
+    if (this._wpIndex >= route.length) return 0;
+    const next = route[this._wpIndex];
+    return Math.hypot(next.x - this.x, next.y - this.y) + routeSuffixLengths(route)[this._wpIndex];
   }
 
   private _moveAlongPath(dt: number): void {

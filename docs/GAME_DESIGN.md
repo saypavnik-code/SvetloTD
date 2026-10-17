@@ -102,3 +102,19 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
 - Lumber is earned every 5 waves and from golems and bosses; nothing spends it yet (a sink is planned).
 - Measured status: `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md`. Waves 11-40 and the hard and insane presets are
   not rebalanced.
+
+## Square map rules (v0.17.0)
+
+- Geometry: 18x18 tiles of 40 px. The road ring runs on tiles 2 and 15 (rows and columns), 52 tiles; each spawn adds a spur of 5 tiles
+  on its own base row or column (rows/columns 3-7 or 10-14), so there are 72 road tiles, 4 base tiles and 248 buildable tiles. Towers fit
+  inside the ring, outside it and beside the spurs.
+- Routes: spawn 0 starts on the north-west ring corner, runs clockwise over the whole north, east and south sides and up the west side to
+  the base row, then along the spur into the base; spawns 1-3 are the same route turned by 90, 180 and 270 degrees. Every route is 52 tiles
+  long and ends at the exact centre of the base; every enemy crosses all four quadrants.
+- Targeting: "first" and "last" use `Enemy.distanceToBase` (the walking distance left; the straight distance for flyers). Sticky targets,
+  priorities and fire rates are unchanged.
+- Waves: `wave.paths` keeps its meaning (-1 spreads a wave over all four spawns in turn, 0-3 uses one spawn); the wave 10 and 15 bosses
+  still use spawns 0 and 1 (open question: a boss per seat).
+- Hero: starts on the base and auto-attacks there; skills are about leaks (the ring is 260 px from the base).
+- Measured effect (normal, `docs/ECONOMY_REPORT.md`): the best catalogued build is defeated in wave 31 (the cross map: 28 with skills, 25 idle),
+  15 lives at wave 21 (10). A wave takes much longer to finish (route 2080 px; a grunt needs 35 s). Values are measurements, not balance.

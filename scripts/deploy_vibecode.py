@@ -71,7 +71,7 @@ def main():
         'port': 3000,
         'healthPath': '/healthz',
         'displayName': 'Svetlogorsk TD',
-        'description': 'Four-lane cooperative-inspired tower defense prototype',
+        'description': 'Square-map cooperative-inspired tower defense prototype',
     }
     response = api('/infra/servers/' + args.target + '/deploy', key, token, payload)
     print('Deploy operation returned:', json.dumps(response.get('data', {}), ensure_ascii=False))

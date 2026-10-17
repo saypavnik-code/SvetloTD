@@ -7,7 +7,6 @@ import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
 import { ObjectPool } from '../utils/ObjectPool';
 import { TILE_SIZE, DEPTH, COLORS } from '../config';
-import { BASE_CENTER_X, BASE_CENTER_Y } from '../data/mapData';
 import { GameSpeed } from '../systems/GameSpeed';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { applyHitSpecials } from '../systems/HitEffects';
@@ -202,7 +201,7 @@ export class Tower {
   }
 
   private _pickTarget(list: Enemy[]): Enemy {
-    const d2=(e:Enemy)=>{const dx=e.x-BASE_CENTER_X,dy=e.y-BASE_CENTER_Y;return dx*dx+dy*dy;};
+    const d2=(e:Enemy)=>e.distanceToBase;   // walking distance left, not the straight line to the base
     switch (this.targetPriority) {
       case TargetPriority.FIRST:     return list.reduce((a,b)=>d2(b)<d2(a)?b:a);
       case TargetPriority.LAST:      return list.reduce((a,b)=>d2(b)>d2(a)?b:a);
