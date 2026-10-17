@@ -59,8 +59,8 @@ export class HUD {
     }).setDepth(DEPTH.HUD);
 
     s.add.image(122, 22, 'icon_gold').setDisplaySize(24, 24).setDepth(DEPTH.HUD);
-    this._goldDisplay = this._economy.gold;
-    this._goldNum = s.add.text(140, 14, `${this._economy.gold}`, {
+    this._goldDisplay = this._economy.goldOf(0);
+    this._goldNum = s.add.text(140, 14, `${this._economy.goldOf(0)}`, {
       fontFamily: FONT, fontSize: '16px', color: COLORS.textGold_css, fontStyle: 'bold',
     }).setDepth(DEPTH.HUD);
 

@@ -68,7 +68,11 @@ export class Enemy implements Poolable {
   constructor() {}
 
   // ── Init ──────────────────────────────────────────────────────────────────
+  /** Seat of the tower that hit it last: the kill bounty goes there (reset on every spawn). */
+  creditSeat = 0;
+
   init(enemyId: EnemyId, waypoints: Waypoint[], opts: EnemySpawnOptions = {}): void {
+    this.creditSeat = 0;
     const def       = ENEMY_DEFS[enemyId];
     this.def        = def;
     this.hp         = Math.round(def.hp * (opts.hpMult ?? 1));

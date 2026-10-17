@@ -118,3 +118,21 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
 - Hero: starts on the base and auto-attacks there; skills are about leaks (the ring is 260 px from the base).
 - Measured effect (normal, `docs/ECONOMY_REPORT.md`): the best catalogued build is defeated in wave 31 (the cross map: 28 with skills, 25 idle),
   15 lives at wave 21 (10). A wave takes much longer to finish (route 2080 px; a grunt needs 35 s). Values are measurements, not balance.
+
+## Seat rules (v0.18.0)
+
+- Zones: the quadrants, numbered clockwise from the north-west (0 NW, 1 NE, 2 SE, 3 SW); every zone has 62 building tiles. A quarter turn
+  moves each zone on by one, like the spawns.
+- Owners: one seat owns all four zones; two seats own two neighbouring zones each (0-1 and 2-3); four seats own one zone each. A seat builds
+  only in its own zones; a tile in a foreign zone is refused like an occupied one.
+- Money: gold and lumber are per seat. The start gold and each wave bonus are split between the seats without losing a coin (the first seats
+  get the remainder); interest is paid on each seat's own gold; every seat gets the lumber of a 5th wave; lives are one pool for the team.
+- Kills: a projectile credits its tower's seat before the damage, so the bounty and the lumber of the kill go to the seat whose tower hit
+  last (poison ticks keep crediting the last hit; the hero adds no credit, so a kill by the hero alone pays seat 0).
+- Ownership of a tower: only its owner upgrades or sells it; the upgrade keeps the owner and the refund goes to the owner's wallet at the
+  usual rate (full in a countdown, 70% in combat). Give and cede come with B3.
+- Shared screen: `?seats=2` or `?seats=4` in the page address. The HUD shows the active seat, the right panel has one chip per seat with its
+  gold and lumber (click it, or press Z X C V, to take that seat; the half-made placement and the selection are dropped), each zone has a
+  tint in its seat colour and every tower an owner dot. A menu choice is still to do.
+- Measured: with one seat the economy and the reports are identical to v0.17.0 (the report tests did not change); the multi-seat balance is
+  not measured before B6.

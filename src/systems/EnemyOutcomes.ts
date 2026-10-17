@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // EnemyOutcomes.ts — What an enemy's death or escape pays and costs.
 //
-//   ENEMY_KILLED      → bounty gold, plus the enemy type's lumberYield
+//   ENEMY_KILLED      → bounty gold, plus the enemy type's lumberYield, to the seat that made the kill
 //   ENEMY_REACHED_END → lives lost = the enemy type's livesCost
 //
 // These rules used to live in GameScene's event handlers and were copied by hand into the
@@ -32,9 +32,10 @@ export class EnemyOutcomes {
 
   private _onKilled = (data: unknown): void => {
     const { enemy, goldReward } = data as { enemy: Enemy; goldReward: number };
-    this._economy.addGold(goldReward);
+    const seat = enemy.creditSeat;            // the seat whose tower hit it last (seat 0 when nobody did)
+    this._economy.addGold(goldReward, seat);
     const lumberYield = enemy.def?.lumberYield ?? 0;
-    if (lumberYield > 0) this._lumber.add(lumberYield);
+    if (lumberYield > 0) this._lumber.add(lumberYield, seat);
   };
 
   private _onLeaked = (enemy: unknown): void => {

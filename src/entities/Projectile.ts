@@ -34,6 +34,9 @@ export class Projectile implements Poolable {
   private _splashDur = 0.3;
   private _splashAcc = 0;
 
+  /** Seat of the tower that fired it; credited before the damage because the kill event fires inside takeDamage. */
+  ownerSeat = 0;
+
   constructor() {}
 
   init(
@@ -41,7 +44,7 @@ export class Projectile implements Poolable {
     damage: number, damageType: DamageType,
     splashRadius: number, color: number, activeEnemies: Enemy[], speed = 320,
   ): void {
-    this.x=x; this.y=y;
+    this.x=x; this.y=y; this.ownerSeat=0;
     this._target=target; this._lastX=target.x; this._lastY=target.y;
     this._targetLost=false; this._damage=damage; this._damageType=damageType;
     this._splashRadius=splashRadius; this._color=color;
@@ -91,10 +94,11 @@ export class Projectile implements Poolable {
       for (const e of this._activeEnemies) {
         if (!e.isActive||e.isDead) continue;
         const dx=e.x-this.x, dy=e.y-this.y;
-        if (dx*dx+dy*dy<=r2) { e.takeDamage(this._damage,this._damageType); this.onEnemyHit?.(e); }
+        if (dx*dx+dy*dy<=r2) { e.creditSeat=this.ownerSeat; e.takeDamage(this._damage,this._damageType); this.onEnemyHit?.(e); }
       }
     } else {
       if (this._target&&this._target.isActive&&!this._target.isDead) {
+        this._target.creditSeat=this.ownerSeat;
         this._target.takeDamage(this._damage,this._damageType);
         this.onEnemyHit?.(this._target);
       }

@@ -10,6 +10,7 @@ import { TILE_SIZE, DEPTH, COLORS } from '../config';
 import { GameSpeed } from '../systems/GameSpeed';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { applyHitSpecials } from '../systems/HitEffects';
+import type { SeatId } from '../data/seats';
 
 export enum TargetPriority { FIRST, LAST, STRONGEST, WEAKEST, NEAREST }
 
@@ -53,13 +54,15 @@ export class Tower {
 
   private _target:          Enemy | null = null;
   private _targetTick       = 0;
+  /** The seat that built it: its kills pay this seat, only this seat may upgrade or sell it. */
+  readonly ownerSeat: SeatId;
   private _fireCooldown     = 0;
   private _projPool:        ObjectPool<Projectile>;
   private _activeEnemiesFn: () => Enemy[];
 
   constructor(
     scene: Phaser.Scene, towerId: TowerId, col: number, row: number,
-    projPool: ObjectPool<Projectile>, activeEnemies: () => Enemy[], invested?: number,
+    projPool: ObjectPool<Projectile>, activeEnemies: () => Enemy[], invested?: number, ownerSeat: SeatId = 0,
   ) {
     this._scene           = scene;
     this.towerId          = towerId;
@@ -69,6 +72,7 @@ export class Tower {
     this.x                = col * TILE_SIZE + TILE_SIZE / 2;
     this.y                = row * TILE_SIZE + TILE_SIZE / 2;
     this.totalInvested    = invested ?? this.data.cost;
+    this.ownerSeat        = ownerSeat;
     this._projPool        = projPool;
     this._activeEnemiesFn = activeEnemies;
 
@@ -229,6 +233,7 @@ export class Tower {
 
     proj.init(this.x, this.y, this._target, this.data.damage, this.data.damageType,
               this.data.splash, this.data.color, this._activeEnemiesFn(), 320);
+    proj.ownerSeat = this.ownerSeat;
     EventBus.emit(GameEvents.TOWER_SHOT, this.towerId);
   }
 

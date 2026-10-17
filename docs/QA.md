@@ -240,3 +240,16 @@ turning into the base in a pinwheel; towers can be placed inside, outside and be
 clockwise around the whole ring and then up their spur; a leak costs lives; "first" targeting shoots the enemy that is closest to the base by
 the road; flyers cross the field in a straight line; the hero sits on the base. Note anything that looks wrong or differs from the real
 Burbenog map: it becomes the next track step. The browser smoke for 1-40 was not run for v0.17.0.
+
+## v0.18.0 handoff: activation block and owner checklist
+
+Activation: the block of the v0.15.0 handoff above (it skips applied patches); v0.18.0 follows v0.17.0.
+
+Expected after v0.18.0: 97 unit tests, 96 pass, 1 TODO (lumber sink), 0 fail; `git log` shows one commit per version.
+
+Browser checklist (`npm run dev`): the normal game (no parameter) behaves as in v0.17.0, one wallet, towers anywhere. Then open the game with
+`?seats=4`: the HUD gold shows a quarter of the start gold; the right panel shows four seat chips (I-IV) with gold and lumber; the field is
+tinted in four colours; seat I builds in the north-west zone only (a tile in another zone shows the red ghost and refuses); click chip II (or
+press X), build in the north-east zone; each tower carries a dot in its owner's colour; seat II cannot sell or upgrade seat I's tower; kills
+pay the seat whose tower made them; after wave 5 every seat has 1 lumber; `?seats=2` gives each seat two zones. The browser smoke for 1-40
+was not run for v0.18.0.

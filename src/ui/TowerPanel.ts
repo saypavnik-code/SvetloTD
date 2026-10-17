@@ -6,6 +6,7 @@ import { TOWER_DEFS, BUILDABLE_TOWER_IDS, type TowerId } from '../data/towers';
 import { Tower, TargetPriority } from '../entities/Tower';
 import { BuildSystem } from '../systems/BuildSystem';
 import { EconomyManager } from '../systems/EconomyManager';
+import { Seats } from '../systems/Seats';
 import {
   GAME_WIDTH, GAME_HEIGHT, GRID_COLS, TILE_SIZE,
   COLORS, DEPTH, FONT_FAMILY,
@@ -35,6 +36,7 @@ export class TowerPanel {
   private readonly _scene:   Phaser.Scene;
   private readonly _build:   BuildSystem;
   private readonly _economy: EconomyManager;
+  private readonly _seats:   Seats;
 
   // ── Build panel ───────────────────────────────────────────────────────────
   private _buildRoot!:  Phaser.GameObjects.Container;
@@ -68,10 +70,11 @@ export class TowerPanel {
   private _tower: Tower | null = null;
   private _selectedIdx = -1;
 
-  constructor(scene: Phaser.Scene, build: BuildSystem, economy: EconomyManager) {
+  constructor(scene: Phaser.Scene, build: BuildSystem, economy: EconomyManager, seats: Seats = new Seats(1)) {
     this._scene   = scene;
     this._build   = build;
     this._economy = economy;
+    this._seats   = seats;
 
     this._buildPanelBackground();
     this._buildBuildPanel();
@@ -175,7 +178,7 @@ export class TowerPanel {
       });
       zone.on('pointerout', () => { rowBg.setVisible(false); this._hideTooltip(); });
       zone.on('pointerdown', () => {
-        if (this._economy.gold < data.cost) return;
+        if (this._gold() < data.cost) return;
         this._selectedIdx = i;
         this._selBars.forEach((b,j) => b.setVisible(j===i));
         this._build.selectTowerType(id);
@@ -185,9 +188,12 @@ export class TowerPanel {
     });
   }
 
+  /** Gold of the seat that is playing now. */
+  private _gold(): number { return this._economy.goldOf(this._seats.active); }
+
   refreshAffordability(): void {
     BUILDABLE_TOWER_IDS.forEach((id, i) => {
-      const canAfford = this._economy.gold >= TOWER_DEFS[id].cost;
+      const canAfford = this._gold() >= TOWER_DEFS[id].cost;
       this._rowNameTxts[i]?.setColor(canAfford ? COLORS.textPrimary_css : COLORS.textMuted_css);
       this._rowCostTxts[i]?.setColor(canAfford ? COLORS.textGold_css   : COLORS.textMuted_css);
     });
@@ -357,7 +363,7 @@ export class TowerPanel {
       const upId = data.upgradeTo[i];
       if (!upId) { btn.gfx.setVisible(false); btn.lbl.setVisible(false); btn.zone.setVisible(false); return; }
       const upData   = TOWER_DEFS[upId];
-      const canAfford = this._economy.gold >= upData.cost;
+      const canAfford = this._gold() >= upData.cost;
       const ux = PX+PAD + i*(PW/2-PAD/2);
       const uw = PW/2 - PAD*1.5;
       const upgY = TOP_H + PAD + 6*20 + 16 + 32;
@@ -460,7 +466,7 @@ export class TowerPanel {
     codes.forEach((code, i) => {
       scene.input.keyboard!.addKey(code).on('down', () => {
         const id = BUILDABLE_TOWER_IDS[i];
-        if (id && this._economy.gold >= TOWER_DEFS[id].cost) {
+        if (id && this._gold() >= TOWER_DEFS[id].cost) {
           this._selectedIdx = i;
           this._selBars.forEach((b,j) => b.setVisible(j===i));
           this._build.selectTowerType(id);

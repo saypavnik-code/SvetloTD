@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.17.0)
+## Current state (v0.18.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -49,6 +49,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   the geometry did: the best catalogued build is now defeated in wave 31 (was 28 with skills, 25 idle) and has 15 lives at wave 21 (was 10).
   The hero stays on the base, so its skills fire only on leaks. A headless Chromium run showed the ring, the four portals and the pinwheel
   spurs, with no console or page errors. Waves 21-40 and the hard and insane presets still have no acceptance bar (B6).
+- v0.18.0 four seats (track step B2): the quadrants are four zones of 62 building tiles; a seat builds only in its own zones, has its own
+  gold and lumber (start gold and wave bonus split without loss, interest on own gold, wave-5 lumber for every seat), owns its towers (only
+  the owner upgrades or sells) and is paid for the kills its towers make; lives stay shared. One seat (the default) owns the whole field and
+  reproduces the v0.17.0 reports exactly. `?seats=2` or `?seats=4` starts a shared screen: seat chips on the right (click or keys Z X C V),
+  zone tints and an owner dot on every tower. Checked in headless Chromium: seat I and II built in their zones, a build in a foreign zone
+  was refused. Not done: a menu choice, give and cede (B3), governors (B4), per-seat hero and wave scaling by seat count.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
@@ -60,7 +66,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | Step | Version | What changes | Acceptance |
 | --- | --- | --- | --- |
 | B1 | v0.17.0 (done) | Square road ring, four corner spawns, equal rotated routes, spurs into the shared base, walking-distance targeting | Rotation-symmetry and route invariants, screenshot, reports regenerated |
-| B2 | v0.18.0 | Four seats: one quadrant zone each, per-seat gold and lumber, tower owner and colour, shared lives, seat bar and hot-seat switch; one human owns all four seats | Per-seat ledger invariants, zone rule, a one-seat game equals today's economy |
+| B2 | v0.18.0 (done) | Four seats: one quadrant zone each, per-seat gold and lumber, tower owner and colour, shared lives, seat bar and hot-seat switch; one human owns all four seats | Per-seat ledger invariants, zone rule, a one-seat game equals today's economy |
 | B3 | v0.19.0 | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 | Governors (element sets) over the 10 tower kinds, extra builder, hero, tech building and ultimate tower paid with lumber (this is the lumber sink) | The lumber TODO test turns green, every kind reachable |
 | B5 | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1 with random waves, scaled by seat count) | Data tests, per-seat-count scaling table |
@@ -112,6 +118,7 @@ whether a lone player owns all four seats (proposed) or one; how many bosses a b
 
 - [x] Symmetric 18x18 four-lane map and routes ending at exact shared center (replaced by the square map in v0.17.0, step B1).
 - [x] v0.17.0 square map with four equal rotated routes ending at the exact shared center; walking-distance targeting; spawn portals.
+- [x] v0.18.0 four seats: zones, per-seat wallets, tower owners, kill credit, hot-seat switch (`?seats=2|4`).
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
 - [x] Correct high-speed travel across multiple enemy waypoints.
 - [x] Scene shutdown hook and scoped event cleanup.
@@ -174,17 +181,19 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.18.0 four seats (Burbenog track, step B2)
-- Objective: the four players of the original. A seat is a quadrant zone with its own gold, lumber, tower colour and builder; lives stay
-  shared. A lone human owns all four seats and one wallet, so a one-seat game keeps today's economy. Priority: P0 (owner decision 2026-10-16).
-- Scope: `SeatId` and a pure zone lookup in `data/mapData`; per-seat wallets in `EconomyManager` and `LumberManager` (one owner of money,
-  see `AGENTS.md` classes 8-9); the tower records its owner and `BuildSystem` enforces the zone rule; kill bounty goes to the owner of the
-  killing tower; a seat bar in the HUD and a hot-seat switch (keys F1-F4). The HUD never touches money (guard test).
-- Acceptance: all gates; ledger invariants per seat and in total; a one-seat run reproduces the v0.17.0 report; zone and owner tests.
-- Then B3 (give and cede), B4 (governors and the lumber sink), B5 (lives and difficulty), B6 (re-measure and rebalance).
+## Next sprint (recommended): v0.19.0 give and cede (Burbenog track, step B3)
+- Objective: the teamwork of the original on top of the four seats. Priority: P0 (owner decision 2026-10-16).
+- Scope: give gold or lumber from the active seat to another seat (a transfer between two wallets, nothing created or lost, events name both
+  seats); cede a tower to another seat (the owner and the dot colour change, `totalInvested` stays, later sell refunds and kills pay the new
+  owner); an optional shared-income mode (a kill pays all seats equally, same total). Controls live on the seat chips: no money is changed
+  from the UI classes, the rules sit in a system (`AGENTS.md` classes 7-9).
+- Acceptance: all gates; conservation tests for every transfer (the sum of all wallets only changes through bounty, interest, bonus, build,
+  upgrade and sell); cede keeps the tower stats and the refund goes to the new owner; a one-seat game is untouched (reports unchanged).
+- Then B4 (governors and the lumber sink), B5 (lives and difficulty), B6 (re-measure and rebalance).
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); record it in
-  the `docs/QA.md` smoke log. Also compare the new field with the real Burbenog map and say what differs (a screenshot of the original
-  settles the road layout); play waves 1-3 and the wave 10 boss once and note the lives lost.
-- Secondary candidates: late-game acceptance bar for waves 21-40; official Phaser type declarations in a dedicated patch; decide whether
-  cannon splash may hit flying enemies (currently it does); structured save schema; the menu still prints a hard-coded "v0.1.0";
+  the `docs/QA.md` smoke log. Also try `?seats=4` (see the v0.18.0 checklist in `docs/QA.md`) and compare the square field with the real
+  Burbenog map: say what differs (a screenshot of the original settles the road layout) and whether a lone player should own all four seats.
+- Secondary candidates: a menu choice for one, two or four seats instead of the URL parameter; late-game acceptance bar for waves 21-40; the
+  top and bottom tile rows lie under the HUD bars (build tiles are partly covered); official Phaser type declarations in a dedicated patch;
+  decide whether cannon splash may hit flying enemies (currently it does); structured save schema; the menu prints a hard-coded "v0.1.0";
   `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned).

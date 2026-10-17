@@ -8,6 +8,7 @@ import { Projectile } from '../entities/Projectile';
 import { Enemy } from '../entities/Enemy';
 import { ObjectPool } from '../utils/ObjectPool';
 import { EconomyManager } from './EconomyManager';
+import { Seats } from './Seats';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { TILE_SIZE, GRID_COLS, GRID_ROWS, DEPTH, COLORS } from '../config';
 
@@ -19,6 +20,7 @@ export class BuildSystem {
   private readonly _projPool:   ObjectPool<Projectile>;
   private readonly _getEnemies: () => Enemy[];
   private readonly _canInteract: () => boolean;
+  private readonly _seats:       Seats;
 
   readonly towers: Tower[] = [];
   private readonly _occupied: GridOccupancy;
@@ -35,9 +37,11 @@ export class BuildSystem {
     scene: Phaser.Scene, economy: EconomyManager,
     projPool: ObjectPool<Projectile>, getEnemies: () => Enemy[],
     canInteract: () => boolean = () => true,
+    seats: Seats = new Seats(1),
   ) {
     this._scene=scene; this._economy=economy; this._projPool=projPool; this._getEnemies=getEnemies;
     this._canInteract = canInteract;
+    this._seats = seats;
     this._occupied = Array.from({length:GRID_ROWS},(_,r)=>Array.from({length:GRID_COLS},(_,c)=>MAP_DATA[r][c]!=='E'));
     this._buildGhostGraphics();
     this._bindInput();
@@ -114,10 +118,11 @@ export class BuildSystem {
     if (!this._canInteract() || !this._selectedTower) return;
     const t=this._selectedTower, cost=TOWER_DEFS[toId].cost;
     if (!t.data.upgradeTo.includes(toId)) return;
-    if (!this._economy.spendGold(cost)) return;
+    if (t.ownerSeat !== this._seats.active) return;   // only the owner changes a tower
+    if (!this._economy.spendGold(cost, t.ownerSeat)) return;
     const col=t.gridCol, row=t.gridRow, invested=t.totalInvested+cost;
     this._removeTower(t);
-    const nt=new Tower(this._scene,toId,col,row,this._projPool,this._getEnemies,invested);
+    const nt=new Tower(this._scene,toId,col,row,this._projPool,this._getEnemies,invested,t.ownerSeat);
     nt.setTargetPriority(t.targetPriority); // an upgrade keeps the player's targeting choice
     this.towers.push(nt); this._occupied[row][col]=true;
     EventBus.emit(GameEvents.TOWER_UPGRADED, nt);
@@ -126,10 +131,12 @@ export class BuildSystem {
 
   sellSelected(): void {
     if (!this._canInteract() || !this._selectedTower) return;
+    if (this._selectedTower.ownerSeat !== this._seats.active) return;   // only the owner changes a tower
     const rate   = this._economy.sellRefundRate;
     const refund = this._selectedTower.sellValue(rate);
+    const owner  = this._selectedTower.ownerSeat;
     this._removeTower(this._selectedTower);
-    this._economy.addGold(refund);
+    this._economy.addGold(refund, owner);
     EventBus.emit(GameEvents.TOWER_SOLD, { refund });
     this._selectTower(null);
   }
@@ -144,12 +151,16 @@ export class BuildSystem {
 
   private _canPlace(col: number, row: number): boolean {
     if (this._occupied[row][col]) return false;
-    return this._economy.gold >= TOWER_DEFS[this._pendingId!].cost;
+    const seat = this._seats.active;
+    if (!this._seats.canBuild(seat, row, col)) return false;   // a seat builds only in its own zones
+    return this._economy.goldOf(seat) >= TOWER_DEFS[this._pendingId!].cost;
   }
 
   private _place(id: TowerId, col: number, row: number): void {
-    if (!this._economy.spendGold(TOWER_DEFS[id].cost)) return;
-    const t=new Tower(this._scene,id,col,row,this._projPool,this._getEnemies);
+    const seat = this._seats.active;
+    if (!this._seats.canBuild(seat, row, col)) return;
+    if (!this._economy.spendGold(TOWER_DEFS[id].cost, seat)) return;
+    const t=new Tower(this._scene,id,col,row,this._projPool,this._getEnemies,undefined,seat);
     this.towers.push(t); this._occupied[row][col]=true;
     EventBus.emit(GameEvents.TOWER_PLACED, t);
     this.cancelPlacement();

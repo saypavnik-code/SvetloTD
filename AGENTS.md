@@ -86,6 +86,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 10. A rule that measures a straight line to the base (v0.17.0: "first" targeting) is wrong on any route that is not straight.
     On the square map the enemy farthest along the ring can be the one farthest from the base in a straight line. Use the
     walking distance (`Enemy.distanceToBase`) and test with an enemy that is far along the road but far from the base.
+11. A one-wallet shortcut in a many-wallet game (v0.18.0): `economy.gold` and `lumber.lumber` mean seat 0 and are for one-seat tests only;
+    code that acts for a seat uses `goldOf(seat)` / `lumberOf(seat)` and names the seat on every payment (guard in `tests/seats.test.mjs`).
+    Credit a kill before the damage is dealt: the kill event fires inside `takeDamage`, so a seat written afterwards is always late.
 
 ## Resuming in a new session
 

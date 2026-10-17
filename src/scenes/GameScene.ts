@@ -17,6 +17,7 @@ import { EconomyManager } from '../systems/EconomyManager';
 import { LumberManager }  from '../systems/LumberManager';
 import { InterestSystem } from '../systems/InterestSystem';
 import { EnemyOutcomes }  from '../systems/EnemyOutcomes';
+import { Seats, parseSeatCount } from '../systems/Seats';
 import { ObjectPool }     from '../utils/ObjectPool';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { Subscriptions }  from '../utils/Subscriptions';
@@ -24,6 +25,7 @@ import { SpriteViews }    from '../ui/SpriteViews';
 import { TowerPanel }     from '../ui/TowerPanel';
 import { WaveInfo }       from '../ui/WaveInfo';
 import { HUD }            from '../ui/HUD';
+import { SeatOverlay }    from '../ui/SeatOverlay';
 import { FloatingTextPool } from '../ui/FloatingTextPool';
 import { GameSpeed }      from '../systems/GameSpeed';
 import { AudioManager }   from '../systems/AudioManager';
@@ -39,6 +41,8 @@ const FONT            = FONT_MAIN;
 
 export class GameScene extends Phaser.Scene {
   private _economy!:      EconomyManager;
+  private _seats!:        Seats;
+  private _seatOverlay:    SeatOverlay | null = null;
   private _lumber!:       LumberManager;
   private _interest!:     InterestSystem;
   private _outcomes!:     EnemyOutcomes;
@@ -160,7 +164,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this._hud          = new HUD(this, this._economy, this._waveManager);
-    this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy);
+    this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy, this._seats);
+    if (this._seats.count > 1) {
+      this._seatOverlay = new SeatOverlay(this, this._seats, this._economy, this._lumber, () => this._buildSystem.towers);
+    }
     this._towerPanel.bindHotkeys(this);
     this._waveInfo     = new WaveInfo(this, this._waveManager);
     this._floatingText = new FloatingTextPool(this);
@@ -214,6 +221,7 @@ export class GameScene extends Phaser.Scene {
     this._waveInfo.update(clampedDelta);
     this._hud.update(clampedDelta);
     this._towerPanel.update(clampedDelta);
+    this._seatOverlay?.update();
 
     this._drawAll();
   }
@@ -222,6 +230,8 @@ export class GameScene extends Phaser.Scene {
   shutdown(): void {
     this._ambientMusic?.stop(1500);
     this._ambientMusic = null;
+    this._seatOverlay?.destroy();
+    this._seatOverlay = null;
     this._sfx          = null;
     this._waveManager.destroy();
     this._outcomes.destroy();
@@ -233,8 +243,10 @@ export class GameScene extends Phaser.Scene {
 
   // ── Systems ────────────────────────────────────────────────────────────────
   private _buildSystems(): void {
-    this._economy   = new EconomyManager();
-    this._lumber    = new LumberManager();
+    // `?seats=2` or `?seats=4` starts a shared-screen game (hot seat); the default is one seat that owns the whole field.
+    this._seats     = new Seats(parseSeatCount(window.location.search));
+    this._economy   = new EconomyManager(this._seats.count);
+    this._lumber    = new LumberManager(this._seats.count);
     this._interest  = new InterestSystem(this._economy, this._lumber);
     this._enemyPool = new ObjectPool<Enemy>(() => new Enemy(), ENEMY_POOL_SIZE);
     this._projPool  = new ObjectPool<Projectile>(() => new Projectile(), PROJ_POOL_SIZE);
@@ -243,7 +255,7 @@ export class GameScene extends Phaser.Scene {
     this._outcomes    = new EnemyOutcomes(this._economy, this._lumber);
     this._buildSystem = new BuildSystem(this, this._economy, this._projPool,
       () => this._waveManager.activeEnemies,
-      () => !this._isPaused && !this._gameOver && !this._tutorialActive);
+      () => !this._isPaused && !this._gameOver && !this._tutorialActive, this._seats);
     this._auraSystem = new AuraSystem(() => this._buildSystem.towers);
   }
 
@@ -797,6 +809,7 @@ export class GameScene extends Phaser.Scene {
     this._subs.on(GameEvents.ENEMY_REACHED_END, this._onEnemyLeaked);
     this._subs.on(GameEvents.LIVES_CHANGED,     this._onLivesChanged);
     this._subs.on(GameEvents.GOLD_CHANGED,      this._onGoldChanged);
+    this._subs.on(GameEvents.SEAT_CHANGED,      this._onSeatChanged);
     this._subs.on(GameEvents.GAME_OVER,         this._onGameOver);
 
     // Phase 2 — economy extensions
@@ -882,7 +895,17 @@ export class GameScene extends Phaser.Scene {
     }
   };
 
-  private _onLumberChanged = (total: unknown): void => {
+  // A new active seat: drop the half-made placement and selection of the previous one and show the new wallet.
+  private _onSeatChanged = (): void => {
+    this._buildSystem.cancelPlacement();
+    this._buildSystem.deselect();
+    this._hud.setGold(this._economy.goldOf(this._seats.active));
+    this._hud.setLumber(this._lumber.lumberOf(this._seats.active));
+    this._towerPanel.refreshAffordability();
+  };
+
+  private _onLumberChanged = (total: unknown, seat?: unknown): void => {
+    if (seat !== undefined && seat !== this._seats.active) return;   // the HUD shows the active seat only
     this._hud.setLumber(total as number);
   };
 
@@ -918,7 +941,8 @@ export class GameScene extends Phaser.Scene {
     this._hud.setLives(lives as number);
   };
 
-  private _onGoldChanged = (gold: unknown): void => {
+  private _onGoldChanged = (gold: unknown, seat?: unknown): void => {
+    if (seat !== undefined && seat !== this._seats.active) return;   // the HUD shows the active seat only
     this._hud.setGold(gold as number);
   };
 
@@ -941,6 +965,13 @@ export class GameScene extends Phaser.Scene {
       if (this._tutorialActive || this._isPaused || this._gameOver) return;
       if (this._waveManager.state==='countdown') this._waveManager.skipCountdown();
     });
+
+    // Z X C V — take seat 1-4 on a shared screen (the seat chips on the right do the same by click)
+    [Phaser.Input.Keyboard.KeyCodes.Z, Phaser.Input.Keyboard.KeyCodes.X, Phaser.Input.Keyboard.KeyCodes.C, Phaser.Input.Keyboard.KeyCodes.V]
+      .forEach((code, seat) => kbd.addKey(code).on('down', () => {
+        if (this._tutorialActive || this._isPaused || this._gameOver) return;
+        this._seats.setActive(seat);
+      }));
 
     // ESC cascade: cancel build → deselect → pause
     kbd.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () => {

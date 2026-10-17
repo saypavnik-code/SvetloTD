@@ -13,8 +13,9 @@ import Phaser from 'phaser';
 // key used at runtime, so keep them unique and descriptive.
 export const GameEvents = {
   // Economy
-  GOLD_CHANGED:        'gold:changed',       // payload: number (new total)
-  LIVES_CHANGED:       'lives:changed',      // payload: number (new total)
+  GOLD_CHANGED:        'gold:changed',       // payload: number (new total of that seat), seat id
+  LIVES_CHANGED:       'lives:changed',      // payload: number (new total, shared by all seats)
+  SEAT_CHANGED:        'seat:changed',       // payload: seat id (the active seat of a shared screen)
 
   // Waves
   WAVE_STARTED:        'wave:started',       // payload: number (wave index)
@@ -35,7 +36,7 @@ export const GameEvents = {
   HERO_SKILL_W:        'hero:skill_w',       // payload: x, y, radius, buffCount
 
   // Economy — Phase 2
-  LUMBER_CHANGED:      'lumber:changed',     // payload: number (new total)
+  LUMBER_CHANGED:      'lumber:changed',     // payload: number (new total of that seat), seat id
   INTEREST_AWARDED:    'interest:awarded',   // payload: number (gold amount)
   WAVE_BONUS_AWARDED:  'wavebonus:awarded',  // payload: number (gold amount)
   BUILD_PHASE_START:   'build:phase:start',  // no payload — enables 100% sell

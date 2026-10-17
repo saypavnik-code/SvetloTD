@@ -17,6 +17,7 @@ import { EconomyManager }            from './EconomyManager';
 import { LumberManager }             from './LumberManager';
 import { GameConfig }                from '../config/difficulty';
 import { type WaveData }             from '../data/waves';
+import { splitEvenly }               from '../data/seats';
 
 export class InterestSystem {
   private readonly _economy: EconomyManager;
@@ -35,21 +36,27 @@ export class InterestSystem {
     const cfg        = GameConfig.difficulty;
 
     // ── 1. Interest on unspent gold ───────────────────────────────────────────
-    const interestGold = Math.floor(this._economy.gold * cfg.interestRate);
+    // Every seat earns interest on its own unspent gold; the event carries the sum.
+    const seats = this._economy.seatCount;
+    let interestGold = 0;
+    for (let seat = 0; seat < seats; seat++) {
+      const interest = Math.floor(this._economy.goldOf(seat) * cfg.interestRate);
+      if (interest > 0) { this._economy.addGold(interest, seat); interestGold += interest; }
+    }
     if (interestGold > 0) {
-      this._economy.addGold(interestGold);
       EventBus.emit(GameEvents.INTEREST_AWARDED, interestGold);
     }
 
     // ── 2. Wave completion bonus ───────────────────────────────────────────────
     const waveBonus = waveData ? Math.round(waveData.bonusGold * cfg.waveBonusMult) : 0;
 
-    this._economy.addGold(waveBonus);
+    // The bonus is split between the seats without losing a coin (a one-seat game gets all of it).
+    splitEvenly(waveBonus, seats).forEach((share, seat) => this._economy.addGold(share, seat));
     EventBus.emit(GameEvents.WAVE_BONUS_AWARDED, waveBonus);
 
     // ── 3. Lumber every 5 waves ────────────────────────────────────────────────
     if (waveNumber % 5 === 0) {
-      this._lumber.add(1);
+      for (let seat = 0; seat < seats; seat++) this._lumber.add(1, seat);
     }
   };
 

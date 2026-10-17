@@ -1,37 +1,49 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// LumberManager.ts — Secondary resource (Lumber / Дерево).
+// LumberManager.ts — Secondary resource (Lumber / Дерево), one wallet per seat.
 //
 // Sources:
-//   • Golem/boss kill  → +lumberYield from EnemyDef  (triggered by GameScene)
-//   • Every 5th wave   → +1 (triggered by WaveManager via EventBus)
+//   • Golem/boss kill  → +lumberYield from EnemyDef to the seat that made the kill (EnemyOutcomes)
+//   • Every 5th wave   → +1 to every seat (InterestSystem, triggered by WAVE_COMPLETED)
 //
 // Spent on:
-//   • Mercenary / T3 towers (BuildSystem checks canAffordLumber)
+//   • Mercenary / T3 towers (BuildSystem checks canAfford)
 //   • Future: unlock hero, aura buildings
 //
-// Emits LUMBER_CHANGED so HUD updates without coupling.
+// Emits LUMBER_CHANGED (new total, seat) so the HUD updates without coupling.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { EventBus, GameEvents } from '../utils/EventBus';
+import type { SeatCount } from '../data/seats';
 
 export class LumberManager {
-  private _lumber = 0;
+  readonly seatCount: SeatCount;
+  private readonly _lumber: number[];
 
-  get lumber(): number { return this._lumber; }
+  constructor(seatCount: SeatCount = 1) {
+    this.seatCount = seatCount;
+    this._lumber = new Array<number>(seatCount).fill(0);
+  }
 
-  add(amount: number): void {
-    if (!Number.isSafeInteger(amount) || amount <= 0) return;
-    this._lumber += amount;
-    EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber);
+  /** Lumber of seat 0, the only seat of a one-seat game. Code that acts for a seat must use lumberOf(seat). */
+  get lumber(): number { return this._lumber[0]; }
+
+  lumberOf(seat: number): number { return this._lumber[seat] ?? 0; }
+
+  private _validSeat(seat: number): boolean { return Number.isInteger(seat) && seat >= 0 && seat < this.seatCount; }
+
+  add(amount: number, seat = 0): void {
+    if (!Number.isSafeInteger(amount) || amount <= 0 || !this._validSeat(seat)) return;
+    this._lumber[seat] += amount;
+    EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber[seat], seat);
   }
 
   /** Returns false if not enough lumber — caller decides how to handle. */
-  spend(amount: number): boolean {
-    if (!Number.isSafeInteger(amount) || amount < 0 || this._lumber < amount) return false;
-    this._lumber -= amount;
-    EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber);
+  spend(amount: number, seat = 0): boolean {
+    if (!Number.isSafeInteger(amount) || amount < 0 || !this._validSeat(seat) || this._lumber[seat] < amount) return false;
+    this._lumber[seat] -= amount;
+    EventBus.emit(GameEvents.LUMBER_CHANGED, this._lumber[seat], seat);
     return true;
   }
 
-  canAfford(amount: number): boolean { return this._lumber >= amount; }
+  canAfford(amount: number, seat = 0): boolean { return this.lumberOf(seat) >= amount; }
 }
