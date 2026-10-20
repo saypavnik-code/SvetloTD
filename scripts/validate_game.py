@@ -47,4 +47,11 @@ for name in ('tower_arrow', 'tower_cannon', 'tower_magic', 'tower_slow', 'tower_
     contents = (root / f'public/assets/sprites/{name}.png').read_bytes()
     assert contents[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', contents[16:24]) == (40, 40)
-print('PASS: square rotation-symmetric map, 4 spawn routes, 40-wave definitions, pools, scene cleanup, 15 PNGs')
+builders = (root / 'src/data/builders.ts').read_text()
+assert "id: 'fire'" in builders and 'MASTERY_LUMBER' in builders and 'LICENSE_LUMBER' in builders, 'builder data is missing'
+assert 'BUILDERS_CHANGED' in (root / 'src/utils/EventBus.ts').read_text()
+for name in ('fire_ult', 'water_ult', 'earth_ult', 'nature_ult'):
+    contents = (root / f'public/assets/art/{name}.png').read_bytes()
+    assert contents[:8] == b'\x89PNG\r\n\x1a\n'
+    assert struct.unpack('>II', contents[16:24]) == (128, 128)
+print('PASS: square rotation-symmetric map, 4 spawn routes, 40-wave definitions, pools, scene cleanup, 15 PNGs, builders and 4 ultimate sprites')

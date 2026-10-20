@@ -99,7 +99,7 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
 - Wave taper (proposal D): HP and count start at 40% / 80% at wave 1 (6 goblins at 40% HP) and move linearly to 30% at wave 40;
   single-enemy waves keep their count of 1. The wave bonus pays 2x the written `bonusGold` (before the difficulty multiplier).
   Constants: `WAVE_TAPER` and `WAVE_BONUS_FACTOR` in `src/data/waves.ts`.
-- Lumber is earned every 5 waves and from golems and bosses; nothing spends it yet (a sink is planned).
+- Lumber is earned every 5 waves and from golems and bosses; since v0.20.0 it buys builder licenses, mastery and ultimate towers (see "Builders and the lumber sink").
 - Measured status: `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md`. Waves 11-40 and the hard and insane presets are
   not rebalanced.
 
@@ -149,3 +149,22 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
   favoured; lumber still goes to the seat that made the kill. The default pays the killer.
 - Controls: under the chip of every other seat three small buttons give gold, give lumber and cede the selected tower (dimmed when the active
   seat cannot). The buttons only call actions; the rules live in `EconomyManager`, `LumberManager` and `BuildSystem`.
+
+## Builders and the lumber sink (v0.20.0)
+
+- Builders: a builder (governor) is a set of tower lines a seat may place. Pyromancer (fire): `magic_t1` line and `acid_t1`; Hydromancer (water):
+  `slow_t1` line; Geomancer (earth): `cannon_t1` line; Warden (nature): `arrow_t1` line; Inquisitor (light) and Necromancer (shadow) are
+  placeholders with no roster (they cannot be picked or bought). The watchtower is common to every seat. Each tower kind belongs to exactly one
+  builder line or is common (data test). The rosters are thin on purpose: no new tier-1 tower exists yet, and a Water-only seat has no damage tower.
+- Start: every seat gets one builder for free; a licensed game gives seat 0-3 fire, earth, nature, water unless `?builders=` says otherwise. A
+  one-seat game owns every open builder (today's towers and keys 1-6). `?builders=all` gives every seat everything; a pick (`?builders=fire`)
+  makes even a one-seat game licensed.
+- Lumber prices: the 2nd, 3rd and 4th builder cost 2, 3 and 4 lumber (`LICENSE_LUMBER`); a builder's mastery costs 3 (`MASTERY_LUMBER`) and unlocks
+  its ultimate tower; an ultimate tower costs 3 lumber on top of its gold. Lumber is never refunded (a sale returns gold only). A refused
+  purchase takes nothing: both purses are checked before either is charged.
+- Ultimates (tier 3): upgrade of the final tier-2 tower of a line, only for a seat that owns the line's builder and has its mastery: fire_ult
+  (chaos splash, melts armor), water_ult (heavy slow), earth_ult (huge ground splash), nature_ult (fast poison arrows). The numbers are a first draft;
+  no catalogued build uses them, so the economy report did not change. Balance comes with step B6.
+- Ceded towers: a seat without the line's builder can sell a tower it received, but cannot upgrade it.
+- Layout: the field (18 x 18 tiles) is never covered. The HUD strip, the seat chips, the build list, the builders section, the wave bar and the
+  hero skill slots stack in the right column (`src/ui/layout.ts`). Deferred on purpose: hero summon and a tech/aura building for lumber.

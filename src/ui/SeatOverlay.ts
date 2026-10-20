@@ -11,6 +11,7 @@ import Phaser from 'phaser';
 import { COLORS, DEPTH, FONT_FAMILY, GRID_COLS, GRID_ROWS, TILE_SIZE } from '../config';
 import { GIVE_GOLD_STEP, GIVE_LUMBER_STEP, SEAT_COLORS, SEAT_NAMES, seatOfZone } from '../data/seats';
 import type { Tower } from '../entities/Tower';
+import { SEAT_BAR_Y } from './layout';
 import type { EconomyManager } from '../systems/EconomyManager';
 import type { LumberManager } from '../systems/LumberManager';
 import type { Seats } from '../systems/Seats';
@@ -23,7 +24,7 @@ export interface SeatActions {
   canCede(): boolean;
 }
 
-const CHIP_X = 736, CHIP_Y = 10, CHIP_W = 126, CHIP_H = 30, CHIP_GAP = 6;
+const CHIP_X = 736, CHIP_Y = SEAT_BAR_Y, CHIP_W = 126, CHIP_H = 30, CHIP_GAP = 6;
 const BTN_Y = CHIP_Y + CHIP_H + 4, BTN_W = 38, BTN_H = 15, BTN_GAP = 6;
 const BUTTONS = [`+${GIVE_GOLD_STEP}◆`, `+${GIVE_LUMBER_STEP}д`, '⇄'] as const;
 

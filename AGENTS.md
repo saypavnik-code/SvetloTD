@@ -90,6 +90,13 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
     code that acts for a seat uses `goldOf(seat)` / `lumberOf(seat)` and names the seat on every payment (guard in `tests/seats.test.mjs`).
     Credit a kill before the damage is dealt: the kill event fires inside `takeDamage`, so a seat written afterwards is always late.
 
+12. A bar drawn over the playfield (v0.20.0): the top bar, the wave bar and the skill slots lay on the first and last tile rows from the start and
+    nobody could see it in a headless test. Interface geometry comes from `src/ui/layout.ts`; `tests/layout.test.mjs` records what the real
+    classes draw and fails when anything leaves the side column.
+13. A purchase with two purses (v0.20.0: gold and lumber for an ultimate): take the first and the second refuses, and the player has paid for a
+    refusal. Check every purse, then charge; a refused action takes nothing (test in `tests/builders.test.mjs`). Lumber is spent only by the
+    builder rules (`BuilderManager`), never by a UI class.
+
 ## Resuming in a new session
 
 Read `README.md`, `ARCHITECTURE.md`, `DESIGN.md`, `ROADMAP.md`, `docs/GAME_DESIGN.md`, `docs/QA.md`,

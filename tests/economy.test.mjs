@@ -94,10 +94,11 @@ test('difficulty presets scale the wave bonus: round(bonusGold x multiplier) wit
   assert.equal(sum(run.rows, 'bonus'), total('insane'), 'the real InterestSystem pays what the table says');
 });
 
-// ── Tracked finding, not fixed: a design decision the owner postponed ───────
-// A TODO test is reported but does not fail the suite; remove `todo` when the sink exists.
+// ── The lumber sink (closed in v0.20.0, track step B4) ─────────────────────
+// Lumber buys builder licenses, a builder's mastery and the ultimate towers (BuilderManager); the rules and the ledger are
+// tested in tests/builders.test.mjs. This scan keeps the sink from being removed by accident.
 
-test('lumber is spent by some system', { todo: 'owner decision 2026-10-11: a lumber sink is added later; lumber stays unspent until then' }, () => {
+test('lumber is spent by some system', () => {
   const spenders = [];
   const visit = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {

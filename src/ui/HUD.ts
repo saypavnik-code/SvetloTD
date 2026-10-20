@@ -1,15 +1,18 @@
 import Phaser from 'phaser';
-import {
-  GAME_WIDTH, GRID_COLS, TILE_SIZE,
-  COLORS, DEPTH, FONT_FAMILY, STARTING_LIVES,
-} from '../config';
+import { COLORS, DEPTH, FONT_FAMILY, STARTING_LIVES } from '../config';
+import { HUD_STRIP } from './layout';
 import { EconomyManager } from '../systems/EconomyManager';
 import { WaveManager } from '../systems/WaveManager';
 import { GameSpeed } from '../systems/GameSpeed';
 import { WAVES } from '../data/waves';
 
-const BAR_H = 44;
+const BAR_H = HUD_STRIP.h;
+const X0 = HUD_STRIP.x;                  // the strip is the top of the right column: the field below-left stays uncovered
+const D = DEPTH.PANEL + 2;               // above the side panel background
 const FONT = FONT_FAMILY;
+const SPEEDS = [1, 2, 3];
+const BTN_W = 42, BTN_H = 28;
+const speedBtnX = (index: number): number => X0 + HUD_STRIP.w - 12 - SPEEDS.length * (BTN_W + 6) + 6 + index * (BTN_W + 6);
 
 export class HUD {
   private readonly _scene: Phaser.Scene;
@@ -37,62 +40,49 @@ export class HUD {
   private _build(): void {
     const s = this._scene;
 
-    const bg = s.add.graphics().setDepth(DEPTH.HUD - 1);
-    bg.fillStyle(COLORS.bgPanel, 1);
-    bg.fillRect(0, 0, GAME_WIDTH, BAR_H);
-    bg.fillStyle(COLORS.bgDark, 0.45);
-    bg.fillRect(0, 0, GAME_WIDTH, 6);
-
+    // Only a divider under the strip: the side panel already paints the background of the column.
+    const bg = s.add.graphics().setDepth(D);
     bg.lineStyle(2, COLORS.walnutLight, 0.7);
-    bg.beginPath(); bg.moveTo(0, BAR_H); bg.lineTo(GAME_WIDTH, BAR_H); bg.strokePath();
+    bg.beginPath(); bg.moveTo(X0 + 10, BAR_H); bg.lineTo(X0 + HUD_STRIP.w - 10, BAR_H); bg.strokePath();
     bg.lineStyle(1, COLORS.amberDeep, 0.9);
-    bg.beginPath(); bg.moveTo(0, BAR_H - 1); bg.lineTo(GAME_WIDTH, BAR_H - 1); bg.strokePath();
+    bg.beginPath(); bg.moveTo(X0 + 10, BAR_H - 1); bg.lineTo(X0 + HUD_STRIP.w - 10, BAR_H - 1); bg.strokePath();
 
-    bg.lineStyle(3, COLORS.walnutDark, 0.9);
-    bg.beginPath(); bg.moveTo(GRID_COLS * TILE_SIZE, 0); bg.lineTo(GRID_COLS * TILE_SIZE, BAR_H); bg.strokePath();
-    bg.lineStyle(1, COLORS.amberDeep, 0.7);
-    bg.beginPath(); bg.moveTo(GRID_COLS * TILE_SIZE + 2, 0); bg.lineTo(GRID_COLS * TILE_SIZE + 2, BAR_H); bg.strokePath();
-
-    s.add.image(26, 22, 'icon_heart').setDisplaySize(24, 24).setDepth(DEPTH.HUD);
-    this._livesNum = s.add.text(44, 14, `${STARTING_LIVES}`, {
+    s.add.image(X0 + 26, 22, 'icon_heart').setDisplaySize(24, 24).setDepth(D);
+    this._livesNum = s.add.text(X0 + 44, 14, `${STARTING_LIVES}`, {
       fontFamily: FONT, fontSize: '16px', color: COLORS.textDanger_css, fontStyle: 'bold',
-    }).setDepth(DEPTH.HUD);
+    }).setDepth(D);
 
-    s.add.image(122, 22, 'icon_gold').setDisplaySize(24, 24).setDepth(DEPTH.HUD);
+    s.add.image(X0 + 112, 22, 'icon_gold').setDisplaySize(24, 24).setDepth(D);
     this._goldDisplay = this._economy.goldOf(0);
-    this._goldNum = s.add.text(140, 14, `${this._economy.goldOf(0)}`, {
+    this._goldNum = s.add.text(X0 + 130, 14, `${this._economy.goldOf(0)}`, {
       fontFamily: FONT, fontSize: '16px', color: COLORS.textGold_css, fontStyle: 'bold',
-    }).setDepth(DEPTH.HUD);
+    }).setDepth(D);
 
     // Lumber counter — shown after gold
-    s.add.image(222, 22, 'icon_lumber').setDisplaySize(26, 26).setDepth(DEPTH.HUD);
-    this._lumberNum = s.add.text(240, 14, '0', {
+    s.add.image(X0 + 204, 22, 'icon_lumber').setDisplaySize(26, 26).setDepth(D);
+    this._lumberNum = s.add.text(X0 + 222, 14, '0', {
       fontFamily: FONT, fontSize: '16px', color: '#7CBA5C', fontStyle: 'bold',
-    }).setDepth(DEPTH.HUD);
+    }).setDepth(D);
 
-    this._waveText = s.add.text(GRID_COLS * TILE_SIZE / 2 + 50, 21, `Волна 1 / ${WAVES.length}`, {
+    this._waveText = s.add.text(X0 + 336, 21, `Волна 1 / ${WAVES.length}`, {
       fontFamily: FONT,
       fontSize: '15px',
       color: COLORS.textPrimary_css,
       fontStyle: 'bold',
       align: 'center',
-    }).setOrigin(0.5).setDepth(DEPTH.HUD);
+    }).setOrigin(0.5).setDepth(D);
 
-    const speeds = [1, 2, 3];
-    const btnW = 42;
-    const btnH = 28;
-    const startX = GRID_COLS * TILE_SIZE - 12 - speeds.length * (btnW + 6) + 6;   // inside the field: the side panel covers the rest of the bar
-    speeds.forEach((spd, i) => {
-      const bx = startX + i * (btnW + 6);
+    SPEEDS.forEach((spd, i) => {
+      const bx = speedBtnX(i), btnW = BTN_W, btnH = BTN_H;
       const by = (BAR_H - btnH) / 2;
-      const bgG = s.add.graphics().setDepth(DEPTH.HUD);
+      const bgG = s.add.graphics().setDepth(D);
       const lbl = s.add.text(bx + btnW / 2, by + btnH / 2, `×${spd}`, {
         fontFamily: FONT, fontSize: '13px', color: COLORS.textSecondary_css, fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(DEPTH.HUD + 1);
+      }).setOrigin(0.5).setDepth(D + 1);
       this._speedBtns.push({ bg: bgG, label: lbl, speed: spd });
       this._redrawSpeedBtn(i, spd === 1);
 
-      const zone = s.add.zone(bx, by, btnW, btnH).setOrigin(0).setInteractive({ useHandCursor: true }).setDepth(DEPTH.HUD + 2);
+      const zone = s.add.zone(bx, by, btnW, btnH).setOrigin(0).setInteractive({ useHandCursor: true }).setDepth(D + 2);
       zone.on('pointerdown', () => {
         GameSpeed.set(spd);
         this._speedBtns.forEach((b, j) => this._redrawSpeedBtn(j, b.speed === spd));
@@ -102,11 +92,8 @@ export class HUD {
 
   private _redrawSpeedBtn(idx: number, active: boolean): void {
     const entry = this._speedBtns[idx];
-    const speeds = [1, 2, 3];
-    const btnW = 42;
-    const btnH = 28;
-    const startX = GRID_COLS * TILE_SIZE - 12 - speeds.length * (btnW + 6) + 6;   // inside the field: the side panel covers the rest of the bar
-    const bx = startX + idx * (btnW + 6);
+    const btnW = BTN_W, btnH = BTN_H;
+    const bx = speedBtnX(idx);
     const by = (BAR_H - btnH) / 2;
 
     const bg = entry.bg;

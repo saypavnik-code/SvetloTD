@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.19.0)
+## Current state (v0.20.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -60,6 +60,17 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   kills, upgrades and sell refunds go to the new owner). Three small buttons under every other seat's chip do it; the rules sit in
   `EconomyManager`, `LumberManager` and `BuildSystem`, the UI only calls them (guard test). `?income=shared` pays every kill to all seats
   equally (odd coins rotate, lumber stays with the killer). Checked in headless Chromium: cede recoloured the owner dot, a gift moved 25 gold.
+- v0.20.0 builders and the lumber sink (track step B4): six builders (governors) in `src/data/builders.ts` - Pyromancer (fire: magic line and the
+  alchemist), Hydromancer (water: slow line), Geomancer (earth: cannon line), Warden (nature: arrow line) and two placeholders (light, shadow).
+  Every seat starts with one builder for free; a further builder costs lumber (2, 3, 4), a builder's mastery costs 3 and unlocks its ultimate
+  tower (new tier 3: Foyerturm, Aisburg, Bergfestung, Waldwachter; 3 lumber plus 360-450 gold). `BuilderManager` owns every lumber payment; the
+  placement and upgrade paths of `BuildSystem` ask it. A one-seat game owns every builder (today's towers, hotkeys 1-6 as before) and the
+  economy reports did not move; a shared screen starts licensed (`?builders=fire,earth,...` picks the free builders, `?builders=all` opens
+  everything, a pick makes even a one-seat game licensed). The lumber TODO test is now a passing test. Viewport: the top bar, the wave bar and
+  the hero skill slots lay on the first and last tile rows; they now live in the right column (`src/ui/layout.ts`, guarded by
+  `tests/layout.test.mjs`), so the 720 x 720 field is uncovered. The info panel rows were re-spaced (the upgrade buttons covered the target
+  row). Checked in headless Chromium: classic, `?builders=fire` through tier 2, mastery and the ultimate, `?seats=4` with a license bought.
+  Not measured: the ultimates (draft numbers, outside every catalogued build), seat-count balance (B6).
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
@@ -73,7 +84,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B1 | v0.17.0 (done) | Square road ring, four corner spawns, equal rotated routes, spurs into the shared base, walking-distance targeting | Rotation-symmetry and route invariants, screenshot, reports regenerated |
 | B2 | v0.18.0 (done) | Four seats: one quadrant zone each, per-seat gold and lumber, tower owner and colour, shared lives, seat bar and hot-seat switch; one human owns all four seats | Per-seat ledger invariants, zone rule, a one-seat game equals today's economy |
 | B3 | v0.19.0 (done) | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
-| B4 | v0.20.0 | Governors (element sets) over the 10 tower kinds, extra builder, hero, tech building and ultimate tower paid with lumber (this is the lumber sink) | The lumber TODO test turns green, every kind reachable |
+| B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
 | B5 | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1 with random waves, scaled by seat count) | Data tests, per-seat-count scaling table |
 | B6 | v0.22.0 | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat | New acceptance bars, regenerated reports |
 | B7 | later | Art pass 3 on the square map: village base, seat-coloured pads, spawn gates, panel frames | Screenshots of menu, empty, built and boss field |
@@ -125,6 +136,7 @@ whether a lone player owns all four seats (proposed) or one; how many bosses a b
 - [x] v0.17.0 square map with four equal rotated routes ending at the exact shared center; walking-distance targeting; spawn portals.
 - [x] v0.18.0 four seats: zones, per-seat wallets, tower owners, kill credit, hot-seat switch (`?seats=2|4`).
 - [x] v0.19.0 give gold and lumber, cede towers, optional shared income (`?income=shared`).
+- [x] v0.20.0 builders, licenses, mastery and ultimate towers paid with lumber; HUD, wave bar and skill slots moved off the field.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
 - [x] Correct high-speed travel across multiple enemy waypoints.
 - [x] Scene shutdown hook and scoped event cleanup.
@@ -144,8 +156,7 @@ whether a lone player owns all four seats (proposed) or one; how many bosses a b
   and bounties do not scale with wave HP. The what-ifs (cheaper upgrades, `normal`-damage arrows) remain design questions.
 - [x] v0.12.0 early-start bonus: the label no longer promises it; a test keeps `WaveInfo` from advertising gold no system pays.
   A real early bonus may return as a designed, measured feature.
-- [ ] Lumber sink (owner decision 2026-10-11: later): scheduled as step B4 of the Burbenog track (extra builders, hero, tech building and
-  ultimate tower cost lumber, as in the original). A TODO test tracks it.
+- [x] Lumber sink (v0.20.0, step B4): licenses, mastery and ultimate towers cost lumber. Still open: hero summon and a tech/aura building for lumber.
 - [ ] Add structured save schema, migration, replay seeds, crash reporting (consent-aware).
 - [x] Triage and remove `SvetloTD-live/`; implement safe aura and input capability boundary (`docs/MIGRATION.md`).
 - [x] Explicit ownership of EventBus subscriptions (v0.11.0): `Subscriptions` in every system and in `GameScene`; guard tests.
@@ -187,23 +198,21 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.20.0 governors and the lumber sink (Burbenog track, step B4)
-- Objective: the builders of the original and the first real use of lumber. Priority: P0 (owner decision 2026-10-16); it also closes the
-  owner decision of 2026-10-11 (lumber sink "later").
-- Scope (proposal, to be confirmed by the owner): a governor is an element set over the tower kinds (data table, one governor per seat);
-  the first builder is free, an extra builder (a second element set) costs 1 lumber, the hero costs 1 lumber, a tech building and the
-  ultimate tower cost lumber; `BuildSystem` refuses a tower outside the seat's builders; one lumber wallet per seat (already there). A
-  one-seat game starts with every builder so it keeps today's towers. Menu or URL choice of the governor stays simple (a table of
-  presets, no new screens).
-- Acceptance: all gates; every tower kind is reachable through some governor; the lumber TODO test turns green (something spends lumber);
-  seat wallets conserve (lumber spent is lumber gone); the one-seat reports stay unchanged until the balance step.
-- Then B5 (lives and difficulty), B6 (re-measure and rebalance).
+## Next sprint (recommended): v0.21.0 lives and difficulty (Burbenog track, step B5)
+- Objective: lives and difficulty as in the original (50 / 25 / 1 / 1 with random waves), scaled by seat count; today every game has 20 shared lives.
+  Priority: P0 for the track (owner decision 2026-10-16).
+- Scope (proposal): difficulty presets carry the starting lives; the number of seats scales lives and wave size through one table; a data test
+  pins the table; the headless harness stays one-seat until B6. Do not touch tower or builder numbers in this patch.
+- Acceptance: all gates; a per-seat-count scaling table in the data tests; a one-seat game on `normal` keeps today's reports unless the owner
+  accepts the new lives.
+- Then B6 (harness knows seats and builders; re-measure and rebalance, including the ultimates and a Water seat that has no damage tower of its
+  own; late-game bar for waves 21-40).
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); record it in
-  the `docs/QA.md` smoke log. Also try `?seats=4` and `?seats=4&income=shared` (v0.18.0 and v0.19.0 checklists in `docs/QA.md`), compare the
-  square field with the real Burbenog map (a screenshot of the original settles the road layout) and say whether a lone player should own
-  all four seats.
-- Secondary candidates: a menu choice for one, two or four seats and for shared income instead of URL parameters; late-game acceptance bar
-  for waves 21-40; the top and bottom tile rows lie under the HUD bars (build tiles are partly covered); official Phaser type declarations
-  in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does); structured save schema; the menu prints a
-  hard-coded "v0.1.0"; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for `baseUrl` and TS5011 for
-  `rootDir`; ^5.7.2 is pinned).
+  the `docs/QA.md` smoke log. Try the v0.20.0 checklist in `docs/QA.md` (`?builders=fire`, `?seats=4`), and say whether a lone player should
+  own every builder (current default, keeps today's towers) or start with one and buy the rest.
+- Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; hero summon and a tech/aura building
+  paid with lumber; a real roster for the light and shadow builders (a Water-only seat has no damage tower); the margin around the field (the
+  field now touches the canvas edge at 720 px: a larger canvas or a smaller tile would add padding); late-game acceptance bar for waves 21-40;
+  official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does); structured
+  save schema; the menu prints a hard-coded "v0.1.0"; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
+  `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned).

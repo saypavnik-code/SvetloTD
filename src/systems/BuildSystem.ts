@@ -8,6 +8,8 @@ import { Projectile } from '../entities/Projectile';
 import { Enemy } from '../entities/Enemy';
 import { ObjectPool } from '../utils/ObjectPool';
 import { EconomyManager } from './EconomyManager';
+import { BuilderManager } from './BuilderManager';
+import { LumberManager } from './LumberManager';
 import { Seats } from './Seats';
 import type { SeatId } from '../data/seats';
 import { EventBus, GameEvents } from '../utils/EventBus';
@@ -22,6 +24,7 @@ export class BuildSystem {
   private readonly _getEnemies: () => Enemy[];
   private readonly _canInteract: () => boolean;
   private readonly _seats:       Seats;
+  private readonly _builders:    BuilderManager;
 
   readonly towers: Tower[] = [];
   private readonly _occupied: GridOccupancy;
@@ -39,10 +42,13 @@ export class BuildSystem {
     projPool: ObjectPool<Projectile>, getEnemies: () => Enemy[],
     canInteract: () => boolean = () => true,
     seats: Seats = new Seats(1),
+    // Which tower lines a seat may place and upgrade. Without one every seat owns every builder (the classic game).
+    builders: BuilderManager = new BuilderManager(new LumberManager(seats.count), seats.count, 'all'),
   ) {
     this._scene=scene; this._economy=economy; this._projPool=projPool; this._getEnemies=getEnemies;
     this._canInteract = canInteract;
     this._seats = seats;
+    this._builders = builders;
     this._occupied = Array.from({length:GRID_ROWS},(_,r)=>Array.from({length:GRID_COLS},(_,c)=>MAP_DATA[r][c]!=='E'));
     this._buildGhostGraphics();
     this._bindInput();
@@ -105,6 +111,7 @@ export class BuildSystem {
   // ── Public API ─────────────────────────────────────────────────────────────
   selectTowerType(id: TowerId): void {
     if (!this._canInteract()) return;
+    if (!this._builders.canPlace(this._seats.active, id)) return;   // only a tower of the seat's own builders
     this._selectTower(null);
     this._pendingId=id;
     this._scene.input.setDefaultCursor('crosshair');
@@ -120,7 +127,12 @@ export class BuildSystem {
     const t=this._selectedTower, cost=TOWER_DEFS[toId].cost;
     if (!t.data.upgradeTo.includes(toId)) return;
     if (t.ownerSeat !== this._seats.active) return;   // only the owner changes a tower
+    if (!this._builders.canUpgrade(t.ownerSeat, toId)) return;   // the line's builder, and mastery for an ultimate
+    const lumberCost = this._builders.lumberCostOf(toId);
+    // Check both purses first: a refused upgrade must not take the gold and keep the tower.
+    if (this._economy.goldOf(t.ownerSeat) < cost || !this._builders.canAffordLumber(t.ownerSeat, lumberCost)) return;
     if (!this._economy.spendGold(cost, t.ownerSeat)) return;
+    this._builders.chargeLumber(t.ownerSeat, lumberCost);   // lumber is never refunded: a sale returns gold only
     const col=t.gridCol, row=t.gridRow, invested=t.totalInvested+cost;
     this._removeTower(t);
     const nt=new Tower(this._scene,toId,col,row,this._projPool,this._getEnemies,invested,t.ownerSeat);
@@ -166,12 +178,13 @@ export class BuildSystem {
     if (this._occupied[row][col]) return false;
     const seat = this._seats.active;
     if (!this._seats.canBuild(seat, row, col)) return false;   // a seat builds only in its own zones
+    if (!this._builders.canPlace(seat, this._pendingId!)) return false;
     return this._economy.goldOf(seat) >= TOWER_DEFS[this._pendingId!].cost;
   }
 
   private _place(id: TowerId, col: number, row: number): void {
     const seat = this._seats.active;
-    if (!this._seats.canBuild(seat, row, col)) return;
+    if (!this._seats.canBuild(seat, row, col) || !this._builders.canPlace(seat, id)) return;
     if (!this._economy.spendGold(TOWER_DEFS[id].cost, seat)) return;
     const t=new Tower(this._scene,id,col,row,this._projPool,this._getEnemies,undefined,seat);
     this.towers.push(t); this._occupied[row][col]=true;

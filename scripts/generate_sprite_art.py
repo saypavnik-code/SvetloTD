@@ -248,6 +248,17 @@ def watchtower():
     dots(im, [(97, 66, 6, (120, 70, 20, 255)), (97, 66, 3, (255, 236, 170, 255))])
     return im
 
+
+
+def ultimate(base, color):
+    """An ultimate tower (v0.20.0): the tier-2 tower of its line on an elemental halo, with a gold base band and gems."""
+    im = canvas()
+    glow(im, 64, 66, 60, color, 170)
+    im.alpha_composite(base(True))
+    lines(im, [(26, 117), (102, 117)], GOLD + (255,), 3)
+    dots(im, [(x, 117, 4, light(color, .35) + (255,)) for x in (34, 64, 94)] + [(64, 7, 5, light(color, .55) + (255,))])
+    return im
+
 # ── enemies ─────────────────────────────────────────────────────────────────
 
 def grunt():
@@ -354,6 +365,8 @@ def hero():
 SPRITES = {
     'arrow_t1': lambda: arrow(False), 'arrow_t2': lambda: arrow(True), 'cannon_t1': lambda: cannon(False), 'cannon_t2': lambda: cannon(True),
     'magic_t1': lambda: magic(False), 'magic_t2': lambda: magic(True), 'slow_t1': lambda: slow(False), 'slow_t2': lambda: slow(True),
+    'fire_ult': lambda: ultimate(magic, (255, 120, 50)), 'water_ult': lambda: ultimate(slow, (140, 220, 250)),
+    'earth_ult': lambda: ultimate(cannon, (200, 150, 90)), 'nature_ult': lambda: ultimate(arrow, (120, 220, 110)),
     'acid_t1': acid, 'watchtower': watchtower, 'grunt': grunt, 'runner': runner, 'golem': golem, 'wyvern': wyvern, 'boss_goliath': goliath, 'hero': hero,
 }
 

@@ -16,6 +16,7 @@ export const GameEvents = {
   GOLD_CHANGED:        'gold:changed',       // payload: number (new total of that seat), seat id
   LIVES_CHANGED:       'lives:changed',      // payload: number (new total, shared by all seats)
   SEAT_CHANGED:        'seat:changed',       // payload: seat id (the active seat of a shared screen)
+  BUILDERS_CHANGED:    'builders:changed',   // payload: seat id (a builder license or a mastery was bought)
 
   // Waves
   WAVE_STARTED:        'wave:started',       // payload: number (wave index)

@@ -15,6 +15,8 @@ import { WaveManager }    from '../systems/WaveManager';
 import { BuildSystem }    from '../systems/BuildSystem';
 import { EconomyManager } from '../systems/EconomyManager';
 import { LumberManager }  from '../systems/LumberManager';
+import { BuilderManager } from '../systems/BuilderManager';
+import { parseBuilderPicks } from '../data/builders';
 import { InterestSystem } from '../systems/InterestSystem';
 import { EnemyOutcomes }  from '../systems/EnemyOutcomes';
 import { Seats, parseSeatCount, parseSharedIncome } from '../systems/Seats';
@@ -34,6 +36,7 @@ import { AmbientMusic }   from '../systems/AmbientMusic';
 import { SFX }            from '../systems/SFX';
 import { AuraSystem } from '../systems/AuraSystem';
 import { detectInputCapabilities } from '../systems/InputCapabilities';
+import { skillSlotRect } from '../ui/layout';
 
 const ENEMY_POOL_SIZE = 50;
 const PROJ_POOL_SIZE  = 80;
@@ -45,6 +48,7 @@ export class GameScene extends Phaser.Scene {
   private _seats!:        Seats;
   private _seatOverlay:    SeatOverlay | null = null;
   private _lumber!:       LumberManager;
+  private _builders!:     BuilderManager;
   private _interest!:     InterestSystem;
   private _outcomes!:     EnemyOutcomes;
   private _views!:        SpriteViews;
@@ -165,7 +169,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this._hud          = new HUD(this, this._economy, this._waveManager);
-    this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy, this._seats);
+    this._towerPanel   = new TowerPanel(this, this._buildSystem, this._economy, this._seats, this._builders, this._lumber);
     if (this._seats.count > 1) {
       const canAct = (): boolean => !this._isPaused && !this._gameOver && !this._tutorialActive;
       this._seatOverlay = new SeatOverlay(this, this._seats, this._economy, this._lumber, () => this._buildSystem.towers, {
@@ -261,9 +265,13 @@ export class GameScene extends Phaser.Scene {
     this._waveManager = new WaveManager(this, this._enemyPool);
     // Right after WaveManager: kill and leak rules run after it has counted the enemy, before the scene reacts.
     this._outcomes    = new EnemyOutcomes(this._economy, this._lumber, this._seats.sharedIncome);
+    // Builders: `?builders=fire,earth` gives seat 0, 1, ... a free first builder (every further one costs lumber), `?builders=all`
+    // every open builder to every seat. With no choice a one-seat game owns every builder and a shared screen starts licensed.
+    this._builders  = new BuilderManager(this._lumber, this._seats.count,
+      BuilderManager.startFor(this._seats.count, parseBuilderPicks(window.location.search)));
     this._buildSystem = new BuildSystem(this, this._economy, this._projPool,
       () => this._waveManager.activeEnemies,
-      () => !this._isPaused && !this._gameOver && !this._tutorialActive, this._seats);
+      () => !this._isPaused && !this._gameOver && !this._tutorialActive, this._seats, this._builders);
     this._auraSystem = new AuraSystem(() => this._buildSystem.towers);
   }
 
@@ -357,7 +365,7 @@ export class GameScene extends Phaser.Scene {
     root.setVisible(true);
 
     const messages = [
-      'Ставьте башни вдоль путей\n(клавиши 1–5).\nРазные башни эффективны\nпротив разной брони.',
+      'Ставьте башни вдоль путей\n(клавиши 1–6).\nРазные башни эффективны\nпротив разной брони.',
       'Кликните на башню для\nинформации. Улучшайте\nбашни кнопкой U.',
       'Управляйте героем правой\nкнопкой мыши.\nQ — ударная волна,\nW — щит башням.',
     ];
@@ -468,17 +476,12 @@ export class GameScene extends Phaser.Scene {
 
   // ── Skill UI ──────────────────────────────────────────────────────────────
   private _buildSkillUI(): void {
-    const SLOT  = 42;
-    const PAD   = 8;
-    const baseY = GAME_HEIGHT - 52 - PAD;   // above wave bar (52px tall)
-    const baseX = PAD;
     const keys  = ['Q', 'W'] as const;
 
     keys.forEach((key, i) => {
-      const sx = baseX + i * (SLOT + PAD);
-      const sy = baseY;
+      const { x: sx, y: sy, w: SLOT } = skillSlotRect(i);   // the left end of the bottom bar, beside the field
 
-      const bg = this.add.graphics().setDepth(DEPTH.HUD);
+      const bg = this.add.graphics().setDepth(DEPTH.PANEL + 2);
       bg.lineStyle(1, COLORS.walnutLight, 0.6);
       bg.fillStyle(COLORS.walnutDark, 0.20);
       bg.fillRoundedRect(sx, sy, SLOT, SLOT, 6);
@@ -487,18 +490,18 @@ export class GameScene extends Phaser.Scene {
       const keyTxt = this.add.text(sx + 5, sy + 4, key, {
         fontFamily: FONT, fontSize: '12px', color: COLORS.textSecondary_css,
         fontStyle: 'bold',
-      }).setDepth(DEPTH.HUD + 1);
+      }).setDepth(DEPTH.PANEL + 3);
 
       const cdTxt = this.add.text(sx + SLOT / 2, sy + SLOT / 2 + 4, '✓', {
         fontFamily: FONT, fontSize: '15px', color: COLORS.amberWarm_css,
         fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(DEPTH.HUD + 1);
+      }).setOrigin(0.5).setDepth(DEPTH.PANEL + 3);
 
       this._skillSlots.push({ bg, key: keyTxt, cd: cdTxt });
       if (detectInputCapabilities().hasTouch) {
         const zone = this.add.zone(sx, sy, SLOT, SLOT)
           .setOrigin(0).setInteractive({ useHandCursor: true })
-          .setDepth(DEPTH.HUD + 2);
+          .setDepth(DEPTH.PANEL + 4);
         zone.on('pointerdown', () => {
           if (this._isPaused || this._gameOver || this._tutorialActive) return;
           if (key === 'Q') this._hero.useSkillQ(this._waveManager.activeEnemies);
@@ -511,14 +514,8 @@ export class GameScene extends Phaser.Scene {
   private _updateSkillUI(): void {
     const cds   = [this._hero.skillQCooldown, this._hero.skillWCooldown];
     const maxCds = [this._hero.SKILL_Q_MAX_CD, this._hero.SKILL_W_MAX_CD];
-    const SLOT   = 42;
-    const PAD    = 8;
-    const baseX  = PAD;
-    const baseY  = GAME_HEIGHT - 52 - PAD;
-
     this._skillSlots.forEach((slot, i) => {
-      const sx   = baseX + i * (SLOT + PAD);
-      const sy   = baseY;
+      const { x: sx, y: sy, w: SLOT } = skillSlotRect(i);
       const cd   = cds[i];
       const ready = cd <= 0;
 

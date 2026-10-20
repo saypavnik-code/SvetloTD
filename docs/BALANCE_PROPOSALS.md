@@ -127,6 +127,10 @@ targeting are ignored, so it is an aid for reading the simulation, not a result.
 | cannon_t2 | 255 | siege | 0.062 | 0.062 | 0.124 | 0.185 |
 | magic_t2 | 260 | chaos | 0.104 | 0.104 | 0.104 | 0.104 |
 | slow_t2 | 200 | magic | 0.056 | 0.034 | 0.090 | 0.016 |
+| fire_ult | 680 | chaos | 0.082 | 0.082 | 0.082 | 0.082 |
+| water_ult | 560 | magic | 0.063 | 0.037 | 0.100 | 0.017 |
+| earth_ult | 705 | siege | 0.052 | 0.052 | 0.104 | 0.156 |
+| nature_ult | 570 | piercing | 0.281 | 0.105 | 0.140 | 0.049 |
 
 Damage types in the matrix that no attacking tower uses: `normal` (x1.5 against medium armor).
 Best tower against medium armor, the armor of the most common enemy: `arrow_t1` at 0.180 dps per gold.

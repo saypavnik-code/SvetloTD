@@ -265,3 +265,19 @@ Browser checklist (`?seats=4`): under each seat chip except the active one there
 the selection closes, and only seat II can sell or upgrade it (switch seats and try). `+25◆` moves exactly 25 gold (the sum of the chips stays
 the same); the buttons are dimmed when the active seat has too little or no tower selected. With `?seats=4&income=shared` a kill raises all
 four chips. The normal game (no parameter) shows no seat controls. The browser smoke for 1-40 was not run for v0.19.0.
+
+## v0.20.0 handoff: activation block and owner checklist
+
+Activation: the block of the v0.15.0 handoff above (it skips applied patches); v0.20.0 follows v0.19.0.
+
+Expected after v0.20.0: 123 unit tests, all pass, 0 TODO, 0 fail (the lumber TODO test is now a passing test); `git log` shows one commit per version.
+
+Browser checklist (`npm run dev`): the normal game shows the HUD (lives, gold, lumber, wave, x1-x3) at the top of the right column and the wave bar with
+the Q and W slots at the bottom of it; the first and last tile rows of the field are fully visible, hoverable and clickable. The build list shows six
+towers on keys 1-6 as before, and a "СТРОИТЕЛИ" section lists four builders (each with "Мастерство 3д") and two "скоро" rows. With
+`?builders=fire` the list shows three towers (magic, alchemist, watchtower) and the other builders offer "Лицензия 2д"; with 2 lumber (type
+`window.game.scene.getScene('GameScene')._lumber.add(5, 0)` in the console) a click buys a license, the list gains the tower, the next license
+costs 3. Upgrade a magic tower to tier 2 (U), select it: the ultimate button says "нужно: Мастерство" until you research the builder's mastery
+(3 lumber, builders section, with nothing selected); then it shows the price (gold plus lumber) and the upgrade spends both. `?seats=4` shows
+the seat chips under the HUD strip and the build list of seat I with its own builder only. Selling an ultimate returns gold but no lumber.
+Look for text that does not fit (the wave title in the narrower bar, the builder rows). The browser smoke for 1-40 was not run for v0.20.0.

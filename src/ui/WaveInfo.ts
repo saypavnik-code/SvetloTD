@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
 import { WaveManager } from '../systems/WaveManager';
 import { WAVES, type WaveData } from '../data/waves';
-import { GAME_WIDTH, GAME_HEIGHT, DEPTH, FONT_FAMILY, COLORS } from '../config';
+import { DEPTH, FONT_FAMILY, COLORS } from '../config';
+import { BOTTOM_BAR, SIDE, SKILL_SLOT, skillSlotRect } from './layout';
 
-const BAR_H = 52;
-const BAR_Y = GAME_HEIGHT - BAR_H;
+// The bar is the bottom of the right column (v0.20.0): the last tile row of the field is never covered.
+const BAR_H = BOTTOM_BAR.h;
+const BAR_Y = BOTTOM_BAR.y;
 const FONT = FONT_FAMILY;
-const LEFT = 112;     // the hero skill slots (Q/W) sit at the left edge of the bottom bar
-const CD_W = 350;     // countdown bar width
-const WAVE_W = 520;   // wave progress bar width
+const LEFT = skillSlotRect(1).x + SKILL_SLOT + 10;   // the hero skill slots (Q/W) sit at the left edge of the bar
+const BTN_W = 140;
+const BTN_X = SIDE.x + SIDE.w - BTN_W - 12;
+const CD_W = 200;     // countdown bar width
+const WAVE_W = 270;   // wave progress bar width
 
 const ARMOR_COLORS: Record<string, string> = {
   unarmored: COLORS.textMuted_css,
@@ -52,30 +56,28 @@ export class WaveInfo {
   }
 
   private _buildBackground(): void {
-    const g = this._scene.add.graphics().setDepth(DEPTH.HUD - 1);
-    g.fillStyle(COLORS.bgPanel, 1);
-    g.fillRect(0, BAR_Y, GAME_WIDTH, BAR_H);
-    g.fillStyle(COLORS.bgDark, 0.45);
-    g.fillRect(0, BAR_Y, GAME_WIDTH, 6);
+    const g = this._scene.add.graphics().setDepth(DEPTH.PANEL + 1);   // above the side panel background
+    g.fillStyle(COLORS.bgDark, 0.35);
+    g.fillRect(SIDE.x + 6, BAR_Y, SIDE.w - 12, BAR_H - 6);
     g.lineStyle(2, COLORS.walnutLight, 0.7);
-    g.beginPath(); g.moveTo(0, BAR_Y); g.lineTo(GAME_WIDTH, BAR_Y); g.strokePath();
+    g.beginPath(); g.moveTo(SIDE.x + 10, BAR_Y); g.lineTo(SIDE.x + SIDE.w - 10, BAR_Y); g.strokePath();
     g.lineStyle(1, COLORS.amberDeep, 0.9);
-    g.beginPath(); g.moveTo(0, BAR_Y + 1); g.lineTo(GAME_WIDTH, BAR_Y + 1); g.strokePath();
+    g.beginPath(); g.moveTo(SIDE.x + 10, BAR_Y + 1); g.lineTo(SIDE.x + SIDE.w - 10, BAR_Y + 1); g.strokePath();
   }
 
   private _buildCountdownPanel(): void {
     const s = this._scene;
     this._cdRoot = s.add.container(0, 0).setDepth(DEPTH.PANEL + 1);
 
-    this._cdBgFlash = s.add.graphics().setDepth(DEPTH.HUD - 1).setVisible(false);
+    this._cdBgFlash = s.add.graphics().setDepth(DEPTH.PANEL + 1).setVisible(false);
     this._cdRoot.add(this._cdBgFlash);
 
-    this._cdTitle = s.add.text(LEFT, BAR_Y + 10, '', {
-      fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css, wordWrap: { width: 560 }, fontStyle: 'bold',
+    this._cdTitle = s.add.text(LEFT, BAR_Y + 6, '', {
+      fontFamily: FONT, fontSize: '13px', color: COLORS.textPrimary_css, wordWrap: { width: BTN_X - LEFT - 4 }, fontStyle: 'bold',
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdTitle);
 
-    this._cdHint = s.add.text(LEFT, BAR_Y + 30, '', {
+    this._cdHint = s.add.text(LEFT, BAR_Y + 24, '', {
       fontFamily: FONT, fontSize: '11px', color: COLORS.textSecondary_css,
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdHint);
@@ -90,15 +92,15 @@ export class WaveInfo {
     this._cdBarFill = s.add.graphics().setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdBarFill);
 
-    this._cdTimer = s.add.text(474, BAR_Y + 36, '20с', {
+    this._cdTimer = s.add.text(LEFT + CD_W + 8, BAR_Y + 34, '20с', {
       fontFamily: FONT, fontSize: '13px', color: COLORS.textSecondary_css,
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdTimer);
 
-    const btnW = 210;
+    const btnW = BTN_W;
     const btnH = 34;
-    const btnX = GAME_WIDTH - btnW - 16;
-    const btnY = BAR_Y + 8;
+    const btnX = BTN_X;
+    const btnY = BAR_Y + 9;
     this._cdBtnGfx = s.add.graphics().setDepth(DEPTH.PANEL + 2);
     this._redrawStartBtn(false, btnX, btnY, btnW, btnH);
     this._cdRoot.add(this._cdBtnGfx);
@@ -127,8 +129,8 @@ export class WaveInfo {
     const s = this._scene;
     this._waveRoot = s.add.container(0, 0).setDepth(DEPTH.PANEL + 1).setVisible(false);
 
-    this._waveTitleTxt = s.add.text(LEFT, BAR_Y + 14, '', {
-      fontFamily: FONT, fontSize: '14px', color: COLORS.textPrimary_css, fontStyle: 'bold',
+    this._waveTitleTxt = s.add.text(LEFT, BAR_Y + 12, '', {
+      fontFamily: FONT, fontSize: '13px', color: COLORS.textPrimary_css, fontStyle: 'bold',
     }).setDepth(DEPTH.PANEL + 2);
     this._waveRoot.add(this._waveTitleTxt);
 
@@ -178,7 +180,7 @@ export class WaveInfo {
     const armorKey = this._enemyArmorKey(next);
     const armorCol = ARMOR_COLORS[armorKey] ?? COLORS.textMuted_css;
 
-    const bossTag = isBoss ? ' 💀 БОСС' : '';
+    const bossTag = isBoss && !next.preview.includes('БОСС') ? ' 💀 БОСС' : '';   // the preview of a boss wave says it already
     const flyTag = isFlying ? ' △ ВОЗДУХ' : '';
     this._cdTitle.setText(`Волна ${this._wm.waveNumber}: ${next.preview}${bossTag}${flyTag}`);
     this._cdTitle.setColor(isBoss ? COLORS.textDanger_css : COLORS.textPrimary_css);
@@ -191,7 +193,7 @@ export class WaveInfo {
     if (isBoss) {
       this._cdBgFlash.clear().setVisible(true);
       this._cdBgFlash.fillStyle(COLORS.danger, 0.08);
-      this._cdBgFlash.fillRect(0, BAR_Y, GAME_WIDTH, BAR_H);
+      this._cdBgFlash.fillRect(SIDE.x + 6, BAR_Y, SIDE.w - 12, BAR_H - 6);
     } else {
       this._cdBgFlash.setVisible(false);
     }
