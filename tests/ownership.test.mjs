@@ -6,6 +6,7 @@ import { loadModules } from './support/load-source.mjs';
 import { simulate } from './support/simulate.mjs';
 
 const game = loadModules(
+  'src/config/difficulty.ts',
   'src/systems/EconomyManager.ts',
   'src/systems/LumberManager.ts',
   'src/systems/InterestSystem.ts',
@@ -18,7 +19,7 @@ const game = loadModules(
   'src/utils/Subscriptions.ts',
   'src/utils/EventBus.ts',
 );
-const { EventBus, GameEvents, Subscriptions, ENEMY_DEFS, WAVES } = game;
+const { EventBus, GameEvents, Subscriptions, ENEMY_DEFS, WAVES, GameConfig } = game;
 
 const listenerCounts = () => Object.fromEntries(Object.values(GameEvents).map((event) => [event, EventBus.listenerCount(event)]));
 
@@ -105,7 +106,7 @@ test('later listeners (the scene\'s presentation) see the kill already paid, and
     EventBus.emit(GameEvents.ENEMY_KILLED, { enemy: { def: ENEMY_DEFS.runner }, goldReward: 5 });
     assert.equal(economy.gold, start + 5);
     EventBus.emit(GameEvents.ENEMY_REACHED_END, { def: ENEMY_DEFS.runner });
-    assert.equal(economy.lives, 20);
+    assert.equal(economy.lives, GameConfig.difficulty.startingLives);
   } finally { EventBus.off(GameEvents.ENEMY_KILLED, spy); destroyAll(); }
 });
 

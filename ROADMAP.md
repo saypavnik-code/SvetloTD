@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.20.0)
+## Current state (v0.21.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -71,6 +71,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   `tests/layout.test.mjs`), so the 720 x 720 field is uncovered. The info panel rows were re-spaced (the upgrade buttons covered the target
   row). Checked in headless Chromium: classic, `?builders=fire` through tier 2, mastery and the ultimate, `?seats=4` with a license bought.
   Not measured: the ultimates (draft numbers, outside every catalogued build), seat-count balance (B6).
+- v0.21.0 lives and difficulty (track step B5): four modes with the lives of the original (easy 50, normal 25, hard 1, expert 1 with a shuffled
+  wave order), one pool of lives for the team whatever the seat count (no scaling: gold is already split without loss and waves do not grow with
+  seats; data test), chosen in the menu or with `?difficulty=`. Hard and expert no longer multiply enemy HP and speed (with one life they killed every
+  catalogued build in waves 3-7 / wave 1); their gold, interest and bonus handicaps stay. Expert shuffles the first four waves of every block of five
+  (`randomizedWaves`, `?seed=` replays an order, printed on the defeat screen). Best results are kept per difficulty. The generated reports were
+  regenerated (normal now has 25 lives; the lumber sentences that still said "no sink" were corrected). Not measured: expert with the shuffled order.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
@@ -85,7 +91,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B2 | v0.18.0 (done) | Four seats: one quadrant zone each, per-seat gold and lumber, tower owner and colour, shared lives, seat bar and hot-seat switch; one human owns all four seats | Per-seat ledger invariants, zone rule, a one-seat game equals today's economy |
 | B3 | v0.19.0 (done) | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
-| B5 | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1 with random waves, scaled by seat count) | Data tests, per-seat-count scaling table |
+| B5 (done) | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1, shuffled waves for expert); the lives are one team pool, no seat scaling (gold is conserved across seats) | Data tests: lives per mode, same totals for 1, 2, 4 seats, seeded order |
 | B6 | v0.22.0 | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat | New acceptance bars, regenerated reports |
 | B7 | later | Art pass 3 on the square map: village base, seat-coloured pads, spawn gates, panel frames | Screenshots of menu, empty, built and boss field |
 | B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
@@ -137,6 +143,7 @@ whether a lone player owns all four seats (proposed) or one; how many bosses a b
 - [x] v0.18.0 four seats: zones, per-seat wallets, tower owners, kill credit, hot-seat switch (`?seats=2|4`).
 - [x] v0.19.0 give gold and lumber, cede towers, optional shared income (`?income=shared`).
 - [x] v0.20.0 builders, licenses, mastery and ultimate towers paid with lumber; HUD, wave bar and skill slots moved off the field.
+- [x] v0.21.0 lives and difficulty as in the original; difficulty choice in the menu; shuffled waves for expert.
 - [x] Projectile release, visible splash lifetime and pool double-release guard.
 - [x] Correct high-speed travel across multiple enemy waypoints.
 - [x] Scene shutdown hook and scoped event cleanup.
@@ -198,21 +205,18 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.21.0 lives and difficulty (Burbenog track, step B5)
-- Objective: lives and difficulty as in the original (50 / 25 / 1 / 1 with random waves), scaled by seat count; today every game has 20 shared lives.
-  Priority: P0 for the track (owner decision 2026-10-16).
-- Scope (proposal): difficulty presets carry the starting lives; the number of seats scales lives and wave size through one table; a data test
-  pins the table; the headless harness stays one-seat until B6. Do not touch tower or builder numbers in this patch.
-- Acceptance: all gates; a per-seat-count scaling table in the data tests; a one-seat game on `normal` keeps today's reports unless the owner
-  accepts the new lives.
-- Then B6 (harness knows seats and builders; re-measure and rebalance, including the ultimates and a Water seat that has no damage tower of its
-  own; late-game bar for waves 21-40).
-- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); record it in
-  the `docs/QA.md` smoke log. Try the v0.20.0 checklist in `docs/QA.md` (`?builders=fire`, `?seats=4`), and say whether a lone player should
-  own every builder (current default, keeps today's towers) or start with one and buy the rest.
-- Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; hero summon and a tech/aura building
-  paid with lumber; a real roster for the light and shadow builders (a Water-only seat has no damage tower); the margin around the field (the
-  field now touches the canvas edge at 720 px: a larger canvas or a smaller tile would add padding); late-game acceptance bar for waves 21-40;
-  official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently it does); structured
-  save schema; the menu prints a hard-coded "v0.1.0"; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports TS5101 for
-  `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned).
+## Next sprint (recommended): v0.22.0 harness for seats and builders, re-measure and rebalance (Burbenog track, step B6)
+- Objective: the headless harness learns the shared screen (several seats, builders, licenses, mastery, ultimates) and a build that reacts to a leak,
+  then re-measures everything the track changed: lives 25 on normal, the thin builder rosters (a Water seat has no damage tower), the ultimates (draft
+  numbers), expert with a shuffled order, and the late game (waves 21-40, no bar yet). Priority: P0 for the track.
+- Scope (proposal): `simulate` takes seats, builders and a wave list (so expert orders can be measured with seeds); add builds that buy a license,
+  mastery and an ultimate; adaptive builds for one-life modes; then change data only where a bar says so, in a separate patch if the diff is large.
+- Acceptance: all gates; a measured table per seat count and per builder start in `docs/BALANCE_PROPOSALS.md`; one-seat normal reports reviewed by
+  the owner before any number moves.
+- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); the checklists of
+  v0.20.0 and v0.21.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
+- Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; hero summon and a tech/aura building paid with
+  lumber; a real roster for the light and shadow builders; the margin around the field (the field now touches the canvas edge at 720 px); late-game
+  acceptance bar for waves 21-40; official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently
+  it does); structured save schema; the menu prints a hard-coded "v0.1.0"; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports
+  TS5101 for `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned).

@@ -281,3 +281,15 @@ costs 3. Upgrade a magic tower to tier 2 (U), select it: the ultimate button say
 (3 lumber, builders section, with nothing selected); then it shows the price (gold plus lumber) and the upgrade spends both. `?seats=4` shows
 the seat chips under the HUD strip and the build list of seat I with its own builder only. Selling an ultimate returns gold but no lumber.
 Look for text that does not fit (the wave title in the narrower bar, the builder rows). The browser smoke for 1-40 was not run for v0.20.0.
+
+## v0.21.0 handoff: activation block and owner checklist
+
+Activation: the block of the v0.15.0 handoff above (it skips applied patches); v0.21.0 follows v0.20.0.
+
+Expected after v0.21.0: 134 unit tests, all pass, 0 TODO, 0 fail.
+
+Browser checklist (`npm run dev`): the menu shows a "СЛОЖНОСТЬ" row with four buttons (Легко 50, Нормально 25, Сложно 1, Эксперт 1 with the heart count);
+the chosen one is highlighted, a line under the row explains it, and the choice survives a reload (`?difficulty=expert` overrides it). The HUD shows
+the lives of the mode (50 / 25 / 1 / 1). On expert the first waves are not in the written order (the wave bar names a later wave early); after a defeat
+the screen says "порядок волн №N", and `?difficulty=expert&seed=N` repeats that order. A defeat on one life ends the game at the first leak. The best
+result under the buttons belongs to the chosen difficulty only: win or lose on easy and check that normal's record did not change.

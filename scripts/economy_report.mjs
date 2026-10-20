@@ -105,8 +105,8 @@ export function buildReport() {
   lines.push(`   ${sum(bank.rows, 'interest')} gold of interest (${Math.round(100 * sum(bank.rows, 'interest') / (sum(bank.rows, 'interest') + killAllIncome))}% of everything earned when nothing is ever spent).`);
   lines.push(`4. **Pressure against income.** Enemy HP per gold of wave income is ${hpPerGold(1).toFixed(1)} in wave 1, ${hpPerGold(20).toFixed(1)} in wave 20 and ${hpPerGold(40).toFixed(1)} in wave 40;`);
   lines.push('   bounties do not scale with the wave HP multiplier.');
-  lines.push(`5. **Difficulty bonus.** The wave bonus is \`round(bonusGold x waveBonusMult)\`; total bonus over 40 waves is ${bonusTotal('normal')} / ${bonusTotal('hard')} / ${bonusTotal('insane')} gold on normal / hard / insane.`);
-  lines.push(`6. **Lumber has no sink.** A full run earns ${bank.lumberEnd} lumber and no system spends it (owner decision: a sink is added later).`);
+  lines.push(`5. **Difficulty bonus.** The wave bonus is \`round(bonusGold x waveBonusMult)\`; total bonus over 40 waves is ${bonusTotal('normal')} / ${bonusTotal('hard')} / ${bonusTotal('insane')} gold on normal / hard / insane (easy pays the normal bonus).`);
+  lines.push(`6. **Lumber sink (v0.20.0).** A full run earns ${bank.lumberEnd} lumber. Licenses, builder mastery and the ultimate towers spend it (BuilderManager); the catalogued builds buy none of them, so every run here ends with its lumber unspent.`);
   lines.push('');
   lines.push('## Wave pressure and income envelope (normal)');
   lines.push('');

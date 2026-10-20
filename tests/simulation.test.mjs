@@ -4,6 +4,7 @@ import test from 'node:test';
 import { loadModules } from './support/load-source.mjs';
 
 const game = loadModules(
+  'src/config/difficulty.ts',
   'src/systems/StatusEffectSystem.ts',
   'src/systems/HitEffects.ts',
   'src/systems/WaveManager.ts',
@@ -185,7 +186,7 @@ test('all 40 waves clear exactly once each, award once and end in a single victo
   assert.equal(world.log.bonuses, 40);
   assert.equal(world.log.kills, totalEnemies);
   assert.equal(world.log.leaks, 0);
-  assert.equal(world.economy.lives, 20);
+  assert.equal(world.economy.lives, game.GameConfig.difficulty.startingLives);
   assert.equal(unreleased, 0, 'enemies were not returned to the pool between waves');
   assert(world.pool.activeCount <= 1, 'only the final, still-dying enemy may remain checked out');
   assert(world.pool.totalCreated <= 64, `enemy pool grew to ${world.pool.totalCreated}`);
@@ -219,7 +220,7 @@ test('leaking every enemy ends in exactly one defeat and stops completing waves'
 test('losing the last life on the final enemy of a wave is a defeat, not a wave clear', () => {
   const world = createWorld();
   const grunts = game.WAVES[0].count;   // wave 1 is grunts of one life each
-  world.economy.loseLife(20 - grunts);  // exactly as many lives left as enemies in wave 1
+  world.economy.loseLife(game.GameConfig.difficulty.startingLives - grunts);  // exactly as many lives left as enemies in wave 1
   world.waves.startGame();
   run(world, { until: () => world.log.terminal.length > 0 });
   for (let i = 0; i < 50; i++) world.waves.update(0.1);
@@ -231,7 +232,7 @@ test('losing the last life on the final enemy of a wave is a defeat, not a wave 
 
 test('losing the last life to the final boss is a defeat, never a victory', () => {
   const world = createWorld();
-  world.economy.loseLife(15); // five lives left == boss livesCost
+  world.economy.loseLife(game.GameConfig.difficulty.startingLives - game.ENEMY_DEFS.boss_goliath.livesCost); // exactly the boss livesCost left
   world.waves._waveIndex = 39; // test-only: jump to the final wave
   world.waves.startGame();
   run(world, { until: () => world.log.terminal.length > 0 });

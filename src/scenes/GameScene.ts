@@ -7,6 +7,8 @@ import {
 } from '../config';
 import { MAP_DATA, BASE_TILE_COL, BASE_TILE_ROW } from '../data/mapData';
 import { SPAWN_POSITIONS } from '../data/pathData';
+import { WAVES, randomizedWaves, parseWaveSeed } from '../data/waves';
+import { GameConfig, bestResultKey } from '../config/difficulty';
 import { Enemy }          from '../entities/Enemy';
 import { Projectile }     from '../entities/Projectile';
 import { Tower }          from '../entities/Tower';
@@ -49,6 +51,7 @@ export class GameScene extends Phaser.Scene {
   private _seatOverlay:    SeatOverlay | null = null;
   private _lumber!:       LumberManager;
   private _builders!:     BuilderManager;
+  private _waveSeed = 0;                 // the order of an expert game (0 in the other modes)
   private _interest!:     InterestSystem;
   private _outcomes!:     EnemyOutcomes;
   private _views!:        SpriteViews;
@@ -262,7 +265,12 @@ export class GameScene extends Phaser.Scene {
     this._interest  = new InterestSystem(this._economy, this._lumber);
     this._enemyPool = new ObjectPool<Enemy>(() => new Enemy(), ENEMY_POOL_SIZE);
     this._projPool  = new ObjectPool<Projectile>(() => new Projectile(), PROJ_POOL_SIZE);
-    this._waveManager = new WaveManager(this, this._enemyPool);
+    // The difficulty (chosen in the menu or by `?difficulty=`) sets the lives, which are one pool for every seat count; expert shuffles the
+    // waves inside each block of five (`?seed=` replays an order, the seed is printed on the defeat screen).
+    const waves = GameConfig.difficulty.randomWaves
+      ? randomizedWaves(this._waveSeed = parseWaveSeed(window.location.search) ?? (Date.now() >>> 0))
+      : WAVES;
+    this._waveManager = new WaveManager(this, this._enemyPool, waves);
     // Right after WaveManager: kill and leak rules run after it has counted the enemy, before the scene reacts.
     this._outcomes    = new EnemyOutcomes(this._economy, this._lumber, this._seats.sharedIncome);
     // Builders: `?builders=fire,earth` gives seat 0, 1, ... a free first builder (every further one costs lumber), `?builders=all`
@@ -464,13 +472,13 @@ export class GameScene extends Phaser.Scene {
     };
 
     try {
-      const stored = localStorage.getItem('best_result');
+      const stored = localStorage.getItem(bestResultKey(GameConfig.difficulty.id));
       const best   = stored ? JSON.parse(stored) : null;
       const isBetter = !best
         || result.wavesCompleted > best.wavesCompleted
         || (result.wavesCompleted === best.wavesCompleted
             && result.livesRemaining > best.livesRemaining);
-      if (isBetter) localStorage.setItem('best_result', JSON.stringify(result));
+      if (isBetter) localStorage.setItem(bestResultKey(GameConfig.difficulty.id), JSON.stringify(result));
     } catch { /* storage unavailable */ }
   }
 
@@ -775,7 +783,8 @@ export class GameScene extends Phaser.Scene {
     root.add(s.add.text(cx,cy-135,victory?'Светлогорск спасён!':'Шторм поглотил берег...',{fontFamily:FONT,fontSize:'14px',color:COLORS.textSecondary_css}).setOrigin(0.5));
 
     if (!victory) {
-      root.add(s.add.text(cx,cy-108,`Вы дошли до волны: ${this._wavesReached}`,{fontFamily:FONT,fontSize:'13px',color:COLORS.textMuted_css}).setOrigin(0.5));
+      const order = GameConfig.difficulty.randomWaves ? ` · порядок волн №${this._waveSeed}` : '';
+      root.add(s.add.text(cx,cy-108,`Вы дошли до волны: ${this._wavesReached}${order}`,{fontFamily:FONT,fontSize:'13px',color:COLORS.textMuted_css}).setOrigin(0.5));
     }
 
     // Stats

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, DEPTH, FONT_FAMILY, STARTING_LIVES } from '../config';
+import { COLORS, DEPTH, FONT_FAMILY } from '../config';
 import { HUD_STRIP } from './layout';
 import { EconomyManager } from '../systems/EconomyManager';
 import { WaveManager } from '../systems/WaveManager';
@@ -48,7 +48,7 @@ export class HUD {
     bg.beginPath(); bg.moveTo(X0 + 10, BAR_H - 1); bg.lineTo(X0 + HUD_STRIP.w - 10, BAR_H - 1); bg.strokePath();
 
     s.add.image(X0 + 26, 22, 'icon_heart').setDisplaySize(24, 24).setDepth(D);
-    this._livesNum = s.add.text(X0 + 44, 14, `${STARTING_LIVES}`, {
+    this._livesNum = s.add.text(X0 + 44, 14, `${this._economy.lives}`, {
       fontFamily: FONT, fontSize: '16px', color: COLORS.textDanger_css, fontStyle: 'bold',
     }).setDepth(D);
 

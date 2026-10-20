@@ -96,6 +96,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 13. A purchase with two purses (v0.20.0: gold and lumber for an ultimate): take the first and the second refuses, and the player has paid for a
     refusal. Check every purse, then charge; a refused action takes nothing (test in `tests/builders.test.mjs`). Lumber is spent only by the
     builder rules (`BuilderManager`), never by a UI class.
+14. A number copied into a test (v0.21.0: "20 lives" in six tests; the lives became 25 and eight tests failed for the wrong reason). Tests read
+    presets and data (`DIFFICULTY_PRESETS`, `GameConfig`), never a copy of the value. A rule that depends on a mode (the lives, the opening
+    bar) is parameterised by the mode in the tests and in the generated reports.
 
 ## Resuming in a new session
 

@@ -16,7 +16,6 @@ export const UI_PANEL_WIDTH = GAME_WIDTH - GRID_COLS * TILE_SIZE; // 560
 export const WAVE_COUNTDOWN_MS    = 5_000;
 export const ENEMY_SPAWN_INTERVAL = 800;
 
-export const STARTING_LIVES = 20;
 
 // ── Baltic RTS Palette (dark stone + amber accents) ─────────────────────────
 export const COLORS = {

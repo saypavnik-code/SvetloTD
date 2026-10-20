@@ -5,9 +5,9 @@
 //   • Golem/boss kill  → +lumberYield from EnemyDef to the seat that made the kill (EnemyOutcomes)
 //   • Every 5th wave   → +1 to every seat (InterestSystem, triggered by WAVE_COMPLETED)
 //
-// Spent on:
-//   • Mercenary / T3 towers (BuildSystem checks canAfford)
-//   • Future: unlock hero, aura buildings
+// Spent on (BuilderManager is the only payer, through `spend`):
+//   • Builder licenses, a builder's mastery and the ultimate towers (v0.20.0)
+//   • Future: hero summon, aura buildings
 //
 // Emits LUMBER_CHANGED (new total, seat) so the HUD updates without coupling.
 // ─────────────────────────────────────────────────────────────────────────────

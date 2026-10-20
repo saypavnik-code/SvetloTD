@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, FONT_MAIN } from '../config';
 import { AudioManager } from '../systems/AudioManager';
+import { DIFFICULTY_IDS, DIFFICULTY_PRESETS, GameConfig, bestResultKey, parseDifficulty, type DifficultyId } from '../config/difficulty';
 
 interface Dust {
   x: number; y: number;
@@ -14,6 +15,10 @@ export class MenuScene extends Phaser.Scene {
 
   private _logoText!: Phaser.GameObjects.Text;
   private _playBtn!: Phaser.GameObjects.Text;
+  private _bestTxt!: Phaser.GameObjects.Text;
+  private _blurbTxt!: Phaser.GameObjects.Text;
+  private _difficultyGfx: Phaser.GameObjects.Graphics[] = [];
+  private _difficultyLbl: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: 'MenuScene' });
@@ -28,8 +33,9 @@ export class MenuScene extends Phaser.Scene {
     this._buildDust();
     this._buildDecorFrame();
     this._buildLogo();
+    this._buildSubtitle();      // creates the best-result line the difficulty row refreshes
+    this._buildDifficulty();
     this._buildPlayButton();
-    this._buildSubtitle();
     this._buildVersionTag();
 
     this.cameras.main.fadeIn(600, 0, 0, 0);
@@ -147,6 +153,77 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
+  /** The difficulty row (v0.21.0): lives and wave order as in the original. `?difficulty=` and the last choice are remembered. */
+  private _buildDifficulty(): void {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const bw = 150, bh = 28, gap = 10, y = cy + 90;
+    const x0 = cx - (DIFFICULTY_IDS.length * bw + (DIFFICULTY_IDS.length - 1) * gap) / 2;
+
+    this.add.text(cx, cy + 74, 'СЛОЖНОСТЬ', {
+      fontFamily: FONT_MAIN, fontSize: '10px', color: COLORS.textMuted_css, letterSpacing: 4,
+    }).setOrigin(0.5);
+    this._blurbTxt = this.add.text(cx, cy + 128, '', {
+      fontFamily: FONT_MAIN, fontSize: '11px', color: COLORS.textSecondary_css,
+    }).setOrigin(0.5);
+
+    let stored: string | null = null;
+    try { stored = localStorage.getItem('difficulty'); } catch { /* storage unavailable */ }
+    const start = parseDifficulty(window.location.search) ?? parseDifficulty(`?difficulty=${stored ?? ''}`) ?? GameConfig.difficulty.id;
+    GameConfig.setDifficulty(start);
+
+    DIFFICULTY_IDS.forEach((id, index) => {
+      const x = x0 + index * (bw + gap);
+      const gfx = this.add.graphics();
+      const label = this.add.text(x + bw / 2, y + bh / 2, `${DIFFICULTY_PRESETS[id].label} · ${DIFFICULTY_PRESETS[id].startingLives}❤`, {
+        fontFamily: FONT_MAIN, fontSize: '12px', fontStyle: 'bold', color: COLORS.textPrimary_css,
+      }).setOrigin(0.5);
+      this._difficultyGfx.push(gfx); this._difficultyLbl.push(label);
+      const zone = this.add.zone(x, y, bw, bh).setOrigin(0).setInteractive({ useHandCursor: true });
+      zone.on('pointerdown', () => this._chooseDifficulty(id));
+      gfx.setPosition(x, y);
+    });
+    this._refreshDifficulty();
+  }
+
+  private _chooseDifficulty(id: DifficultyId): void {
+    GameConfig.setDifficulty(id);
+    try { localStorage.setItem('difficulty', id); } catch { /* storage unavailable */ }
+    this._refreshDifficulty();
+  }
+
+  private _refreshDifficulty(): void {
+    const current = GameConfig.difficulty.id;
+    DIFFICULTY_IDS.forEach((id, index) => {
+      const selected = id === current;
+      const gfx = this._difficultyGfx[index];
+      gfx.clear();
+      gfx.fillStyle(selected ? COLORS.amberDeep : COLORS.bgPanelHover, selected ? 0.55 : 0.6);
+      gfx.fillRoundedRect(0, 0, 150, 28, 6);
+      gfx.lineStyle(selected ? 3 : 2, selected ? COLORS.amberBright : COLORS.walnutLight, 0.9);
+      gfx.strokeRoundedRect(0, 0, 150, 28, 6);
+      this._difficultyLbl[index].setColor(selected ? COLORS.amberGlow_css : COLORS.textPrimary_css);
+    });
+    this._blurbTxt.setText(GameConfig.difficulty.blurb);
+    this._refreshBest();
+  }
+
+  /** The best result of the chosen difficulty only. */
+  private _refreshBest(): void {
+    let line = '';
+    try {
+      const stored = localStorage.getItem(bestResultKey(GameConfig.difficulty.id));
+      if (stored) {
+        const best = JSON.parse(stored) as { isVictory: boolean; wavesCompleted: number; livesRemaining: number; enemiesKilled: number };
+        line = best.isVictory
+          ? `✦ Победа! Волна ${best.wavesCompleted} • ❤ ${best.livesRemaining} • ☠ ${best.enemiesKilled}`
+          : `Лучший рубеж: Волна ${best.wavesCompleted} • ❤ ${best.livesRemaining} • ☠ ${best.enemiesKilled}`;
+        this._bestTxt.setColor(best.isVictory ? COLORS.amberWarm_css : COLORS.textSecondary_css);
+      }
+    } catch { /* storage unavailable */ }
+    this._bestTxt.setText(line);
+  }
+
   private _buildPlayButton(): void {
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -198,24 +275,10 @@ export class MenuScene extends Phaser.Scene {
       color: COLORS.textMuted_css,
     }).setOrigin(0.5);
 
-    try {
-      const stored = localStorage.getItem('best_result');
-      if (stored) {
-        const best = JSON.parse(stored) as {
-          isVictory: boolean; wavesCompleted: number; livesRemaining: number; enemiesKilled: number;
-        };
-        const line = best.isVictory
-          ? `✦ Победа! Волна ${best.wavesCompleted} • ❤ ${best.livesRemaining} • ☠ ${best.enemiesKilled}`
-          : `Лучший рубеж: Волна ${best.wavesCompleted} • ❤ ${best.livesRemaining} • ☠ ${best.enemiesKilled}`;
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 248, line, {
-          fontFamily: FONT_MAIN,
-          fontSize: '10px',
-          color: best.isVictory ? COLORS.amberWarm_css : COLORS.textSecondary_css,
-        }).setOrigin(0.5);
-      }
-    } catch {
-      // storage unavailable
-    }
+    this._bestTxt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 248, '', {
+      fontFamily: FONT_MAIN, fontSize: '10px', color: COLORS.textSecondary_css,
+    }).setOrigin(0.5);
+    this._refreshBest();
   }
 
   private _buildVersionTag(): void {

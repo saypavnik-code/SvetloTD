@@ -5,7 +5,6 @@
 // split between them without losing a coin, and every payment names the seat it belongs to.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { STARTING_LIVES } from '../config';
 import { GameConfig }     from '../config/difficulty';
 import { splitEvenly, type SeatCount } from '../data/seats';
 import { EventBus, GameEvents } from '../utils/EventBus';
@@ -14,7 +13,7 @@ import { Subscriptions } from '../utils/Subscriptions';
 export class EconomyManager {
   readonly seatCount: SeatCount;
   private readonly _gold: number[];
-  private _lives  = STARTING_LIVES;
+  private _lives  = GameConfig.difficulty.startingLives;   // one pool for the team: the same for one, two or four seats
   // 1.0 during build phase (100% refund), 0.7 during combat (70% refund)
   private _sellRefundRate = 0.7;
   private readonly _subs = new Subscriptions();

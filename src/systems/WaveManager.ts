@@ -41,6 +41,7 @@ export class WaveManager {
   readonly activeEnemies: Enemy[] = [];
   state: WaveState = 'idle';
 
+  private readonly _waves: readonly WaveData[];
   private _waveIndex        = 0;
   private _countdownSecs    = 0;
   private _totalCount       = 0;
@@ -62,16 +63,18 @@ export class WaveManager {
   onWaveComplete?:  (wave: WaveData) => void;
   onVictory?:       () => void;
 
-  constructor(_scene: unknown, pool: ObjectPool<Enemy>) {
+  /** `waves`: the wave list of this game (an expert game passes a shuffled one, see randomizedWaves). */
+  constructor(_scene: unknown, pool: ObjectPool<Enemy>, waves: readonly WaveData[] = WAVES) {
+    this._waves = waves;
     this._pool = pool;
     this._subs.on(GameEvents.ENEMY_KILLED,      this._onEnemyRemoved);
     this._subs.on(GameEvents.ENEMY_REACHED_END, this._onEnemyRemoved);
     this._subs.on(GameEvents.GAME_OVER,         this._onGameOver);
   }
 
-  get currentWaveData(): WaveData | null { return WAVES[this._waveIndex] ?? null; }
+  get currentWaveData(): WaveData | null { return this._waves[this._waveIndex] ?? null; }
   get waveNumber():  number { return this._waveIndex + 1; }
-  get totalWaves():  number { return WAVES.length; }
+  get totalWaves():  number { return this._waves.length; }
   get countdownSecs(): number { return Math.ceil(this._countdownSecs); }
 
   startGame(): void { this._beginCountdown(); }
@@ -141,7 +144,7 @@ export class WaveManager {
   }
 
   private _launchWave(): void {
-    const wave = WAVES[this._waveIndex];
+    const wave = this._waves[this._waveIndex];
     if (!wave) return;
 
     const paths = wave.paths === -1 ? ALL_PATHS : [ALL_PATHS[wave.paths]];
@@ -192,7 +195,7 @@ export class WaveManager {
 
   private _waveComplete(): void {
     if (this.state === 'victory' || this._terminated) return;
-    const wave  = WAVES[this._waveIndex];
+    const wave  = this._waves[this._waveIndex];
 
     // Gold is paid by InterestSystem on WAVE_COMPLETED (the single owner of the wave bonus).
     // The callback is presentation only and deliberately receives no gold amount.
@@ -202,7 +205,7 @@ export class WaveManager {
 
     this._waveIndex++;
 
-    if (this._waveIndex >= WAVES.length) {
+    if (this._waveIndex >= this._waves.length) {
       this.state = 'victory';
       this.onVictory?.();
       EventBus.emit(GameEvents.GAME_OVER, { victory: true });

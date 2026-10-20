@@ -21,7 +21,7 @@ test('the oracle baseline clears all 40 waves with every enemy killed and nobody
   assert.equal(run.rows.length, 40);
   assert.equal(sum(run.rows, 'leaks'), 0);
   assert.equal(sum(run.rows, 'kills'), WAVES.reduce((total, wave) => total + wave.count, 0));
-  assert.equal(run.livesLeft, 20);
+  assert.equal(run.livesLeft, DIFFICULTY_PRESETS.normal.startingLives);
 });
 
 test('oracle income does not depend on the simulation step', () => {
@@ -62,7 +62,7 @@ test('gold, lives, kills, interest and bonus add up in every wave of every run',
       }
     }
   }
-  assert.equal(runs, 3 * targets.length * 2);
+  assert.equal(runs, Object.keys(DIFFICULTY_PRESETS).length * targets.length * 2);
 });
 
 test('towers are bought through the real build system and cost exactly their price', () => {

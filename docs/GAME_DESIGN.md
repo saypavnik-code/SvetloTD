@@ -58,7 +58,7 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
 - Teamwork (B3): give gold or lumber to a seat; cede a tower (its refund then goes to the new owner); optional shared income.
 - Governors (B4): a governor is an element set over the 10 tower kinds. The first builder is free; an extra builder, the hero, a tech building
   and the ultimate tower cost lumber (1 lumber per 5 waves, as now). This replaces the unfinished mercenary idea of the `LumberManager` header.
-- Lives and difficulty (B5): 50 / 25 / 1 / 1 with random waves, scaled by the number of seats; the current 20 lives are a placeholder.
+- Lives and difficulty (B5, done in v0.21.0): 50 / 25 / 1 / 1 with random waves for expert; one pool of lives for the team (see "Lives and difficulty").
 - Balance (B6): the first measurement on the square map (v0.17.0) is in `docs/ECONOMY_REPORT.md`; nothing is called balanced before B6.
 
 ## Implemented combat and economy rules (v0.3.0)
@@ -168,3 +168,19 @@ stays inside the 18x18 board and the existing combat rules. Milestones: the Burb
 - Ceded towers: a seat without the line's builder can sell a tower it received, but cannot upgrade it.
 - Layout: the field (18 x 18 tiles) is never covered. The HUD strip, the seat chips, the build list, the builders section, the wave bar and the
   hero skill slots stack in the right column (`src/ui/layout.ts`). Deferred on purpose: hero summon and a tech/aura building for lumber.
+
+## Lives and difficulty (v0.21.0)
+
+- Four modes, chosen in the menu (a row of buttons; the last choice is remembered) or with `?difficulty=easy|normal|hard|insane` (`expert` is
+  accepted for insane): easy 50 lives, normal 25, hard 1, expert (id `insane`) 1 life and a shuffled wave order. The lives are one pool for the
+  whole team and do not depend on the number of seats: the start gold is already split between the seats without loss and the waves do not grow
+  with the seat count, so the totals are the same for one, two and four players (data test). This replaces the earlier idea of scaling by seats.
+- Enemy stats: every mode uses the enemy HP and speed of normal, as in the original (the modes differ by lives and wave order). Hard and expert
+  used to multiply HP by 1.6 and 2.8; with one life that killed every catalogued build in waves 3-7 and in wave 1. Their gold (260, 200), interest
+  and wave-bonus handicaps (owner decision of 2026-10-11) stay; easy has the economy of normal.
+- Expert waves: the 40 waves come in blocks of five. The first four waves of a block swap compositions (type, count, HP, speed, lane); the fifth
+  (golems or a boss) and every boss wave stay put. The wave number, hence the taper, and the wave bonus belong to the slot. The order comes from a
+  seed (`?seed=N` replays one; the defeat screen prints the number of the order). Same seed, same list (data test).
+- Records: the best result is kept per difficulty (normal keeps the old key), so an easy run never covers a normal record.
+- Not measured: the harness runs expert with the written order, and its fixed build scripts never react to a leak, so on one life they fall in waves
+  7-12 even with normal stats. That is a statement about the scripts, not about a human player. Teaching the harness to adapt is part of step B6.

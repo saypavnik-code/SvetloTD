@@ -106,3 +106,50 @@ function shapeWave(wave: WaveData): WaveData {
 }
 
 export const WAVES: WaveData[] = BASE_WAVES.map((wave) => shapeWave(wave));
+
+/** Small seeded generator (mulberry32): the same seed always gives the same order, so a random run can be replayed. */
+function seededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** `?seed=123` fixes the order of an expert game (to replay a run); null when absent or not a whole number. */
+export function parseWaveSeed(search: string): number | null {
+  const raw = new URLSearchParams(search).get('seed');
+  return raw !== null && /^\d{1,10}$/.test(raw.trim()) ? Number(raw.trim()) >>> 0 : null;
+}
+
+/**
+ * The wave list of an expert game (v0.21.0). Waves come in blocks of five (1-5, 6-10, ...); inside a block the first four swap their
+ * compositions at random, while the fifth (the milestone: golems or a boss) and every boss wave stay where they are. What belongs to the
+ * slot stays with the slot: the wave number, hence the taper (applied later by `randomizedWaves`), and the wave bonus. Count, enemy type, HP, speed modifier and lane move with
+ * the composition. Pure: the same seed gives the same list; a different seed almost always gives a different one.
+ */
+export function shuffledBaseWaves(seed: number, base: readonly WaveData[] = BASE_WAVES): WaveData[] {
+  const random = seededRandom(seed);
+  const slots = base.map((wave) => ({ ...wave }));
+  for (let start = 0; start < slots.length; start += 5) {
+    const movable: number[] = [];
+    for (let i = start; i < Math.min(start + 5, slots.length); i++) if (!slots[i].isBoss && slots[i].wave % 5 !== 0) movable.push(i);
+    const order = movable.map((i) => base[i]);
+    for (let i = order.length - 1; i > 0; i--) {                     // Fisher-Yates
+      const j = Math.floor(random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    movable.forEach((slotIndex, k) => {
+      slots[slotIndex] = { ...order[k], wave: base[slotIndex].wave, bonusGold: base[slotIndex].bonusGold };
+    });
+  }
+  return slots;
+}
+
+/** The shuffled list with the taper and the wave bonus applied, ready for a WaveManager. */
+export function randomizedWaves(seed: number): WaveData[] {
+  return shuffledBaseWaves(seed).map((wave) => shapeWave(wave));
+}

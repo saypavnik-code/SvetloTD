@@ -102,9 +102,9 @@ export function evaluate(scenario, maxWave = 40, difficulty = 'normal') {
 const key = (bar) => (bar === MID_BAR ? 'lives21' : 'lives11');
 const better = (bar) => (a, b) => (!b || a[key(bar)] > b[key(bar)] || (a[key(bar)] === b[key(bar)] && a.cleared > b.cleared) ? a : b);
 export const bestOf = (outcomes, bar = OPENING_BAR) => outcomes.reduce((best, o) => better(bar)(o, best), null);
-export const passes = (outcomes, bar = OPENING_BAR) => bestOf(outcomes, bar)[key(bar)] >= MIN_LIVES;
+export const passes = (outcomes, bar = OPENING_BAR, minLives = MIN_LIVES) => bestOf(outcomes, bar)[key(bar)] >= minLives;
 const fate = (o) => (o.result === 'victory' ? 'victory' : o.result === 'unfinished' ? `alive in wave ${o.reachedWave}` : `defeated in wave ${o.reachedWave}`);
-const verdict = (outcomes, bar) => (passes(outcomes, bar) ? 'PASS' : 'FAIL');
+const verdict = (outcomes, bar, minLives = MIN_LIVES) => (passes(outcomes, bar, minLives) ? 'PASS' : 'FAIL');
 
 const dpsPerGold = (def, armor, cost) => (def.damage * (DAMAGE_MATRIX[def.damageType]?.[armor] ?? 1) * def.attackSpeed) / cost;
 function cumulativeCost(id) {
@@ -155,7 +155,7 @@ export function buildProposals() {
   lines.push(`  x${WAVE_BONUS_FACTOR} the written \`bonusGold\` (\`WAVE_BONUS_FACTOR\`). Towers and upgrade costs are untouched. Why D: it leaves the best build the most lives at wave 21`);
   lines.push('  in both hero modes (see "Current data" and the alternatives below).');
   lines.push(`- **Difficulty bonus.** \`round(bonusGold x waveBonusMult)\` with ${presets.map((p) => `${p.waveBonusMult.toFixed(1)} (${p.id})`).join(', ')}. The old dead \`waveBonusBase/Scale\` fields are gone.`);
-  lines.push('- **Lumber.** Stays earned and unspent; a sink is added later (tracked by a TODO test).');
+  lines.push('- **Lumber.** Spent since v0.20.0 on builder licenses, mastery and the ultimate towers (BuilderManager); no catalogued build buys them, so these runs leave it unspent.');
   lines.push('');
   lines.push('## Method, metric and limits');
   lines.push('');
@@ -182,11 +182,16 @@ export function buildProposals() {
   lines.push('');
   lines.push('### Other difficulties (informational, waves 1-11 only)');
   lines.push('');
+  lines.push('Hard and insane (the expert mode) have one life and the enemy stats of normal (v0.21.0): the bar there is "still alive when wave 11 starts" (at least');
+  lines.push('min(3, lives) lives). The catalogued builds are fixed scripts that never react to a leak, so a one-life run is a harsh test of them and says little about a human');
+  lines.push('player; the harness also runs insane with the written wave order, not with a shuffled one.');
+  lines.push('');
   lines.push(table(
-    ['difficulty', 'hero', 'best build', 'lives@11', 'opening bar'],
+    ['difficulty', 'lives', 'hero', 'best build', 'lives@11', 'opening bar'],
     other.flatMap(({ difficulty, result }) => ['idle', 'skills'].map((mode) => {
       const top = bestOf(result[mode]);
-      return [difficulty, mode, top.build, top.lives11, verdict(result[mode], OPENING_BAR)];
+      const lives = DIFFICULTY_PRESETS[difficulty].startingLives;
+      return [difficulty, lives, mode, top.build, top.lives11, verdict(result[mode], OPENING_BAR, Math.min(MIN_LIVES, lives))];
     })),
   ));
   lines.push('');
@@ -283,11 +288,11 @@ export function buildProposals() {
   lines.push('## Open decisions');
   lines.push('');
   lines.push(`1. **Late game (waves 21-40).** The bars cover waves 1-20 only. With the applied curve the best build is ${fate(best)} with the scripted skills and`);
-  lines.push(`   ${fate(bestOf(normal.idle, MID_BAR))} with an idle hero. A late-game bar, the boss waves and a lumber sink are the next design decisions.`);
+  lines.push(`   ${fate(bestOf(normal.idle, MID_BAR))} with an idle hero. A late-game bar, the boss waves and the ultimate towers are the next design decisions.`);
   lines.push('2. **Upgrades and damage types.** The what-if rows give the numbers: cheaper upgrades and a `normal`-damage tower are each a');
   lines.push('   design decision, not a tuning detail. See the efficiency table.');
-  lines.push('3. **Lumber sink.** Lumber is earned and never spent. The `LumberManager` header comment describes the intended sink (mercenaries');
-  lines.push('   and tier-3 towers), which needs new content.');
+  lines.push('3. **Lumber sink.** Licenses, mastery and the four ultimate towers cost lumber since v0.20.0, but no catalogued build buys them and the');
+  lines.push('   ultimates are not measured: a build that spends lumber is part of the next balance step.');
   lines.push('4. **Calibration.** The skill rule is fixed, the hero never moves and no build plans for the bosses. One human play of waves 1-3');
   lines.push('   and one of the wave 10 boss tell how pessimistic `idle` and `skills` are before any proposal is applied.');
   lines.push('');

@@ -6,14 +6,14 @@ owner picks one and a later patch writes the numbers into the data files. Browse
 
 ## Decisions applied
 
-- **Opening, candidate C** (owner, 2026-10-11, patch v0.8.0). Starting gold 300 (normal), 260 (hard), 200 (insane), which is twice the old values. Bounties x1.5, rounded:
+- **Opening, candidate C** (owner, 2026-10-11, patch v0.8.0). Starting gold 300 (easy), 300 (normal), 260 (hard), 200 (insane), which is twice the old values. Bounties x1.5, rounded:
   grunt 6, runner 5, golem 21, wyvern 11, boss_goliath 90.
 - **Mid game, proposal D** (assistant under the owner's delegation of 2026-10-14, patch v0.13.0). HP and count start at 40% and 80% at wave 1
   and move linearly to 30% at wave 40 (`WAVE_TAPER` in `src/data/waves.ts`); single-enemy waves keep their count of 1. The wave bonus pays
   x2 the written `bonusGold` (`WAVE_BONUS_FACTOR`). Towers and upgrade costs are untouched. Why D: it leaves the best build the most lives at wave 21
   in both hero modes (see "Current data" and the alternatives below).
-- **Difficulty bonus.** `round(bonusGold x waveBonusMult)` with 1.0 (normal), 0.8 (hard), 0.6 (insane). The old dead `waveBonusBase/Scale` fields are gone.
-- **Lumber.** Stays earned and unspent; a sink is added later (tracked by a TODO test).
+- **Difficulty bonus.** `round(bonusGold x waveBonusMult)` with 1.0 (easy), 1.0 (normal), 0.8 (hard), 0.6 (insane). The old dead `waveBonusBase/Scale` fields are gone.
+- **Lumber.** Spent since v0.20.0 on builder licenses, mastery and the ultimate towers (BuilderManager); no catalogued build buys them, so these runs leave it unspent.
 
 ## Method, metric and limits
 
@@ -32,23 +32,27 @@ Opening bar: idle hero **PASS**, scripted skills **PASS**. Mid-game bar: idle he
 
 | build | hero | outcome | cleared | lives@11 | lives@21 | Q casts | W casts |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 31 | 30 | 20 | 15 | 0 | 0 |
-| arrow | skills | defeated in wave 31 | 30 | 20 | 15 | 1 | 0 |
-| cannon_arrow | idle | defeated in wave 25 | 24 | 16 | 1 | 0 | 0 |
-| cannon_arrow | skills | defeated in wave 25 | 24 | 20 | 5 | 2 | 0 |
-| magic_slow | idle | defeated in wave 23 | 22 | 18 | 5 | 0 | 0 |
-| magic_slow | skills | defeated in wave 25 | 24 | 18 | 9 | 2 | 0 |
-| balanced | idle | defeated in wave 27 | 26 | 18 | 11 | 0 | 0 |
-| balanced | skills | defeated in wave 27 | 26 | 18 | 11 | 0 | 0 |
+| arrow | idle | defeated in wave 31 | 30 | 25 | 20 | 0 | 0 |
+| arrow | skills | defeated in wave 31 | 30 | 25 | 20 | 1 | 0 |
+| cannon_arrow | idle | defeated in wave 27 | 26 | 21 | 6 | 0 | 0 |
+| cannon_arrow | skills | defeated in wave 30 | 29 | 25 | 10 | 2 | 0 |
+| magic_slow | idle | defeated in wave 23 | 22 | 23 | 10 | 0 | 0 |
+| magic_slow | skills | defeated in wave 27 | 26 | 23 | 14 | 2 | 0 |
+| balanced | idle | defeated in wave 30 | 29 | 23 | 16 | 0 | 0 |
+| balanced | skills | defeated in wave 30 | 29 | 23 | 16 | 0 | 0 |
 
 ### Other difficulties (informational, waves 1-11 only)
 
-| difficulty | hero | best build | lives@11 | opening bar |
-| --- | --- | --- | --- | --- |
-| hard | idle | balanced | 16 | PASS |
-| hard | skills | magic_slow | 16 | PASS |
-| insane | idle | arrow | 0 | FAIL |
-| insane | skills | arrow | 0 | FAIL |
+Hard and insane (the expert mode) have one life and the enemy stats of normal (v0.21.0): the bar there is "still alive when wave 11 starts" (at least
+min(3, lives) lives). The catalogued builds are fixed scripts that never react to a leak, so a one-life run is a harsh test of them and says little about a human
+player; the harness also runs insane with the written wave order, not with a shuffled one.
+
+| difficulty | lives | hero | best build | lives@11 | opening bar |
+| --- | --- | --- | --- | --- | --- |
+| hard | 1 | idle | arrow | 0 | FAIL |
+| hard | 1 | skills | cannon_arrow | 1 | PASS |
+| insane | 1 | idle | arrow | 0 | FAIL |
+| insane | 1 | skills | cannon_arrow | 1 | PASS |
 
 ### Where the best build loses (normal, scripted skills)
 
@@ -60,7 +64,7 @@ Best build: `arrow`, defeated in wave 31, 30 waves cleared. Waves in which it le
 | 25 | boss_goliath | 1 of 1 | 5 | 24 | 4080 |
 | 27 | wyvern | 2 of 14 | 4 | 24 | 4080 |
 | 30 | boss_goliath | 1 of 1 | 5 | 24 | 4080 |
-| 31 | wyvern | 1 of 16 | 2 | 24 | 4080 |
+| 31 | wyvern | 3 of 16 | 6 | 24 | 4080 |
 
 ## Mid-game alternatives that were not taken (E and F)
 
@@ -68,8 +72,8 @@ Scenarios against the waves as written; the applied data is proposal D (see "Dec
 
 | proposal | what changes | idle hero | scripted skills |
 | --- | --- | --- | --- |
-| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: arrow, 7 lives at wave 21, defeated in wave 25 | PASS: arrow, 11 lives at wave 21, defeated in wave 27 |
-| F: Waves only | HP and count from 40% / 80% at wave 1, linear to 20% at wave 40; wave bonus unchanged; upgrade costs unchanged | PASS: arrow, 15 lives at wave 21, defeated in wave 31 | PASS: arrow, 15 lives at wave 21, defeated in wave 31 |
+| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: arrow, 12 lives at wave 21, defeated in wave 27 | PASS: arrow, 16 lives at wave 21, defeated in wave 30 |
+| F: Waves only | HP and count from 40% / 80% at wave 1, linear to 20% at wave 40; wave bonus unchanged; upgrade costs unchanged | PASS: arrow, 20 lives at wave 21, defeated in wave 35 | PASS: arrow, 20 lives at wave 21, defeated in wave 35 |
 
 ### Proposal E: all builds
 
@@ -77,14 +81,14 @@ The curve is only half as soft as in D; the economy answers with a 1.5x bonus an
 
 | build | hero | outcome | cleared | lives@11 | lives@21 |
 | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 25 | 24 | 20 | 7 |
-| arrow | skills | defeated in wave 27 | 26 | 20 | 11 |
-| cannon_arrow | idle | defeated in wave 17 | 16 | 12 | 0 |
-| cannon_arrow | skills | defeated in wave 17 | 16 | 16 | 0 |
-| magic_slow | idle | defeated in wave 23 | 22 | 16 | 3 |
-| magic_slow | skills | defeated in wave 25 | 24 | 20 | 11 |
-| balanced | idle | defeated in wave 25 | 24 | 16 | 5 |
-| balanced | skills | defeated in wave 27 | 26 | 20 | 11 |
+| arrow | idle | defeated in wave 27 | 26 | 25 | 12 |
+| arrow | skills | defeated in wave 30 | 29 | 25 | 16 |
+| cannon_arrow | idle | defeated in wave 17 | 16 | 17 | 0 |
+| cannon_arrow | skills | defeated in wave 20 | 19 | 21 | 0 |
+| magic_slow | idle | defeated in wave 23 | 22 | 21 | 8 |
+| magic_slow | skills | defeated in wave 27 | 26 | 25 | 16 |
+| balanced | idle | defeated in wave 27 | 26 | 21 | 10 |
+| balanced | skills | defeated in wave 27 | 26 | 25 | 16 |
 
 ### Proposal F: all builds
 
@@ -92,14 +96,14 @@ Softer than the applied D at the end (20% instead of 30%) but with the wave bonu
 
 | build | hero | outcome | cleared | lives@11 | lives@21 |
 | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 31 | 30 | 20 | 15 |
-| arrow | skills | defeated in wave 31 | 30 | 20 | 15 |
-| cannon_arrow | idle | defeated in wave 25 | 24 | 16 | 1 |
-| cannon_arrow | skills | defeated in wave 25 | 24 | 20 | 5 |
-| magic_slow | idle | defeated in wave 25 | 24 | 18 | 9 |
-| magic_slow | skills | defeated in wave 25 | 24 | 18 | 9 |
-| balanced | idle | defeated in wave 30 | 29 | 18 | 11 |
-| balanced | skills | defeated in wave 30 | 29 | 18 | 11 |
+| arrow | idle | defeated in wave 35 | 34 | 25 | 20 |
+| arrow | skills | defeated in wave 35 | 34 | 25 | 20 |
+| cannon_arrow | idle | defeated in wave 30 | 29 | 21 | 6 |
+| cannon_arrow | skills | defeated in wave 30 | 29 | 25 | 10 |
+| magic_slow | idle | defeated in wave 27 | 26 | 23 | 14 |
+| magic_slow | skills | defeated in wave 27 | 26 | 23 | 14 |
+| balanced | idle | defeated in wave 31 | 30 | 23 | 16 |
+| balanced | skills | defeated in wave 31 | 30 | 23 | 16 |
 
 ## What-ifs for the design questions (not proposals, waves 1-20)
 
@@ -107,9 +111,9 @@ Each row changes one thing against the current data and reports the best build.
 
 | what-if | idle hero | scripted skills |
 | --- | --- | --- |
-| W0: Current data | PASS: arrow, 15 lives at wave 21, alive in wave 21 | PASS: arrow, 15 lives at wave 21, alive in wave 21 |
-| W1: Tier-2/3 upgrades cost 30% less | PASS: arrow, 15 lives at wave 21, alive in wave 21 | PASS: arrow, 15 lives at wave 21, alive in wave 21 |
-| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | PASS: arrow, 7 lives at wave 21, alive in wave 21 | PASS: balanced, 11 lives at wave 21, alive in wave 21 |
+| W0: Current data | PASS: arrow, 20 lives at wave 21, alive in wave 21 | PASS: arrow, 20 lives at wave 21, alive in wave 21 |
+| W1: Tier-2/3 upgrades cost 30% less | PASS: arrow, 20 lives at wave 21, alive in wave 21 | PASS: arrow, 20 lives at wave 21, alive in wave 21 |
+| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | PASS: arrow, 12 lives at wave 21, alive in wave 21 | PASS: balanced, 16 lives at wave 21, alive in wave 21 |
 
 ## Tower efficiency (analytic, from the data)
 
@@ -168,10 +172,10 @@ below 1 means the wave cannot be killed by what the economy could have bought. I
 ## Open decisions
 
 1. **Late game (waves 21-40).** The bars cover waves 1-20 only. With the applied curve the best build is defeated in wave 31 with the scripted skills and
-   defeated in wave 31 with an idle hero. A late-game bar, the boss waves and a lumber sink are the next design decisions.
+   defeated in wave 31 with an idle hero. A late-game bar, the boss waves and the ultimate towers are the next design decisions.
 2. **Upgrades and damage types.** The what-if rows give the numbers: cheaper upgrades and a `normal`-damage tower are each a
    design decision, not a tuning detail. See the efficiency table.
-3. **Lumber sink.** Lumber is earned and never spent. The `LumberManager` header comment describes the intended sink (mercenaries
-   and tier-3 towers), which needs new content.
+3. **Lumber sink.** Licenses, mastery and the four ultimate towers cost lumber since v0.20.0, but no catalogued build buys them and the
+   ultimates are not measured: a build that spends lumber is part of the next balance step.
 4. **Calibration.** The skill rule is fixed, the hero never moves and no build plans for the bosses. One human play of waves 1-3
    and one of the wave 10 boss tell how pessimistic `idle` and `skills` are before any proposal is applied.
