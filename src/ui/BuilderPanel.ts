@@ -19,7 +19,7 @@ const PAD = 16;
 const FONT = FONT_FAMILY;
 
 interface Row {
-  swatch: Phaser.GameObjects.Graphics;
+  swatch: Phaser.GameObjects.Image;
   name:   Phaser.GameObjects.Text;
   action: Phaser.GameObjects.Text;
   zone:   Phaser.GameObjects.Zone;
@@ -49,8 +49,8 @@ export class BuilderPanel {
 
     BUILDER_IDS.forEach((id, index) => {
       const y = top + 24 + index * BUILDER_ROW_H;
-      const swatch = scene.add.graphics().setDepth(DEPTH.PANEL + 2);
-      const name = scene.add.text(SIDE.x + PAD + 20, y + 3, '', { fontFamily: FONT, fontSize: '12px', color: COLORS.textPrimary_css, fontStyle: 'bold' })
+      const swatch = scene.add.image(SIDE.x + PAD + 10, y + BUILDER_ROW_H / 2, `builder_${id}`).setDisplaySize(20, 20).setDepth(DEPTH.PANEL + 2);
+      const name = scene.add.text(SIDE.x + PAD + 26, y + 3, '', { fontFamily: FONT, fontSize: '12px', color: COLORS.textPrimary_css, fontStyle: 'bold' })
         .setDepth(DEPTH.PANEL + 2);
       const action = scene.add.text(SIDE.x + SIDE.w - PAD, y + 3, '', { fontFamily: FONT, fontSize: '12px', color: COLORS.textGold_css, fontStyle: 'bold', align: 'right' })
         .setOrigin(1, 0).setDepth(DEPTH.PANEL + 2);
@@ -94,9 +94,7 @@ export class BuilderPanel {
     BUILDER_IDS.forEach((id, index) => {
       const def = BUILDERS[id], row = this._rows[index];
       const owned = this._builders.owns(seat, id);
-      row.swatch.clear();
-      row.swatch.fillStyle(def.color, def.open ? (owned ? 1 : 0.45) : 0.2);
-      row.swatch.fillRoundedRect(SIDE.x + PAD, top(index, this._seats.count) + 5, 12, 12, 3);
+      row.swatch.setAlpha(def.open ? (owned ? 1 : 0.45) : 0.2);
       row.name.setText(`${def.name} · ${def.element}`);
       row.name.setColor(owned ? COLORS.textPrimary_css : COLORS.textMuted_css);
       let label = '', affordable = true;
@@ -110,5 +108,3 @@ export class BuilderPanel {
     });
   }
 }
-
-function top(index: number, seatCount: number): number { return buildersTop(seatCount) + 24 + index * BUILDER_ROW_H; }

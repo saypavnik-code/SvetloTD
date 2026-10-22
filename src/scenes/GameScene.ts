@@ -43,6 +43,7 @@ import { skillSlotRect } from '../ui/layout';
 const ENEMY_POOL_SIZE = 50;
 const PROJ_POOL_SIZE  = 80;
 const BASE_SIZE       = 2 * TILE_SIZE;
+const PORTAL_SIZE     = 56;   // a spawn portal covers its one road tile and a little more (the texture is 112 px: crisp at 2x)
 const FONT            = FONT_MAIN;
 
 export class GameScene extends Phaser.Scene {
@@ -576,11 +577,9 @@ export class GameScene extends Phaser.Scene {
 
   // One portal per ring corner: the four equal starting points of the square map.
   private _drawSpawnPortals(): void {
-    const g = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
     for (const spawn of SPAWN_POSITIONS) {
-      g.fillStyle(COLORS.walnutDark, 0.85); g.fillCircle(spawn.x, spawn.y, TILE_SIZE * 0.42);
-      g.lineStyle(2, COLORS.danger, 0.9);   g.strokeCircle(spawn.x, spawn.y, TILE_SIZE * 0.42);
-      g.lineStyle(1.5, COLORS.dangerSoft, 0.7); g.strokeCircle(spawn.x, spawn.y, TILE_SIZE * 0.24);
+      const portal = this.add.image(spawn.x, spawn.y, 'spr_spawn_portal').setDisplaySize(PORTAL_SIZE, PORTAL_SIZE).setDepth(DEPTH.PATH_DECORATION);
+      this.tweens.add({ targets: portal, angle: 360, duration: 24000, repeat: -1 });   // the rune ring turns slowly; the scene stops the tween on shutdown
     }
   }
 
@@ -602,16 +601,7 @@ export class GameScene extends Phaser.Scene {
     const bx=BASE_TILE_COL*TILE_SIZE, by=BASE_TILE_ROW*TILE_SIZE;
     const cx=bx+BASE_SIZE/2, cy=by+BASE_SIZE/2;
     this._baseGlow=this.add.graphics().setDepth(DEPTH.BASE-1);
-    const g=this.add.graphics().setDepth(DEPTH.BASE);
-    const pts:Phaser.Types.Math.Vector2Like[]=[];
-    for(let i=0;i<6;i++){const a=Phaser.Math.DegToRad(30+60*i);pts.push({x:cx+BASE_SIZE*0.52*Math.cos(a),y:cy+BASE_SIZE*0.52*Math.sin(a)});}
-    g.fillStyle(COLORS.amberDeep,0.9);g.fillPoints(pts,true);
-    g.lineStyle(2,COLORS.amberGlow,0.8);g.strokePoints(pts,true);
-    const inner:Phaser.Types.Math.Vector2Like[]=[];
-    for(let i=0;i<6;i++){const a=Phaser.Math.DegToRad(30+60*i);inner.push({x:cx+BASE_SIZE*0.32*Math.cos(a),y:cy+BASE_SIZE*0.32*Math.sin(a)});}
-    g.lineStyle(1,COLORS.amberPale,0.4);g.strokePoints(inner,true);
-    g.fillStyle(COLORS.amberGlow,1);g.fillCircle(cx,cy,7);
-    g.lineStyle(1.5,COLORS.amberBright,0.9);g.strokeCircle(cx,cy,7);
+    this.add.image(cx,cy,'spr_citadel').setDisplaySize(BASE_SIZE,BASE_SIZE).setDepth(DEPTH.BASE);
     this.add.text(cx,cy+BASE_SIZE*0.52+8,'БАЗА',{fontFamily:FONT,fontSize:'11px',color:COLORS.textGold_css}).setOrigin(0.5,0).setDepth(DEPTH.HUD);
   }
 

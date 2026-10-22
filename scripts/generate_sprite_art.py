@@ -27,8 +27,8 @@ def dark(c, t):
     return lerp(c, (0, 0, 0), t)
 
 
-def canvas():
-    return Image.new('RGBA', (W * S, W * S), (0, 0, 0, 0))
+def canvas(size=W):
+    return Image.new('RGBA', (size * S, size * S), (0, 0, 0, 0))
 
 
 def sc(pts):
@@ -82,7 +82,8 @@ def dots(img, items):
 
 
 def glow(img, x, y, r, color, alpha=150):
-    r = min(r, min(x, y, W - x, W - y) / 1.25)   # keep the halo inside the canvas, never clipped at the edge
+    n = img.size[0] // S
+    r = min(r, min(x, y, n - x, n - y) / 1.25)   # keep the halo inside the canvas, never clipped at the edge
     layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
     ImageDraw.Draw(layer).ellipse([(x - r) * S, (y - r) * S, (x + r) * S, (y + r) * S], fill=color + (alpha,))
     img.alpha_composite(layer.filter(ImageFilter.GaussianBlur(r * S * 0.45)))
@@ -127,7 +128,8 @@ def outlined(img, px=2.4):
 
 def done(img, name):
     OUT.mkdir(parents=True, exist_ok=True)
-    outlined(img).resize((W, W), Image.LANCZOS).save(OUT / f'{name}.png', optimize=True)
+    n = img.size[0] // S
+    outlined(img).resize((n, n), Image.LANCZOS).save(OUT / f'{name}.png', optimize=True)
 
 
 STONE, STONE_D = (176, 164, 142), (104, 94, 80)
@@ -259,6 +261,64 @@ def ultimate(base, color):
     dots(im, [(x, 117, 4, light(color, .35) + (255,)) for x in (34, 64, 94)] + [(64, 7, 5, light(color, .55) + (255,))])
     return im
 
+# ── map objects (v0.22.0) ───────────────────────────────────────────────────
+# The base fills the 2x2 centre of the square map (80 px, drawn from a 160 px texture); a portal marks a spawn tile
+# (56 px, drawn from a 112 px texture). Both are symmetric enough to repeat four times without a mirrored copy.
+
+def citadel():
+    im = canvas(160)
+    shadow = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).ellipse([8 * S, 128 * S, 152 * S, 156 * S], fill=INK + (150,))
+    im.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(3 * S)))
+    glow(im, 80, 64, 34, (255, 176, 66), 140)   # small enough that the blur stays inside the canvas (no clipped box)
+    paint(im, rrect(10, 116, 150, 148, 4), dark(STONE_D, .15), STONE_D, 'y')
+    paint(im, rrect(26, 58, 134, 124, 3), dark(STONE_D, .1), STONE, 'x', 'tri')
+    bricks(im, 26, 58, 134, 124, 9)
+    merlons(im, 26, 134, 60, 7, light(STONE, .05))
+    for x0 in (6, 122):
+        cyl(im, x0, 46, x0 + 32, 128, STONE_D, STONE, 4)
+        bricks(im, x0, 46, x0 + 32, 128, 9)
+        cone(im, x0 + 16, 16, 50, 21, (140, 64, 24), (232, 150, 50))
+        paint(im, rrect(x0 + 12, 74, x0 + 20, 92, 3), (20, 14, 10), dark(AMBER, .3), 'y')
+    glow(im, 80, 106, 22, (255, 170, 60), 130)
+    paint(im, rrect(64, 86, 96, 126, 13), (34, 22, 14), (110, 74, 42), 'x', 'tri')
+    lines(im, [(80, 90), (80, 126)], (26, 18, 12, 200), 1.4)
+    for y in (100, 112):
+        lines(im, [(66, y), (94, y)], (200, 150, 70, 170), 1.2)
+    paint(im, poly([(80, 8), (94, 34), (80, 64), (66, 34)]), (196, 112, 28), (255, 224, 140), 'x', 'tri')
+    paint(im, poly([(80, 8), (94, 34), (80, 36)]), (255, 214, 120), (255, 250, 220), 'x')
+    dots(im, [(80, 36, 4, (255, 250, 226, 220))])
+    flag(im, 22, 44, AMBER)
+    flag(im, 138, 44, AMBER)
+    return im
+
+
+def spawn_portal():
+    im = canvas(112)
+    c = 56
+    d = ImageDraw.Draw(im, 'RGBA')
+    ring = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    paint(ring, ell(6, 6, 106, 106), STONE_D, light(STONE, .05), 'y')
+    paint(ring, ell(12, 12, 100, 100), dark(STONE_D, .35), STONE_D, 'y')
+    im.alpha_composite(ring)
+    d = ImageDraw.Draw(im, 'RGBA')
+    for r in range(38, 2, -1):
+        t = 1 - r / 38
+        col = lerp((96, 40, 128), (8, 4, 14), t ** 0.7)
+        d.ellipse([(c - r) * S, (c - r) * S, (c + r) * S, (c + r) * S], fill=col + (255,))
+    d.ellipse([(c - 33) * S, (c - 33) * S, (c + 33) * S, (c + 33) * S], outline=(196, 70, 56, 255), width=2 * S)
+    for k in range(3):
+        a0 = k * 2 * math.pi / 3
+        pts = [(c + math.cos(a0 + t * 2.2) * (30 - t * 20), c + math.sin(a0 + t * 2.2) * (30 - t * 20)) for t in [i / 12 for i in range(13)]]
+        lines(im, pts, (190, 150, 240, 200), 2.0)
+    for k in range(8):
+        a = k * math.pi / 4 + math.pi / 8
+        d.polygon(sc([(c + math.cos(a - .12) * 40, c + math.sin(a - .12) * 40), (c + math.cos(a + .12) * 40, c + math.sin(a + .12) * 40),
+                      (c + math.cos(a + .1) * 47, c + math.sin(a + .1) * 47), (c + math.cos(a - .1) * 47, c + math.sin(a - .1) * 47)]), fill=AMBER + (255,))
+    dots(im, [(c, c, 3, (255, 230, 200, 255))])
+    return im
+
+
 # ── enemies ─────────────────────────────────────────────────────────────────
 
 def grunt():
@@ -367,6 +427,7 @@ SPRITES = {
     'magic_t1': lambda: magic(False), 'magic_t2': lambda: magic(True), 'slow_t1': lambda: slow(False), 'slow_t2': lambda: slow(True),
     'fire_ult': lambda: ultimate(magic, (255, 120, 50)), 'water_ult': lambda: ultimate(slow, (140, 220, 250)),
     'earth_ult': lambda: ultimate(cannon, (200, 150, 90)), 'nature_ult': lambda: ultimate(arrow, (120, 220, 110)),
+    'citadel': citadel, 'spawn_portal': spawn_portal,
     'acid_t1': acid, 'watchtower': watchtower, 'grunt': grunt, 'runner': runner, 'golem': golem, 'wyvern': wyvern, 'boss_goliath': goliath, 'hero': hero,
 }
 

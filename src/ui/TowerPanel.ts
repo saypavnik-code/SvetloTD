@@ -29,6 +29,7 @@ const PRIORITY_ORDER = [
   TargetPriority.FIRST, TargetPriority.NEAREST, TargetPriority.STRONGEST,
   TargetPriority.WEAKEST, TargetPriority.LAST,
 ];
+const DAMAGE_LABELS: Record<string, string> = { normal: 'Обычный', piercing: 'Колющий', magic: 'Магический', siege: 'Осадный', chaos: 'Хаос' };
 const PRIORITY_LABELS: Record<TargetPriority, string> = {
   [TargetPriority.FIRST]:     'Первый',
   [TargetPriority.LAST]:      'Последний',
@@ -76,6 +77,7 @@ export class TowerPanel {
   // ── Tooltip ───────────────────────────────────────────────────────────────
   private _ttRoot!:    Phaser.GameObjects.Container;
   private _ttBg!:      Phaser.GameObjects.Graphics;
+  private _ttDmgIcon!: Phaser.GameObjects.Image;
   private _ttTexts:    Phaser.GameObjects.Text[] = [];
   private _ttTimer:    Phaser.Time.TimerEvent | null = null;
   private _ttVisible   = false;
@@ -462,9 +464,11 @@ export class TowerPanel {
     this._ttRoot = s.add.container(0,0).setDepth(DEPTH.OVERLAY_UI).setVisible(false);
     this._ttBg   = s.add.graphics();
     this._ttRoot.add(this._ttBg);
+    this._ttDmgIcon = s.add.image(PX + PAD, PAD, 'dmg_normal').setDisplaySize(16, 16);   // inside the side column until the tooltip places it
+    this._ttRoot.add(this._ttDmgIcon);
     // 6 text slots
     for (let i=0;i<8;i++) {
-      const t = s.add.text(0,0,'',{fontFamily:FONT, fontSize:'11px', color: COLORS.bgPrimary_css});
+      const t = s.add.text(0,0,'',{fontFamily:FONT, fontSize:'11px', color: COLORS.textPrimary_css});
       this._ttRoot.add(t); this._ttTexts.push(t);
     }
   }
@@ -480,10 +484,10 @@ export class TowerPanel {
       this._ttBg.lineStyle(1,COLORS.amberDeep,0.9); this._ttBg.strokeRoundedRect(tx+3,ty+3,TW-6,TH-6,4);
       const lines = [
         { text: data.name, color: COLORS.amberWarm_css, size:'13px' },
-        { text: `Урон: ${data.damage}   DPS: ${(data.damage*data.attackSpeed).toFixed(1)}`, color: COLORS.bgPrimary_css },
-        { text: `Скорость: ${data.attackSpeed} атк/с`, color: COLORS.bgPrimary_css },
-        { text: `Дальность: ${data.range}px`, color: COLORS.bgPrimary_css },
-        { text: `Тип: ${data.damageType}`, color: COLORS.textMuted_css },
+        { text: `Урон: ${data.damage}   DPS: ${(data.damage*data.attackSpeed).toFixed(1)}`, color: COLORS.textPrimary_css },
+        { text: `Скорость: ${data.attackSpeed} атк/с`, color: COLORS.textPrimary_css },
+        { text: `Дальность: ${data.range}px`, color: COLORS.textPrimary_css },
+        { text: `Тип: ${DAMAGE_LABELS[data.damageType] ?? data.damageType}`, color: COLORS.textMuted_css },
         { text: data.special.length > 0
             ? `Эффект: ${data.special.map(s=>`${s.type} ${s.value}`).join(', ')}`
             : (data.splash ? `AoE: ${data.splash}px` : ''),
@@ -493,10 +497,12 @@ export class TowerPanel {
       ];
       this._ttTexts.forEach((t,i) => {
         const l = lines[i]; if (!l) return;
-        t.setText(l.text); t.setColor(l.color||COLORS.bgPrimary_css);
+        t.setText(l.text); t.setColor(l.color||COLORS.textPrimary_css);
         if ((l as {size?:string}).size) t.setFontSize((l as {size?:string}).size!);
         t.setPosition(tx+10, ty+8+i*16);
       });
+      const typeRow = lines.findIndex(l => l.text.startsWith('Тип'));
+      this._ttDmgIcon.setTexture(`dmg_${data.damageType}`).setPosition(tx+TW-18, ty+8+typeRow*16+7);
       this._ttRoot.setVisible(true); this._ttVisible=true;
     });
   }

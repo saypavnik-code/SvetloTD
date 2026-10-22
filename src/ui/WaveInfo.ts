@@ -35,6 +35,7 @@ export class WaveInfo {
   private _cdBtnGfx!: Phaser.GameObjects.Graphics;
   private _cdBtnLbl!: Phaser.GameObjects.Text;
   private _cdHint!: Phaser.GameObjects.Text;
+  private _cdArmorIcon!: Phaser.GameObjects.Image;
   private _cdBgFlash!: Phaser.GameObjects.Graphics;
 
   private _waveRoot!: Phaser.GameObjects.Container;
@@ -77,7 +78,9 @@ export class WaveInfo {
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdTitle);
 
-    this._cdHint = s.add.text(LEFT, BAR_Y + 24, '', {
+    this._cdArmorIcon = s.add.image(LEFT + 7, BAR_Y + 31, 'armor_medium').setDisplaySize(14, 14).setDepth(DEPTH.PANEL + 2);
+    this._cdRoot.add(this._cdArmorIcon);
+    this._cdHint = s.add.text(LEFT + 18, BAR_Y + 24, '', {
       fontFamily: FONT, fontSize: '11px', color: COLORS.textSecondary_css,
     }).setDepth(DEPTH.PANEL + 2);
     this._cdRoot.add(this._cdHint);
@@ -187,6 +190,7 @@ export class WaveInfo {
 
     this._cdHint.setText(this._effectivenessHint(next));
     this._cdHint.setColor(armorCol);
+    this._cdArmorIcon.setTexture(`armor_${armorKey}`);
 
     this._cdBtnLbl.setText('▶ Начать сейчас');   // no early-start bonus exists, so the label must not promise one
 

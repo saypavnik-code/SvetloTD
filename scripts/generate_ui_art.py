@@ -141,6 +141,195 @@ class _bind:
         return getattr(self._d, name)
 
 
+# ── builder emblems, damage and armor icons (v0.22.0) ───────────────────────
+INK = (26, 18, 12)
+ELEMENT_TINTS = {'fire': (232, 121, 58), 'water': (98, 181, 229), 'earth': (156, 123, 84),
+                 'nature': (109, 191, 103), 'light': (242, 227, 160), 'shadow': (142, 111, 191)}
+
+
+def e_fire(d):
+    d.polygon(P([(48, 11), (60, 30), (72, 46), (73, 62), (65, 76), (48, 83), (31, 76), (23, 62), (25, 47), (36, 35), (39, 47), (44, 28)]), fill=(255, 214, 128, 255))
+    d.polygon(P([(48, 34), (58, 50), (60, 63), (54, 73), (48, 76), (41, 73), (36, 63), (40, 51), (44, 56)]), fill=(255, 128, 40, 255))
+    d.polygon(P([(48, 55), (54, 65), (52, 73), (48, 75), (44, 73), (42, 65)]), fill=(255, 246, 206, 255))
+
+
+def e_water(d):
+    d.polygon(P([(48, 11), (66, 50), (30, 50)]), fill=(236, 248, 255, 255))
+    d.ellipse(P([(28, 38), (68, 80)]), fill=(236, 248, 255, 255))
+    d.polygon(P([(48, 20), (60, 50), (50, 50)]), fill=(150, 205, 240, 255))
+    d.ellipse(P([(33, 52), (63, 78)]), fill=(150, 205, 240, 255))
+    d.ellipse(P([(36, 52), (46, 66)]), fill=(255, 255, 255, 235))
+
+
+def e_earth(d):
+    d.polygon(P([(16, 74), (36, 32), (50, 56), (64, 24), (82, 74)]), fill=(240, 226, 196, 255))
+    d.polygon(P([(64, 24), (82, 74), (62, 74), (56, 48)]), fill=(186, 158, 118, 255))
+    d.polygon(P([(36, 32), (50, 56), (40, 74), (16, 74)]), fill=(206, 182, 142, 255))
+    d.polygon(P([(64, 24), (71, 37), (64, 35), (58, 39)]), fill=(255, 255, 255, 255))
+    d.rectangle(P([(20, 72), (78, 77)]), fill=(120, 88, 54, 255))
+
+
+def e_nature(d):
+    axis = (-math.pi / 4)
+    cx, cy, half = 48, 46, 34
+    top, bot = [], []
+    for i in range(0, 21):
+        t = i / 20
+        along = -half + 2 * half * t
+        width = 17 * math.sin(math.pi * t) ** 0.75
+        for sign, out in ((-1, top), (1, bot)):
+            x, y = along, sign * width
+            out.append((cx + x * math.cos(axis) - y * math.sin(axis), cy + x * math.sin(axis) + y * math.cos(axis)))
+    d.polygon(P(top + bot[::-1]), fill=(232, 250, 214, 255))
+    d.polygon(P(bot + [(cx + half * math.cos(axis), cy + half * math.sin(axis))]), fill=(166, 214, 140, 255))
+    d.line(P([(cx - half * math.cos(axis) - 4, cy - half * math.sin(axis) + 4), (cx + (half - 4) * math.cos(axis), cy + (half - 4) * math.sin(axis))]), fill=(70, 130, 64, 255), width=3 * S)
+    d.line(P([(20, 78), (30, 66)]), fill=(120, 84, 50, 255), width=3 * S)
+
+
+def e_light(d):
+    for k in range(8):
+        a = k * math.pi / 4
+        reach = 36 if k % 2 == 0 else 28
+        d.polygon(P([(48 + math.cos(a - .24) * 15, 48 + math.sin(a - .24) * 15), (48 + math.cos(a) * reach, 48 + math.sin(a) * reach),
+                     (48 + math.cos(a + .24) * 15, 48 + math.sin(a + .24) * 15)]), fill=(255, 250, 226, 255))
+    d.ellipse(P([(33, 33), (63, 63)]), fill=(255, 226, 140, 255))
+    d.ellipse(P([(39, 39), (57, 57)]), fill=(255, 252, 232, 255))
+
+
+def e_shadow(d):
+    mask = Image.new('L', (96 * S, 96 * S), 0)
+    md = ImageDraw.Draw(mask)
+    md.ellipse(P([(16, 18), (76, 78)]), fill=255)
+    md.ellipse(P([(34, 8), (86, 60)]), fill=0)
+    d._image.paste(Image.new('RGBA', mask.size, (232, 222, 250, 255)), (0, 0), mask)
+    d.polygon(P([(70, 56), (72, 63), (79, 65), (72, 67), (70, 74), (68, 67), (61, 65), (68, 63)]), fill=(255, 255, 255, 255))
+    d.polygon(P([(62, 22), (63.5, 27), (68, 28.5), (63.5, 30), (62, 35), (60.5, 30), (56, 28.5), (60.5, 27)]), fill=(255, 255, 255, 255))
+
+
+EMBLEM_GLYPHS = {'fire': e_fire, 'water': e_water, 'earth': e_earth, 'nature': e_nature, 'light': e_light, 'shadow': e_shadow}
+
+
+def icon64(draw):
+    """A 64 px icon: flat shapes with the ink outline of the sprites, readable down to 16 px."""
+    img, d = layer(64)
+    draw(d)
+    k = int(2.2 * 2 * S) | 1
+    dil = img.split()[3].filter(ImageFilter.MaxFilter(k))
+    out = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    out.paste(Image.new('RGBA', img.size, INK + (255,)), (0, 0), dil)
+    out.alpha_composite(img)
+    return finish(out, 64)
+
+
+def quad(p0, p1, w0, w1):
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    n = math.hypot(dx, dy)
+    nx, ny = -dy / n, dx / n
+    return [(p0[0] + nx * w0 / 2, p0[1] + ny * w0 / 2), (p1[0] + nx * w1 / 2, p1[1] + ny * w1 / 2),
+            (p1[0] - nx * w1 / 2, p1[1] - ny * w1 / 2), (p0[0] - nx * w0 / 2, p0[1] - ny * w0 / 2)]
+
+
+def star(cx, cy, r_out, r_in, points=5, rot=-math.pi / 2):
+    return [(cx + math.cos(rot + i * math.pi / points) * (r_out if i % 2 == 0 else r_in),
+             cy + math.sin(rot + i * math.pi / points) * (r_out if i % 2 == 0 else r_in)) for i in range(points * 2)]
+
+
+def d_normal(d):
+    d.polygon(P(quad((24, 40), (52, 12), 9, 3)), fill=(214, 220, 226, 255))
+    d.polygon(P([(52, 12), (56, 8), (54, 15)]), fill=(214, 220, 226, 255))
+    d.line(P([(26, 38), (50, 14)]), fill=(255, 255, 255, 255), width=S)
+    d.polygon(P(quad((17, 33), (31, 47), 6, 6)), fill=(232, 169, 59, 255))
+    d.polygon(P(quad((22, 42), (12, 52), 5, 5)), fill=(120, 80, 44, 255))
+    d.ellipse(P([(7, 49), (15, 57)]), fill=(250, 210, 110, 255))
+
+
+def d_piercing(d):
+    d.polygon(P(quad((10, 54), (40, 24), 3.5, 3.5)), fill=(196, 150, 92, 255))
+    d.polygon(P([(56, 8), (36, 16), (48, 28)]), fill=(222, 228, 234, 255))
+    d.polygon(P([(56, 8), (36, 16), (44, 20)]), fill=(255, 255, 255, 255))
+    for off in (0, 8):
+        d.polygon(P([(10 + off, 54 + off * 0.0), (4 + off, 44), (18 + off, 52)]), fill=(243, 227, 188, 255))
+    d.polygon(P([(10, 54), (20, 60), (12, 46)]), fill=(243, 227, 188, 255))
+
+
+def d_magic(d):
+    d.polygon(P([(32, 5), (50, 20), (50, 42), (32, 59), (14, 42), (14, 20)]), fill=(150, 100, 220, 255))
+    d.polygon(P([(32, 5), (50, 20), (32, 30), (14, 20)]), fill=(206, 170, 250, 255))
+    d.polygon(P([(32, 30), (50, 20), (50, 42), (32, 59)]), fill=(104, 62, 170, 255))
+    d.polygon(P([(14, 20), (32, 30), (32, 59), (14, 42)]), fill=(128, 82, 196, 255))
+    d.polygon(P(star(50, 12, 7, 2, 4, -math.pi / 2)), fill=(255, 250, 226, 255))
+
+
+def d_siege(d):
+    for y0, y1 in ((16, 6), (26, 14), (36, 24)):
+        d.line(P([(4, y0 + 18), (22, y1 + 18)]), fill=(214, 220, 228, 255), width=3 * S)
+    d.ellipse(P([(16, 20), (57, 61)]), fill=(70, 72, 82, 255))
+    d.ellipse(P([(20, 24), (45, 49)]), fill=(112, 114, 126, 255))
+    d.ellipse(P([(23, 27), (33, 37)]), fill=(190, 192, 202, 255))
+
+
+def d_chaos(d):
+    d.polygon(P([(28, 5), (6, 32), (28, 59), (26, 48), (32, 41), (25, 33), (31, 25), (26, 16)]), fill=(214, 76, 120, 255))
+    d.polygon(P([(38, 5), (60, 32), (38, 59), (36, 48), (42, 41), (35, 33), (41, 25), (36, 16)]), fill=(150, 62, 176, 255))
+    d.polygon(P([(14, 32), (20, 26), (24, 32), (20, 38)]), fill=(255, 226, 150, 255))
+    d.polygon(P([(46, 32), (50, 26), (56, 32), (50, 38)]), fill=(255, 226, 150, 255))
+
+
+DAMAGE_GLYPHS = {'normal': d_normal, 'piercing': d_piercing, 'magic': d_magic, 'siege': d_siege, 'chaos': d_chaos}
+
+
+def a_unarmored(d):
+    d.polygon(P([(18, 6), (46, 6), (50, 18), (45, 28), (50, 40), (44, 60), (38, 50), (32, 62), (26, 50), (20, 60), (15, 42), (19, 30), (14, 18)]), fill=(204, 176, 128, 255))
+    d.line(P([(25, 13), (31, 26), (25, 38)]), fill=(120, 90, 56, 255), width=2 * S)
+    d.line(P([(40, 15), (36, 28), (41, 40)]), fill=(120, 90, 56, 255), width=2 * S)
+
+
+def a_light(d):
+    d.ellipse(P([(8, 8), (56, 56)]), fill=(120, 78, 40, 255))
+    d.ellipse(P([(13, 13), (51, 51)]), fill=(168, 116, 66, 255))
+    d.ellipse(P([(24, 24), (40, 40)]), fill=(204, 208, 214, 255))
+    d.ellipse(P([(28, 28), (36, 36)]), fill=(250, 210, 110, 255))
+    for x, y in ((32, 17), (47, 32), (32, 47), (17, 32)):
+        d.ellipse(P([(x - 2, y - 2), (x + 2, y + 2)]), fill=(250, 210, 110, 255))
+
+
+def a_medium(d):
+    d.polygon(P([(8, 8), (56, 8), (56, 30), (32, 60), (8, 30)]), fill=(120, 132, 150, 255))
+    d.polygon(P([(13, 13), (51, 13), (51, 29), (32, 53), (13, 29)]), fill=(160, 172, 190, 255))
+    d.polygon(P([(28, 13), (36, 13), (36, 48), (32, 53), (28, 48)]), fill=(224, 230, 238, 255))
+    d.polygon(P([(13, 21), (51, 21), (51, 27), (13, 27)]), fill=(224, 230, 238, 255))
+
+
+def a_heavy(d):
+    d.rounded_rectangle(P([(14, 3), (50, 61)]), radius=5 * S, fill=(70, 74, 84, 255))
+    d.rounded_rectangle(P([(18, 7), (46, 57)]), radius=3 * S, fill=(110, 116, 128, 255))
+    d.rectangle(P([(30, 7), (34, 57)]), fill=(168, 174, 186, 255))
+    for x, y in ((22, 12), (42, 12), (22, 28), (42, 28), (22, 44), (42, 44)):
+        d.ellipse(P([(x - 2, y - 2), (x + 2, y + 2)]), fill=(214, 220, 228, 255))
+
+
+def a_fortified(d):
+    teeth = [(8, 6), (17, 6), (17, 13), (21, 13), (21, 6), (30, 6), (30, 13), (34, 13), (34, 6), (43, 6), (43, 13), (47, 13), (47, 6), (56, 6), (56, 58), (8, 58)]
+    d.polygon(P(teeth), fill=(112, 102, 88, 255))
+    d.polygon(P([(11, 16), (53, 16), (53, 55), (11, 55)]), fill=(176, 164, 142, 255))
+    for y in (26, 36, 46):
+        d.line(P([(11, y), (53, y)]), fill=(104, 94, 80, 255), width=S)
+    for x, y0 in ((22, 16), (40, 16), (16, 26), (32, 26), (48, 26), (22, 36), (40, 36), (16, 46), (48, 46)):
+        d.line(P([(x, y0), (x, y0 + 10)]), fill=(104, 94, 80, 255), width=S)
+    d.rectangle(P([(26, 40), (38, 56)]), fill=(52, 40, 30, 255))
+    d.ellipse(P([(26, 33), (38, 47)]), fill=(52, 40, 30, 255))
+
+
+def a_heroic(d):
+    d.polygon(P([(3, 22), (12, 14), (14, 3), (24, 11), (32, 4), (40, 11), (50, 3), (52, 14), (61, 22), (54, 26), (58, 36), (48, 34), (32, 61), (16, 34), (6, 36), (10, 26)]), fill=(180, 118, 34, 255))
+    d.polygon(P([(16, 19), (24, 18), (32, 12), (40, 18), (48, 19), (47, 32), (32, 52), (17, 32)]), fill=(90, 56, 26, 255))
+    d.polygon(P(star(32, 32, 15, 6.5, 5)), fill=(255, 201, 91, 255))
+    d.polygon(P(star(32, 32, 7.5, 3.2, 5)), fill=(255, 244, 200, 255))
+
+
+ARMOR_GLYPHS = {'unarmored': a_unarmored, 'light': a_light, 'medium': a_medium, 'heavy': a_heavy, 'fortified': a_fortified, 'heroic': a_heroic}
+
+
 # ── HUD icons (64x64) ───────────────────────────────────────────────────────
 
 def icon_heart():
@@ -243,6 +432,12 @@ def main():
     glyphs = {'arrow': g_arrow, 'cannon': g_cannon, 'magic': g_magic, 'slow': g_slow, 'acid': g_acid, 'watchtower': g_guard}
     for name, fn in glyphs.items():
         medallion(fn, tints[name]).save(UI / f'tw_{name}.png', optimize=True)
+    for name, fn in EMBLEM_GLYPHS.items():
+        medallion(fn, ELEMENT_TINTS[name]).save(UI / f'builder_{name}.png', optimize=True)
+    for name, fn in DAMAGE_GLYPHS.items():
+        icon64(fn).save(UI / f'dmg_{name}.png', optimize=True)
+    for name, fn in ARMOR_GLYPHS.items():
+        icon64(fn).save(UI / f'armor_{name}.png', optimize=True)
     icon_heart().save(UI / 'icon_heart.png', optimize=True)
     icon_gold().save(UI / 'icon_gold.png', optimize=True)
     icon_lumber().save(UI / 'icon_lumber.png', optimize=True)

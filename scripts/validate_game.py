@@ -54,4 +54,13 @@ for name in ('fire_ult', 'water_ult', 'earth_ult', 'nature_ult'):
     contents = (root / f'public/assets/art/{name}.png').read_bytes()
     assert contents[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', contents[16:24]) == (128, 128)
-print('PASS: square rotation-symmetric map, 4 spawn routes, 40-wave definitions, pools, scene cleanup, 15 PNGs, builders and 4 ultimate sprites')
+for _name, _size in (('citadel', 160), ('spawn_portal', 112)):
+    _png = (root / 'public' / 'assets' / 'art' / f'{_name}.png').read_bytes()
+    assert _png[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>II', _png[16:24]) == (_size, _size), f'{_name}.png must be a {_size} px PNG'
+for _prefix, _names, _size in (('builder', ('fire', 'water', 'earth', 'nature', 'light', 'shadow'), 96),
+                               ('dmg', ('normal', 'piercing', 'magic', 'siege', 'chaos'), 64),
+                               ('armor', ('unarmored', 'light', 'medium', 'heavy', 'fortified', 'heroic'), 64)):
+    for _name in _names:
+        _png = (root / 'public' / 'assets' / 'ui' / f'{_prefix}_{_name}.png').read_bytes()
+        assert _png[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>II', _png[16:24]) == (_size, _size), f'{_prefix}_{_name}.png must be a {_size} px PNG'
+print('PASS: square rotation-symmetric map, 4 spawn routes, 40-wave definitions, pools, scene cleanup, 15 PNGs, builders and 4 ultimate sprites, map objects and 17 interface icons')

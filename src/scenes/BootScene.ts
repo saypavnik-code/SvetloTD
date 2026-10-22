@@ -5,6 +5,8 @@
 
 import Phaser from 'phaser';
 import { COLORS } from '../config';
+import { BUILDER_IDS } from '../data/builders';
+import { DAMAGE_MATRIX } from '../data/damageMatrix';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -27,6 +29,12 @@ export class BootScene extends Phaser.Scene {
     for (const k of ['icon_heart', 'icon_gold', 'icon_lumber', 'tw_arrow', 'tw_cannon', 'tw_magic', 'tw_slow', 'tw_acid', 'tw_watchtower']) {
       this.load.image(k, `assets/ui/${k}.png`);
     }
+    // v0.22.0 art (scripts/generate_sprite_art.py, scripts/generate_ui_art.py): map objects, builder emblems, damage and armor icons.
+    // The ids come from the data, so a new builder, damage type or armor class cannot ship without its icon (tests/art.test.mjs).
+    for (const n of ['citadel', 'spawn_portal']) this.load.image(`spr_${n}`, `assets/art/${n}.png`);
+    for (const id of BUILDER_IDS) this.load.image(`builder_${id}`, `assets/ui/builder_${id}.png`);
+    for (const id of Object.keys(DAMAGE_MATRIX)) this.load.image(`dmg_${id}`, `assets/ui/dmg_${id}.png`);
+    for (const id of Object.keys(DAMAGE_MATRIX.normal)) this.load.image(`armor_${id}`, `assets/ui/armor_${id}.png`);
   }
 
   create(): void {

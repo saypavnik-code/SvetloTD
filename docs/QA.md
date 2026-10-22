@@ -293,3 +293,14 @@ the chosen one is highlighted, a line under the row explains it, and the choice 
 the lives of the mode (50 / 25 / 1 / 1). On expert the first waves are not in the written order (the wave bar names a later wave early); after a defeat
 the screen says "порядок волн №N", and `?difficulty=expert&seed=N` repeats that order. A defeat on one life ends the game at the first leak. The best
 result under the buttons belongs to the chosen difficulty only: win or lose on easy and check that normal's record did not change.
+
+## v0.22.0 art pass 3, part 1: owner checklist
+
+Open the game in a browser (this has never been done for the HUD and scenes) and check, on one screen each:
+
+1. The base in the middle of the road square is a stone keep with an amber crystal, exactly as wide as the 2x2 base, and its label still reads under it.
+2. Each of the four spawn tiles shows a dark portal that turns slowly (about 24 s per turn); enemies walk out of it and over it, never under it.
+3. The builder rows show the six emblems (fire, water, earth, nature, light, shadow); the unavailable light and shadow rows are dimmed; names are not cut.
+4. Hover a tower in the build panel: the line `Тип:` says Обычный / Колющий / Магический / Осадный / Хаос and the matching icon sits at the right edge.
+5. During the countdown the wave bar shows the armor icon of the next wave in front of the hint, and the icon changes between a grunt, a golem and the boss wave.
+6. Nothing of the new art covers a first or last tile row of the field.

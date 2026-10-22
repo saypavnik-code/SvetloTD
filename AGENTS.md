@@ -112,5 +112,6 @@ Process lessons (v0.10.0 to v0.15.0):
 - One sandbox command is limited to 300 s: run patch chains in the background (`setsid nohup ... &`) and poll the log.
 - Headless browser checks: the static server started in an earlier command is gone, start it in the same command as the screenshot;
   the scene needs 9-13 s to load under SwiftShader and the tutorial needs 3-4 clicks before towers can be placed.
-- Art lives in two generator scripts (`scripts/generate_ui_art.py`, `scripts/generate_sprite_art.py`); edit the script, regenerate,
-  look at a contact sheet and a game screenshot, commit the PNGs. Never hand-edit a PNG.
+- Art lives in two generator scripts (`scripts/generate_ui_art.py`: HUD, tower, builder, damage and armor icons; `scripts/generate_sprite_art.py`: sprites,
+  citadel, spawn portal); edit the script, regenerate, look at a contact sheet and a game screenshot, commit the PNGs. Never hand-edit a PNG.
+  Sizes and silhouettes are pinned by `tests/art.test.mjs`; the footprint of a map object follows the 2x2 base and the single spawn tile (`docs/ART.md`).

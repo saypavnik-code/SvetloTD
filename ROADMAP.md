@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.21.0)
+## Current state (v0.22.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -77,6 +77,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   catalogued build in waves 3-7 / wave 1); their gold, interest and bonus handicaps stay. Expert shuffles the first four waves of every block of five
   (`randomizedWaves`, `?seed=` replays an order, printed on the defeat screen). Best results are kept per difficulty. The generated reports were
   regenerated (normal now has 25 lives; the lumber sentences that still said "no sink" were corrected). Not measured: expert with the shuffled order.
+- v0.22.0 art pass 3, part 1 (`docs/ART.md`): the base is a stone-keep sprite (`spr_citadel`, 80 px = the 2x2 base) and each spawn tile carries a slowly
+  turning portal (`spr_spawn_portal`, 56 px); builder rows show an emblem per element (`builder_<id>`), the tower tooltip names the damage type in Russian
+  with its icon (`dmg_<id>`), the wave bar shows the armor class of the next wave (`armor_<id>`). Icons come from `scripts/generate_ui_art.py`, map objects
+  from `scripts/generate_sprite_art.py`; ids come from the data, so a new builder, damage type or armor class cannot ship without an icon, and armor classes
+  must differ by silhouette (`tests/art.test.mjs`). Not done: projectiles and hit effects, road-edge tiles, nine-slice frames, lighting and post effects.
+  Checked in headless Chromium (WebGL under SwiftShader, 1280x720): the four portals, the citadel, the builder emblems, the armor icon in the countdown and the damage icon in the tooltip render, no console messages or page errors; the first screenshot of the tooltip showed its stat lines in the background colour, fixed in the same patch.
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
@@ -92,8 +98,8 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B3 | v0.19.0 (done) | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
 | B5 (done) | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1, shuffled waves for expert); the lives are one team pool, no seat scaling (gold is conserved across seats) | Data tests: lives per mode, same totals for 1, 2, 4 seats, seeded order |
-| B6 | v0.22.0 | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat | New acceptance bars, regenerated reports |
-| B7 | later | Art pass 3 on the square map: village base, seat-coloured pads, spawn gates, panel frames | Screenshots of menu, empty, built and boss field |
+| B6 | v0.23.0 | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat | New acceptance bars, regenerated reports |
+| B7 | v0.22.0 (part 1 done; the rest later) | Art pass 3 on the square map: citadel base and spawn portals, builder emblems, damage and armor icons are done; seat-coloured pads, panel frames are open | Screenshots of menu, empty, built and boss field |
 | B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
 
 Open design questions (the assistant proposes, the owner decides): the exact road layout of the original (a screenshot would settle it);
@@ -175,9 +181,9 @@ whether a lone player owns all four seats (proposed) or one; how many bosses a b
 - [ ] Art bible: silhouette language, scale, palette, contrast and animations.
 - [ ] Replace prototypes with authored 2D sprite atlases, 2-4 animation states each.
 - [x] v0.14.0 art pass 2: sprites for the 10 tower kinds, 5 enemies and the hero, drawn by `ui/SpriteViews`.
-- [ ] Art pass 3 (deferred behind B1-B3: terrain, base and pads depend on the square map and on seat colours): the base, panel and button
-  frames (nine-slice), menu background, projectiles and hit effects, walk-cycle frames.
-  Regenerate with `python3 scripts/generate_ui_art.py` and `python3 scripts/generate_sprite_art.py` (the PNGs are committed).
+- [x] v0.22.0 art pass 3, part 1: citadel base, spawn portals, builder emblems, damage and armor icons (`docs/ART.md`).
+- [ ] Art pass 3, the rest: seat-coloured pads, nine-slice panel and button frames, menu background, projectiles and hit effects, road-edge tiles,
+  walk-cycle frames. Regenerate with `python3 scripts/generate_ui_art.py` and `python3 scripts/generate_sprite_art.py` (the PNGs are committed).
 - [ ] SFX mixing/ducking, captions, color-blind modes, reduced-motion option.
 - [ ] Hero depth and active abilities; wave modifiers with comprehensible telegraphs.
 
@@ -205,7 +211,7 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.22.0 harness for seats and builders, re-measure and rebalance (Burbenog track, step B6)
+## Next sprint (recommended): v0.23.0 harness for seats and builders, re-measure and rebalance (Burbenog track, step B6)
 - Objective: the headless harness learns the shared screen (several seats, builders, licenses, mastery, ultimates) and a build that reacts to a leak,
   then re-measures everything the track changed: lives 25 on normal, the thin builder rosters (a Water seat has no damage tower), the ultimates (draft
   numbers), expert with a shuffled order, and the late game (waves 21-40, no bar yet). Priority: P0 for the track.
