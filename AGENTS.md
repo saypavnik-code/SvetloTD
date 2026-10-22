@@ -99,6 +99,13 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
 14. A number copied into a test (v0.21.0: "20 lives" in six tests; the lives became 25 and eight tests failed for the wrong reason). Tests read
     presets and data (`DIFFICULTY_PRESETS`, `GameConfig`), never a copy of the value. A rule that depends on a mode (the lives, the opening
     bar) is parameterised by the mode in the tests and in the generated reports.
+15. A gate that reads tool output in one format (v0.20.0: the unit-test gate parsed `# tests N`; the owner's Node prints `ℹ tests N`, the summary came out as
+    `{}` and the patch failed with no hint). Parse both the TAP and the spec form (strip colour codes) and, when no summary is found, print the last lines of
+    the output instead of an empty dictionary. A reason that prints `{}` is a defect of its own.
+16. Text drawn in a background colour (v0.22.0: the tower tooltip stats were `#1C1917` on `#130F0C` and nobody noticed for ten patches). Text colours come
+    from the text tokens of `COLORS`; look at a screenshot of every panel you touch; `tests/art.test.mjs` pins the contrast of the tooltip.
+17. A UI object created at (0, 0) and moved when it is shown: `tests/layout.test.mjs` records the construction and rejects it. Create it inside the
+    side column and place it on show.
 
 ## Resuming in a new session
 
@@ -115,3 +122,17 @@ Process lessons (v0.10.0 to v0.15.0):
 - Art lives in two generator scripts (`scripts/generate_ui_art.py`: HUD, tower, builder, damage and armor icons; `scripts/generate_sprite_art.py`: sprites,
   citadel, spawn portal); edit the script, regenerate, look at a contact sheet and a game screenshot, commit the PNGs. Never hand-edit a PNG.
   Sizes and silhouettes are pinned by `tests/art.test.mjs`; the footprint of a map object follows the 2x2 base and the single spawn tile (`docs/ART.md`).
+
+Process lessons (v0.20.0 to v0.22.1):
+- When the tooling files are not in the project knowledge, the engine is still inside the newest patch file: it is everything from `"""Transactional` up to
+  `BLOB = (`; `BLOB` is a base64 zlib JSON manifest (`version`, `prev_version`, `filename`, `history_status`, `history_scope`, `commit_message`, `edits`
+  [{path, edits [{old, new}]}], `new_text`, `new_binary`, `generated`, `gates`, `require_clean_tests`). Reuse it, write a new manifest, wrap it the same way.
+- A patch that failed before its commit leaves no trace (everything is restored), so it may be delivered again under the same name; a committed version is
+  never reused. The preflight tolerates untracked sibling `patch_svetlogorsk_td_v*.py` files and refuses any other untracked file (a spec JSON, an e2e script).
+- The Repomix export has no PNG and no `package-lock.json`: in the sandbox run `generate_art.py`, `generate_sprite_art.py`, `generate_ui_art.py` in this
+  order, then `npm install` (not `npm ci`).
+- Headless browser recipe: `@sparticuz/chromium` and `puppeteer-core` installed in a directory outside the repository, `dist` served by a small static server
+  started in the same command, flags `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`; start the game with
+  `window.game.scene.stop('MenuScene'); window.game.scene.start('GameScene')`; four clicks at (640, 434) close the tutorial; a hover tooltip needs about 9 s of
+  wall time because SwiftShader renders a few frames per second and the tooltip delay runs on scene time.
+- Verified so far on LF checkouts only (the owner works on Linux); the CRLF run and a deliberately red test were not repeated for v0.20.0-v0.22.1.

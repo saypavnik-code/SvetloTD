@@ -304,3 +304,43 @@ Open the game in a browser (this has never been done for the HUD and scenes) and
 4. Hover a tower in the build panel: the line `Тип:` says Обычный / Колющий / Магический / Осадный / Хаос and the matching icon sits at the right edge.
 5. During the countdown the wave bar shows the armor icon of the next wave in front of the hint, and the icon changes between a grunt, a golem and the boss wave.
 6. Nothing of the new art covers a first or last tile row of the field.
+
+## v0.22.1 handoff: cleanup, activation block and owner queue
+
+v0.22.1 is documentation only. From the owner's HEAD b49936b the chain is v0.20.0, v0.21.0, v0.22.0, v0.22.1.
+
+Step 1, cleanup of the working directory (before activation: the preflight refuses any untracked file except sibling patch files). The repository tracks no
+obsolete script (every file in `scripts/` is used by a gate, a report, the art or a deployment path); what piles up is untracked: helper scripts and specs,
+failed-run reports, old exports. The `-e` keeps the patch files that are waiting to be applied.
+
+```bash
+cd /workspaces/SvetloTD
+git status --short --ignored                          # look first
+git clean -nd -e 'patch_svetlogorsk_td_v*.py'         # dry run: lists what would go; nothing is deleted
+git clean -fd -e 'patch_svetlogorsk_td_v*.py'         # only after reading the list above
+rm -rf .git/svetlo-patch                              # reports of failed patch runs (inside .git, never committed)
+rm -f repomix-output.xml                              # ignored by git; export a fresh one for the next session
+rm -rf /tmp/svetlo_backup                             # helper scripts parked outside the repository
+```
+
+Never add `-x` to `git clean`: it would delete `node_modules` and `dist` too.
+
+Step 2, activation. The block of the v0.15.0 handoff skips applied patches; run it in a subshell so that a failure does not close the terminal:
+
+```bash
+cd /workspaces/SvetloTD && (
+  set -e
+  for P in $(ls patch_svetlogorsk_td_v0_*.py | sort -V); do
+    V=$(echo "$P" | sed -E 's/patch_svetlogorsk_td_v([0-9]+)_([0-9]+)_([0-9]+)_.*/\1.\2.\3/')
+    if grep -q "| v$V |" docs/PATCH_HISTORY.md; then echo "skip v$V (already applied)"; continue; fi
+    python "$P" --dry-run
+    python "$P" --commit --push --self-delete
+  done
+)
+git log --oneline -6 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
+```
+
+Expected: 140 unit tests, 140 pass, 0 fail, 0 TODO; `git log` shows one commit per version; the patch files are gone from the root.
+
+Owner queue: the checklists of v0.20.0, v0.21.0 and v0.22.0 above (menu difficulty row, `?builders=fire`, `?seats=4`, the art checklist); a browser run of waves 1-40,
+victory, defeat, pause and restart; the decision whether a lone player keeps every builder. Then v0.23.0 (B6), see `ROADMAP.md`, "Next sprint".

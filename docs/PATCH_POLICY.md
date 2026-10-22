@@ -55,3 +55,7 @@ A new patch version is required for any post-release fix, including a fix to a p
 - One sandbox command is limited to 300 s and one patch takes about a minute of gates: run chains in the background and poll a log.
 - A patch whose version row already exists in `docs/PATCH_HISTORY.md` refuses to run, so an applied patch can never be applied twice;
   the activation block in `docs/QA.md` skips such patches.
+- A patch that failed before its commit may be delivered again under the same name (nothing was committed or pushed); once a version has a row in
+  `docs/PATCH_HISTORY.md` its file name and number are never reused. A docs-only hand-off takes a patch number (`v0.22.1`) and leaves the next sprint's number free.
+- The unit-test gate reads the summary of `node --test` in both the TAP form (`# tests N`) and the spec form (`ℹ tests N`) and fails with the output tail when
+  it finds neither; with `require_clean_tests` it needs 0 fail, 0 todo and 0 cancelled.

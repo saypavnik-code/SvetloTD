@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.22.0)
+## Current state (v0.22.1)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -83,6 +83,10 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   from `scripts/generate_sprite_art.py`; ids come from the data, so a new builder, damage type or armor class cannot ship without an icon, and armor classes
   must differ by silhouette (`tests/art.test.mjs`). Not done: projectiles and hit effects, road-edge tiles, nine-slice frames, lighting and post effects.
   Checked in headless Chromium (WebGL under SwiftShader, 1280x720): the four portals, the citadel, the builder emblems, the armor icon in the countdown and the damage icon in the tooltip render, no console messages or page errors; the first screenshot of the tooltip showed its stat lines in the background colour, fixed in the same patch.
+- v0.22.1 documentation hand-off (no code): the chain v0.20.0, v0.21.0, v0.22.0, v0.22.1 is delivered; the owner's HEAD was b49936b (v0.16.0-v0.19.0) when it was
+  cut. 140 unit tests, 0 TODO after the chain. The first run of v0.20.0 failed in the owner's Codespace because the unit-test gate read only the TAP summary
+  (`# tests N`) and the Node there prints the spec form (`ℹ tests N`); the engine in v0.20.0-v0.22.1 reads both and shows the output tail when it finds none
+  (`AGENTS.md`, defect class 15). The activation block and the working-directory cleanup are in `docs/QA.md`, "v0.22.1 handoff".
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
@@ -220,9 +224,11 @@ until the corresponding tasks are tested and accepted.
 - Acceptance: all gates; a measured table per seat count and per builder start in `docs/BALANCE_PROPOSALS.md`; one-seat normal reports reviewed by
   the owner before any number moves.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); the checklists of
-  v0.20.0 and v0.21.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
+  v0.20.0, v0.21.0 and v0.22.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
 - Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; hero summon and a tech/aura building paid with
   lumber; a real roster for the light and shadow builders; the margin around the field (the field now touches the canvas edge at 720 px); late-game
   acceptance bar for waves 21-40; official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently
   it does); structured save schema; the menu prints a hard-coded "v0.1.0"; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports
-  TS5101 for `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned).
+  TS5101 for `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned);
+  a soft round halo instead of the amber square glow behind the citadel (`_animateBase`); redraw the older sprites whose glow is cut by the canvas edge;
+  `WaveInfo` keeps its own enemy-to-armor table next to `ENEMY_DEFS` (a test makes them agree, one source would be better).
