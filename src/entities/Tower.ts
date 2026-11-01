@@ -282,6 +282,16 @@ export class Tower {
     }
 
     // ── Per-tower models ────────────────────────────────────────────────────
+    if (this.towerId === 'watchtower') {
+      const auraT  = (Date.now() % 2400) / 2400;
+      const pulseA = 0.055 + 0.045 * Math.sin(auraT * Math.PI * 2);
+      const pulse2 = 0.028 + 0.022 * Math.sin(auraT * Math.PI * 2 + 1.6);
+      g.fillStyle(c, pulseA); g.fillCircle(cx, cy, this.data.auraRadius);
+      g.lineStyle(1.5, c, 0.25 + 0.18 * Math.sin(auraT * Math.PI * 2)); g.strokeCircle(cx, cy, this.data.auraRadius);
+      g.fillStyle(c, pulse2); g.fillCircle(cx, cy, this.data.auraRadius * 0.62);
+      g.lineStyle(1, c, 0.15); g.strokeCircle(cx, cy, this.data.auraRadius * 0.62);
+    }
+
     switch (withBody ? this.towerId : null) {
 
       // Arrow T1: compact square keep with a single forward barrel
@@ -483,16 +493,8 @@ export class Tower {
         break;
       }
 
-      // Watchtower: aura support — flag pole with pulsing detection ring
+      // Watchtower: aura support — flag pole (aura rings drawn above in both sprite & vector modes)
       case 'watchtower': {
-        const auraT   = (Date.now() % 2400) / 2400;
-        const pulseA  = 0.055 + 0.045 * Math.sin(auraT * Math.PI * 2);
-        const pulse2  = 0.028 + 0.022 * Math.sin(auraT * Math.PI * 2 + 1.6);
-        // Dual aura rings
-        g.fillStyle(c, pulseA); g.fillCircle(cx, cy, this.data.auraRadius);
-        g.lineStyle(1.5, c, 0.25 + 0.18 * Math.sin(auraT * Math.PI * 2)); g.strokeCircle(cx, cy, this.data.auraRadius);
-        g.fillStyle(c, pulse2); g.fillCircle(cx, cy, this.data.auraRadius * 0.62);
-        g.lineStyle(1, c, 0.15); g.strokeCircle(cx, cy, this.data.auraRadius * 0.62);
         // Stone base column
         g.fillStyle(0x2A2018, 0.92); g.fillRoundedRect(cx-5, cy-h, 10, h*2, 2);
         g.lineStyle(1, COLORS.amberDeep, 0.45); g.strokeRoundedRect(cx-5, cy-h, 10, h*2, 2);
