@@ -108,7 +108,11 @@ export class Projectile implements Poolable {
   drawTo(g: Phaser.GameObjects.Graphics): void {
     if (!this.isActive) return;
     // Amber dot
+    // Soft luminous halo behind the projectile core
+    g.fillStyle(this._color, 0.24); g.fillCircle(this.x, this.y, 6);
     g.fillStyle(this._color, 1); g.fillCircle(this.x, this.y, 3.5);
+    // White-hot centre of the projectile
+    g.fillStyle(0xffffff, 0.7); g.fillCircle(this.x, this.y, 1.4);
     g.lineStyle(1.5, COLORS.amberGlow, 0.55); g.strokeCircle(this.x, this.y, 3.5);
     // Trail dots
     for (let i=1;i<this._trail.length;i++) {
@@ -131,5 +135,7 @@ export class Projectile implements Poolable {
     const r=4+t*this._splashR, a=(1-t)*0.55;
     g.lineStyle(2, this._color, a); g.strokeCircle(this._splashX, this._splashY, r);
     g.fillStyle(this._color, a*0.10); g.fillCircle(this._splashX, this._splashY, r);
+    // Inner shockwave ring
+    g.lineStyle(1.2, 0xffffff, a*0.5); g.strokeCircle(this._splashX, this._splashY, r*0.68);
   }
 }

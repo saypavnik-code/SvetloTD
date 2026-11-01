@@ -39,8 +39,7 @@ export class GameOverScene extends Phaser.Scene {
     // ── Background card ───────────────────────────────────────────────────
     const CW = 360; const CH = 380;
     const bg = this.add.graphics();
-    bg.fillStyle(COLORS.bgPanel, 0.96);
-    bg.fillStyle(COLORS.bgDark, 0.25);
+    bg.fillStyle(COLORS.bgDark, 0.45);
     bg.fillRoundedRect(cx - CW / 2 + 8, cy - CH / 2 + 8, CW - 16, CH - 16, 10);
     bg.fillRoundedRect(cx - CW / 2, cy - CH / 2, CW, CH, 12);
     bg.lineStyle(4, COLORS.walnutDark, 0.95);

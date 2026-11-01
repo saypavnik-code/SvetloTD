@@ -307,6 +307,8 @@ export class Enemy implements Poolable {
     g.fillStyle(COLORS.walnutDark, 0.45); g.fillRect(barX, barY, barW, 3);
     const col = ratio>0.6 ? COLORS.success : ratio>0.3 ? COLORS.amberWarm : COLORS.danger;
     g.fillStyle(col, 1); g.fillRect(barX, barY, barW * ratio, 3);
+    // Specular sheen along the top edge of the health bar
+    g.fillStyle(0xffffff, 0.28); g.fillRect(barX, barY, barW * ratio, 1);
   }
 
   // Flying shadow (drawn under main enemy layer) — called from GameScene

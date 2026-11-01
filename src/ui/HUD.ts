@@ -119,7 +119,10 @@ export class HUD {
 
   setLives(n: number): void {
     this._livesNum.setText(`${n}`);
-    const ox = this._livesNum.x;
+    const ox = _livesBaseX.get(this._livesNum) ?? this._livesNum.x;
+    _livesBaseX.set(this._livesNum, ox);
+    this._scene.tweens.killTweensOf(this._livesNum);
+    this._livesNum.x = ox;
     this._scene.tweens.add({
       targets: this._livesNum,
       x: { from: ox - 3, to: ox },
@@ -166,3 +169,5 @@ export class HUD {
     }
   }
 }
+
+const _livesBaseX = new WeakMap<object, number>();

@@ -844,6 +844,8 @@ export class GameScene extends Phaser.Scene {
     if (wave?.isBoss) {
       this._sfx?.bossAlert();
       // Boss warning banner
+      // A new boss wave must not fight a previous banner fade-out
+      this.tweens.killTweensOf(this._bossWarning);
       this._bossWarning.setVisible(true).setAlpha(0).setScale(0.5);
       this.tweens.add({
         targets: this._bossWarning, alpha: 1, scaleX: 1, scaleY: 1,

@@ -371,6 +371,8 @@ export class TowerPanel {
   private _showInfoPanel(tower: Tower): void {
     this._buildRoot.setVisible(false);
     this._infoRoot.setVisible(true);
+    // Stop any in-flight fade so two tweens never fight over alpha
+    this._scene.tweens.killTweensOf(this._infoRoot);
     this._infoRoot.setAlpha(0);
     this._scene.tweens.add({ targets: this._infoRoot, alpha: 1, duration: 150 });
     this._populateInfo(tower);

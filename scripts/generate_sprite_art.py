@@ -1,442 +1,647 @@
 #!/usr/bin/env python3
-"""Generate the tower, enemy and hero sprites (Pillow, 4x supersampling, deterministic).
+"""Generate 2D top-down sprites for towers, enemies, hero, citadel and portals.
 
-Writes public/assets/art/<name>.png (128x128, transparent, outlined, facing right where it matters).
-Run: python3 scripts/generate_sprite_art.py   (needs Pillow; the PNGs are committed)
+All entity sprites are authored at 128x128 (drawn at ~40-64 px in-game) with a
+shared Baltic-amber palette, consistent 2 px dark-ink outline, soft contact
+shadow, and subtle top-left key light so towers and creeps read as one family.
+
+Output:
+  public/assets/art/<name>.png   (20 entity/tower sprites, 128x128)
+  public/assets/art/citadel.png  (160x160 -> drawn 80x80)
+  public/assets/art/spawn_portal.png (112x112 -> drawn 56x56)
 """
+
 import math
 from pathlib import Path
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
-from PIL import Image, ImageDraw, ImageFilter
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "public" / "assets" / "art"
+OUT.mkdir(parents=True, exist_ok=True)
 
-OUT = Path(__file__).resolve().parent.parent / 'public' / 'assets' / 'art'
-W, S = 128, 4
-INK = (26, 18, 12)
-AMBER, GOLD = (232, 169, 59), (250, 210, 110)
+S = 128  # canonical sprite size
 
+# Shared palette — matches src/config/constants.ts & generate_ui_art.py
+INK = (26, 18, 12, 255)
+INK_SOFT = (26, 18, 12, 165)
 
-def lerp(a, b, t):
-    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+STONE_DARK = (58, 52, 46, 255)
+STONE_MID = (106, 96, 86, 255)
+STONE_LIGHT = (164, 152, 136, 255)
+STONE_HI = (212, 200, 182, 255)
 
+WOOD_DARK = (74, 48, 28, 255)
+WOOD_MID = (124, 84, 50, 255)
+WOOD_LIGHT = (178, 128, 78, 255)
 
-def light(c, t):
-    return lerp(c, (255, 255, 255), t)
+PINE_DARK = (32, 62, 40, 255)
+PINE_MID = (58, 108, 68, 255)
+PINE_LIGHT = (108, 168, 110, 255)
 
+GOLD_DARK = (122, 86, 28, 255)
+GOLD_MID = (196, 148, 58, 255)
+GOLD_LIGHT = (244, 206, 112, 255)
 
-def dark(c, t):
-    return lerp(c, (0, 0, 0), t)
+AMBER = (242, 168, 59, 255)
+AMBER_HI = (255, 226, 154, 255)
 
+FIRE_DEEP = (168, 42, 22, 255)
+FIRE_MID = (232, 92, 32, 255)
+FIRE_HI = (255, 202, 86, 255)
 
-def canvas(size=W):
-    return Image.new('RGBA', (size * S, size * S), (0, 0, 0, 0))
+ICE_DEEP = (34, 88, 138, 255)
+ICE_MID = (78, 162, 218, 255)
+ICE_HI = (202, 238, 255, 255)
 
+ARC_DEEP = (74, 42, 138, 255)
+ARC_MID = (146, 92, 228, 255)
+ARC_HI = (224, 188, 255, 255)
 
-def sc(pts):
-    return [(x * S, y * S) for x, y in pts]
+ACID_DEEP = (46, 108, 34, 255)
+ACID_MID = (118, 198, 58, 255)
+ACID_HI = (212, 248, 128, 255)
 
+IRON_DARK = (44, 48, 56, 255)
+IRON_MID = (88, 96, 108, 255)
+IRON_LIGHT = (148, 158, 172, 255)
 
-def paint(img, shape, c1, c2, axis='x', profile='lin'):
-    """Fill `shape` (a callback drawing white on an L mask) with a gradient over its bounding box."""
-    m = Image.new('L', img.size, 0)
-    shape(ImageDraw.Draw(m))
-    bb = m.getbbox()
-    if not bb:
-        return
-    w, h = bb[2] - bb[0], bb[3] - bb[1]
-    g = Image.linear_gradient('L')
-    g = (g if axis == 'y' else g.transpose(Image.Transpose.ROTATE_90)).resize((w, h))
-    if profile == 'tri':
-        g = g.point(lambda v: 255 - abs(v - 127) * 2)
-    col = Image.composite(Image.new('RGBA', (w, h), c2 + (255,)), Image.new('RGBA', (w, h), c1 + (255,)), g)
-    layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    layer.paste(col, (bb[0], bb[1]))
-    img.paste(layer, (0, 0), m)
+FLESH_DARK = (96, 118, 72, 255)
+FLESH_MID = (138, 168, 98, 255)
+FLESH_HI = (182, 208, 138, 255)
 
-
-def poly(pts):
-    return lambda d: d.polygon(sc(pts), fill=255)
-
-
-def ell(x0, y0, x1, y1):
-    return lambda d: d.ellipse([x0 * S, y0 * S, x1 * S, y1 * S], fill=255)
-
-
-def rrect(x0, y0, x1, y1, r=3):
-    return lambda d: d.rounded_rectangle([x0 * S, y0 * S, x1 * S, y1 * S], radius=r * S, fill=255)
-
-
-def rot_rect(cx, cy, length, width, ang):
-    c, s = math.cos(ang), math.sin(ang)
-    return [(cx + x * c - y * s, cy + x * s + y * c) for x, y in
-            ((-length / 2, -width / 2), (length / 2, -width / 2), (length / 2, width / 2), (-length / 2, width / 2))]
+CRIMSON_DARK = (112, 24, 28, 255)
+CRIMSON = (188, 46, 48, 255)
+CRIMSON_HI = (238, 112, 96, 255)
 
 
-def lines(img, pts, color, width=1.5):
-    ImageDraw.Draw(img, 'RGBA').line(sc(pts), fill=color, width=max(1, int(width * S)), joint='curve')
+def new(size: int = S) -> Image.Image:
+    return Image.new("RGBA", (size, size), (0, 0, 0, 0))
 
 
-def dots(img, items):
-    d = ImageDraw.Draw(img, 'RGBA')
-    for x, y, r, col in items:
-        d.ellipse([(x - r) * S, (y - r) * S, (x + r) * S, (y + r) * S], fill=col)
+def shadow_base(size: int = S, rx: int = 44, ry: int = 38, cy: int = 72) -> Image.Image:
+    """Soft grounded ambient-occlusion contact shadow beneath a sprite."""
+    im = new(size)
+    d = ImageDraw.Draw(im)
+    cx = size // 2
+    d.ellipse((cx - rx - 4, cy - ry - 2, cx + rx + 4, cy + ry + 6), fill=(12, 8, 5, 95))
+    d.ellipse((cx - rx + 2, cy - ry + 2, cx + rx - 2, cy + ry + 2), fill=(18, 12, 8, 145))
+    return im.filter(ImageFilter.GaussianBlur(radius=4.0))
 
 
-def glow(img, x, y, r, color, alpha=150):
-    n = img.size[0] // S
-    r = min(r, min(x, y, n - x, n - y) / 1.25)   # keep the halo inside the canvas, never clipped at the edge
-    layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(layer).ellipse([(x - r) * S, (y - r) * S, (x + r) * S, (y + r) * S], fill=color + (alpha,))
-    img.alpha_composite(layer.filter(ImageFilter.GaussianBlur(r * S * 0.45)))
+def outlined(img: Image.Image, width: int = 2, color=INK) -> Image.Image:
+    """Dilate the solid opaque silhouette (alpha > 180) by `width` px into a dark outline.
+    Soft glows and ground shadows (alpha <= 180) are preserved without turning into ink blobs.
+    """
+    alpha = img.split()[3]
+    solid = alpha.point(lambda a: 255 if a > 180 else 0)
+    expanded = solid
+    for _ in range(width):
+        expanded = expanded.filter(ImageFilter.MaxFilter(3))
+    ring = ImageChops.subtract(expanded, solid)
+    ring_soft = ring.filter(ImageFilter.GaussianBlur(radius=0.45))
+    out = Image.new("RGBA", img.size, color[:3] + (0,))
+    out.putalpha(ring_soft)
+    return Image.alpha_composite(out, img)
 
 
-def bricks(img, x0, y0, x1, y1, step=8, col=(0, 0, 0, 55)):
-    d = ImageDraw.Draw(img, 'RGBA')
-    for row, y in enumerate(range(y0 + step, y1, step)):
-        d.line([((x0 + 2) * S, y * S), ((x1 - 2) * S, y * S)], fill=col, width=S)
-        for x in range(x0 + 4 + (6 if row % 2 else 0), x1 - 2, 12):
-            d.line([(x * S, (y - step) * S), (x * S, y * S)], fill=col, width=S)
+def glow(img: Image.Image, color, radius: int = 6, strength: float = 0.7) -> Image.Image:
+    """Soft outer halo in `color` behind opaque pixels (kept <= 168 alpha so outlined() ignores it)."""
+    alpha = img.split()[3].filter(ImageFilter.GaussianBlur(radius=radius))
+    alpha = alpha.point(lambda a: min(168, int(a * strength)))
+    halo = Image.new("RGBA", img.size, color[:3] + (0,))
+    halo.putalpha(alpha)
+    return Image.alpha_composite(halo, img)
 
 
-def cyl(img, x0, y0, x1, y1, edge, mid, r=3):
-    paint(img, rrect(x0, y0, x1, y1, r), edge, mid, 'x', 'tri')
+def reg_poly(cx: float, cy: float, r: float, n: int, rot: float = 0.0):
+    return [
+        (cx + r * math.cos(rot + 2 * math.pi * i / n),
+         cy + r * math.sin(rot + 2 * math.pi * i / n))
+        for i in range(n)
+    ]
 
 
-def cone(img, cx, apex, base, hw, edge, mid):
-    paint(img, poly([(cx, apex), (cx + hw, base), (cx - hw, base)]), edge, mid, 'x', 'tri')
-    paint(img, ell(cx - hw - 3, base - 5, cx + hw + 3, base + 5), dark(edge, .2), mid, 'x', 'tri')
+def tower_pedestal(im: Image.Image, radius: int = 44, rim_color=STONE_LIGHT, core_color=STONE_MID):
+    """Shared octagonal stone foundation with mortar grooves, corner rivets, and top-left rim light."""
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2 + 2
+    outer = reg_poly(cx, cy, radius, 8, rot=math.pi / 8)
+    inner = reg_poly(cx, cy - 1, radius - 6, 8, rot=math.pi / 8)
+    core = reg_poly(cx, cy - 2, radius - 12, 8, rot=math.pi / 8)
+    d.polygon(outer, fill=STONE_DARK)
+    d.polygon(inner, fill=rim_color)
+    d.polygon(core, fill=core_color)
+    for i in (4, 5, 6):
+        p1 = inner[i]
+        p2 = inner[(i + 1) % 8]
+        d.line([p1, p2], fill=STONE_HI, width=2)
+    for i in range(8):
+        d.line([inner[i], core[i]], fill=STONE_DARK, width=1)
+        rx = (inner[i][0] + core[i][0]) * 0.5
+        ry = (inner[i][1] + core[i][1]) * 0.5
+        d.ellipse((rx - 1.5, ry - 1.5, rx + 1.5, ry + 1.5), fill=STONE_HI)
 
 
-def merlons(img, x0, x1, y, n, color):
-    w = (x1 - x0) / (2 * n - 1)
-    for i in range(n):
-        paint(img, rrect(x0 + i * 2 * w, y - 7, x0 + i * 2 * w + w, y + 2, 1), dark(color, .2), color, 'x', 'tri')
+def brick_ring(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int, count: int = 8, color=STONE_DARK):
+    for i in range(count):
+        a = 2 * math.pi * i / count
+        x1 = cx + (r - 4) * math.cos(a)
+        y1 = cy + (r - 4) * math.sin(a)
+        x2 = cx + (r + 2) * math.cos(a)
+        y2 = cy + (r + 2) * math.sin(a)
+        d.line([(x1, y1), (x2, y2)], fill=color, width=2)
 
 
-def flag(img, x, y, color):
-    lines(img, [(x, y), (x, y - 16)], (70, 52, 36, 255), 1.6)
-    paint(img, poly([(x, y - 16), (x + 14, y - 12), (x, y - 7)]), dark(color, .25), color, 'x')
+def cylindrical_sheen(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int, color=STONE_HI):
+    """Crescent highlight on the upper-left quadrant of a circular turret body."""
+    d.arc((cx - r + 2, cy - r + 2, cx + r - 2, cy + r - 2), start=195, end=265, fill=color, width=2)
 
 
-def outlined(img, px=2.4):
-    k = int(px * 2 * S) | 1
-    dil = img.split()[3].filter(ImageFilter.MaxFilter(k))
-    out = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    out.paste(Image.new('RGBA', img.size, INK + (255,)), (0, 0), dil)
-    out.alpha_composite(img)
-    return out
+def save(name: str, im: Image.Image) -> None:
+    im.save(OUT / f"{name}.png", "PNG")
 
 
-def done(img, name):
-    OUT.mkdir(parents=True, exist_ok=True)
-    n = img.size[0] // S
-    outlined(img).resize((n, n), Image.LANCZOS).save(OUT / f'{name}.png', optimize=True)
+# ---------------------------------------------------------------------------
+# TOWERS (14)
+# ---------------------------------------------------------------------------
+
+def spr_arrow_t1() -> Image.Image:
+    im = shadow_base(S, 42, 36, 70)
+    tower_pedestal(im, 42, WOOD_LIGHT, WOOD_MID)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 26, cy - 26, cx + 26, cy + 26), fill=WOOD_DARK)
+    d.ellipse((cx - 22, cy - 23, cx + 22, cy + 21), fill=WOOD_MID)
+    for dy in (-12, -4, 4, 12):
+        d.line([(cx - 18, cy + dy), (cx + 18, cy + dy)], fill=WOOD_DARK, width=2)
+        d.line([(cx - 16, cy + dy - 1), (cx + 16, cy + dy - 1)], fill=WOOD_LIGHT, width=1)
+    d.arc((cx - 22, cy - 22, cx + 22, cy + 22), start=205, end=335, fill=GOLD_LIGHT, width=5)
+    d.arc((cx - 20, cy - 20, cx + 20, cy + 20), start=210, end=330, fill=WOOD_LIGHT, width=2)
+    d.line([(cx - 18, cy - 8), (cx, cy + 12), (cx + 18, cy - 8)], fill=STONE_HI, width=2)
+    d.line([(cx, cy + 16), (cx, cy - 26)], fill=WOOD_LIGHT, width=4)
+    d.polygon([(cx, cy - 34), (cx - 8, cy - 20), (cx + 8, cy - 20)], fill=IRON_LIGHT)
+    d.polygon([(cx, cy - 34), (cx - 3, cy - 20), (cx, cy - 22)], fill=STONE_HI)
+    d.polygon([(cx - 6, cy + 16), (cx + 6, cy + 16), (cx, cy + 10)], fill=CRIMSON_HI)
+    return outlined(im, 2)
 
 
-STONE, STONE_D = (176, 164, 142), (104, 94, 80)
-
-# ── towers ──────────────────────────────────────────────────────────────────
-
-def arrow(t2):
-    im = canvas()
-    if t2:
-        glow(im, 64, 70, 40, (90, 170, 220), 70)
-    top = 46 if t2 else 58
-    cyl(im, 38, top, 90, 114, STONE_D, STONE)
-    bricks(im, 38, top, 90, 114)
-    paint(im, rrect(56, 94, 72, 114, 8), (50, 34, 22), (96, 66, 40), 'x', 'tri')
-    paint(im, rrect(61, top + 16, 67, top + 34, 2), (20, 14, 10), (60, 44, 30), 'x')
-    roof = ((70, 140, 176), (116, 190, 224)) if t2 else ((150, 58, 40), (212, 104, 62))
-    merlons(im, 34, 94, top + 2, 4, STONE)
-    cone(im, 64, 10 if t2 else 16, top - 4, 40, *roof)
-    if t2:
-        lines(im, [(52, 70), (62, 62), (58, 72), (72, 60)], GOLD + (255,), 2.2)
-        glow(im, 62, 66, 8, GOLD, 120)
-        flag(im, 64, 14, AMBER)
-    else:
-        flag(im, 64, 20, AMBER)
-    return im
+def spr_arrow_t2() -> Image.Image:
+    im = shadow_base(S, 46, 40, 70)
+    tower_pedestal(im, 46, STONE_LIGHT, STONE_MID)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 30, cy - 30, cx + 30, cy + 30), fill=WOOD_DARK)
+    d.ellipse((cx - 26, cy - 27, cx + 26, cy + 25), fill=WOOD_MID)
+    brick_ring(d, cx, cy, 28, 8, GOLD_MID)
+    cylindrical_sheen(d, cx, cy - 1, 25, GOLD_LIGHT)
+    d.polygon([(cx - 28, cy - 6), (cx - 8, cy - 18), (cx - 6, cy - 10), (cx - 24, cy + 2)], fill=GOLD_LIGHT)
+    d.polygon([(cx + 28, cy - 6), (cx + 8, cy - 18), (cx + 6, cy - 10), (cx + 24, cy + 2)], fill=GOLD_LIGHT)
+    d.ellipse((cx - 12, cy - 19, cx - 4, cy - 11), fill=GOLD_MID)
+    d.ellipse((cx + 4, cy - 19, cx + 12, cy - 11), fill=GOLD_MID)
+    d.line([(cx - 24, cy - 2), (cx, cy + 14), (cx + 24, cy - 2)], fill=STONE_HI, width=2)
+    for dx in (-5, 5):
+        d.line([(cx + dx, cy + 16), (cx + dx, cy - 28)], fill=WOOD_LIGHT, width=3)
+        d.polygon([(cx + dx, cy - 36), (cx + dx - 6, cy - 24), (cx + dx + 6, cy - 24)], fill=AMBER_HI)
+    return outlined(im, 2)
 
 
-def cannon(t2):
-    im = canvas()
-    if t2:
-        glow(im, 70, 56, 36, (230, 60, 40), 90)
-    cyl(im, 22, 68, 106, 114, dark(STONE_D, .1), STONE_D, 5)
-    bricks(im, 22, 68, 106, 114)
-    merlons(im, 20, 108, 70, 5, (120, 108, 92))
-    barrel = rot_rect(70, 52, 58 if t2 else 50, 24 if t2 else 20, -0.95)
-    paint(im, lambda d: d.polygon(sc(barrel), fill=255), (44, 40, 40), (122, 116, 118), 'y', 'tri')
-    mx, my = 70 + math.cos(-0.95) * 29, 52 + math.sin(-0.95) * 29
-    paint(im, ell(mx - 13, my - 9, mx + 13, my + 9), (24, 20, 20), (84, 78, 80), 'x', 'tri')
-    paint(im, ell(mx - 8, my - 5, mx + 8, my + 5), (6, 4, 4), (30, 24, 24))
-    paint(im, ell(40, 76, 68, 104), (60, 40, 24), (140, 98, 56), 'x', 'tri')
-    dots(im, [(54, 90, 3, (230, 200, 120, 255))] + [(x, 106, 6, (34, 30, 30, 255)) for x in (84, 96)] + [(90, 98, 6, (46, 42, 42, 255))])
-    if t2:
-        for x in (32, 44, 98):
-            lines(im, [(x, 82), (x + 5, 90), (x, 98)], (255, 110, 70, 255), 2)
-        glow(im, 40, 90, 14, (255, 90, 50), 90)
-        lines(im, [(40, 70), (100, 70)], GOLD + (255,), 2)
-    return im
+def spr_cannon_t1() -> Image.Image:
+    im = shadow_base(S, 44, 38, 70)
+    tower_pedestal(im, 44, STONE_LIGHT, STONE_MID)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 26, cy - 24, cx + 26, cy + 26), fill=IRON_DARK)
+    d.ellipse((cx - 22, cy - 22, cx + 22, cy + 22), fill=IRON_MID)
+    cylindrical_sheen(d, cx, cy, 21, IRON_LIGHT)
+    d.rounded_rectangle((cx - 12, cy - 36, cx + 12, cy + 8), radius=6, fill=IRON_DARK)
+    d.rounded_rectangle((cx - 9, cy - 34, cx + 9, cy + 6), radius=4, fill=IRON_MID)
+    d.line([(cx - 4, cy - 32), (cx - 4, cy + 4)], fill=IRON_LIGHT, width=2)
+    d.rectangle((cx - 12, cy - 18, cx + 12, cy - 13), fill=GOLD_MID)
+    d.rectangle((cx - 12, cy - 4, cx + 12, cy + 1), fill=GOLD_MID)
+    d.ellipse((cx - 8, cy - 38, cx + 8, cy - 28), fill=INK)
+    d.ellipse((cx - 4, cy + 8, cx + 4, cy + 16), fill=FIRE_MID)
+    return outlined(im, 2)
 
 
-def magic(t2):
-    im = canvas()
-    glow(im, 64, 34, 36 if t2 else 28, (190, 110, 255), 130)
-    cyl(im, 50, 58, 78, 114, (52, 54, 86), (112, 116, 164), 4)
-    bricks(im, 50, 58, 78, 114, 9)
-    paint(im, ell(34, 100, 94, 120), (60, 56, 70), (120, 112, 120), 'x', 'tri')
-    paint(im, ell(40, 52, 88, 68), (70, 60, 96), (150, 138, 190), 'x', 'tri')
-    if t2:
-        lines(im, [(40, 62), (88, 62)], GOLD + (255,), 2)
-    s = 1.35 if t2 else 1.0
-    cx, cy = 64, 32
-    pts = [(cx, cy - 24 * s), (cx + 14 * s, cy), (cx, cy + 22 * s), (cx - 14 * s, cy)]
-    paint(im, poly(pts), (110, 60, 190), (200, 150, 255), 'x')
-    paint(im, poly([pts[0], pts[1], (cx, cy)]), (190, 140, 250), (245, 225, 255), 'x')
-    paint(im, poly([pts[3], (cx, cy), pts[2]]), (80, 40, 150), (130, 80, 210), 'x')
-    if t2:
-        for ox, oy in ((-30, -4), (30, 8), (6, -34)):
-            sh = [(cx + ox, cy + oy - 8), (cx + ox + 5, cy + oy), (cx + ox, cy + oy + 8), (cx + ox - 5, cy + oy)]
-            paint(im, poly(sh), (130, 70, 210), (230, 190, 255), 'x')
-    return im
+def spr_cannon_t2() -> Image.Image:
+    im = shadow_base(S, 46, 40, 70)
+    tower_pedestal(im, 46, STONE_LIGHT, STONE_DARK)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    for a_deg in (45, 135, 225, 315):
+        a = math.radians(a_deg)
+        x = cx + 32 * math.cos(a)
+        y = cy + 32 * math.sin(a)
+        d.ellipse((x - 6, y - 6, x + 6, y + 6), fill=GOLD_MID)
+        d.ellipse((x - 3, y - 3, x + 3, y + 3), fill=GOLD_LIGHT)
+    d.ellipse((cx - 28, cy - 26, cx + 28, cy + 28), fill=IRON_DARK)
+    d.ellipse((cx - 24, cy - 24, cx + 24, cy + 24), fill=IRON_MID)
+    d.rounded_rectangle((cx - 16, cy - 36, cx + 16, cy + 10), radius=8, fill=IRON_DARK)
+    d.rounded_rectangle((cx - 13, cy - 34, cx + 13, cy + 8), radius=6, fill=IRON_LIGHT)
+    d.rectangle((cx - 16, cy - 20, cx + 16, cy - 14), fill=GOLD_LIGHT)
+    d.rectangle((cx - 16, cy - 4, cx + 16, cy + 2), fill=GOLD_LIGHT)
+    d.ellipse((cx - 12, cy - 38, cx + 12, cy - 24), fill=INK)
+    d.ellipse((cx - 8, cy - 35, cx + 8, cy - 27), fill=FIRE_MID)
+    d.ellipse((cx - 4, cy - 33, cx + 4, cy - 29), fill=FIRE_HI)
+    return outlined(im, 2)
 
 
-def slow(t2):
-    im = canvas()
-    cyc = (120, 200, 235) if t2 else (96, 168, 176)
-    if t2:
-        glow(im, 64, 56, 44, (120, 220, 255), 90)
-    paint(im, poly([(40, 114), (88, 114), (78, 56), (50, 56)]), dark(STONE_D, .1) if not t2 else (80, 130, 170), STONE if not t2 else (190, 230, 250), 'x', 'tri')
-    bricks(im, 42, 56, 86, 114, 9)
-    paint(im, rrect(56, 96, 72, 114, 7), (50, 34, 22), (96, 66, 40), 'x', 'tri')
-    cone(im, 64, 34, 58, 18, (110, 70, 40), (176, 118, 70)) if not t2 else cone(im, 64, 34, 58, 18, (90, 150, 200), (200, 240, 255))
+def spr_magic_t1() -> Image.Image:
+    im = shadow_base(S, 42, 36, 70)
+    tower_pedestal(im, 42, STONE_LIGHT, ARC_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 26, cy - 26, cx + 26, cy + 26), fill=ARC_DEEP)
+    d.polygon(reg_poly(cx, cy, 24, 6, rot=0), fill=ARC_MID)
+    d.polygon(reg_poly(cx, cy, 18, 6, rot=math.pi / 6), fill=ARC_DEEP)
+    d.polygon([(cx, cy - 28), (cx - 14, cy + 4), (cx, cy + 18), (cx + 14, cy + 4)], fill=ARC_MID)
+    d.polygon([(cx, cy - 28), (cx - 14, cy + 4), (cx, cy - 2)], fill=ARC_HI)
+    d.polygon([(cx, cy - 28), (cx, cy - 2), (cx + 14, cy + 4)], fill=(176, 124, 244, 255))
+    d.ellipse((cx - 5, cy - 14, cx + 5, cy - 4), fill=(255, 255, 255, 235))
+    return outlined(glow(im, ARC_MID, radius=7, strength=0.65), 2)
+
+
+def spr_magic_t2() -> Image.Image:
+    im = shadow_base(S, 46, 40, 70)
+    tower_pedestal(im, 46, GOLD_LIGHT, ARC_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 30, cy - 30, cx + 30, cy + 30), fill=ARC_DEEP)
+    d.polygon(reg_poly(cx, cy, 28, 8, rot=0), fill=GOLD_MID)
+    d.polygon(reg_poly(cx, cy, 23, 8, rot=math.pi / 8), fill=ARC_DEEP)
+    for i in range(3):
+        a = 2 * math.pi * i / 3 - math.pi / 2
+        ox = cx + 22 * math.cos(a)
+        oy = cy + 22 * math.sin(a)
+        d.ellipse((ox - 6, oy - 6, ox + 6, oy + 6), fill=ARC_HI)
+        d.ellipse((ox - 3, oy - 3, ox + 3, oy + 3), fill=(255, 255, 255, 240))
+    d.polygon([(cx, cy - 26), (cx - 14, cy), (cx, cy + 20), (cx + 14, cy)], fill=ARC_MID)
+    d.polygon([(cx, cy - 26), (cx - 10, cy - 2), (cx + 4, cy - 6)], fill=ARC_HI)
+    return outlined(glow(im, ARC_HI, radius=8, strength=0.75), 2)
+
+
+def spr_slow_t1() -> Image.Image:
+    im = shadow_base(S, 42, 36, 70)
+    tower_pedestal(im, 42, ICE_HI, ICE_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 26, cy - 26, cx + 26, cy + 26), fill=ICE_DEEP)
+    for i in range(6):
+        a = math.pi * i / 3
+        x2 = cx + 24 * math.cos(a)
+        y2 = cy + 24 * math.sin(a)
+        d.line([(cx, cy), (x2, y2)], fill=ICE_HI, width=4)
+    d.polygon(reg_poly(cx, cy, 14, 6, rot=math.pi / 6), fill=ICE_MID)
+    d.polygon(reg_poly(cx, cy, 8, 6, rot=0), fill=ICE_HI)
+    return outlined(glow(im, ICE_MID, radius=6, strength=0.6), 2)
+
+
+def spr_slow_t2() -> Image.Image:
+    im = shadow_base(S, 46, 40, 70)
+    tower_pedestal(im, 46, ICE_HI, ICE_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    for i in range(8):
+        a = math.pi * i / 4
+        tip = (cx + 34 * math.cos(a), cy + 34 * math.sin(a))
+        l = (cx + 14 * math.cos(a - 0.3), cy + 14 * math.sin(a - 0.3))
+        r = (cx + 14 * math.cos(a + 0.3), cy + 14 * math.sin(a + 0.3))
+        d.polygon([tip, l, r], fill=ICE_MID if i % 2 else ICE_HI)
+    d.ellipse((cx - 16, cy - 16, cx + 16, cy + 16), fill=ICE_DEEP)
+    d.ellipse((cx - 11, cy - 11, cx + 11, cy + 11), fill=ICE_HI)
+    d.ellipse((cx - 5, cy - 6, cx + 2, cy + 1), fill=(255, 255, 255, 245))
+    return outlined(glow(im, ICE_HI, radius=8, strength=0.7), 2)
+
+
+def spr_acid_t1() -> Image.Image:
+    im = shadow_base(S, 44, 38, 70)
+    tower_pedestal(im, 44, STONE_LIGHT, ACID_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 28, cy - 28, cx + 28, cy + 28), fill=IRON_DARK)
+    d.ellipse((cx - 23, cy - 23, cx + 23, cy + 23), fill=ACID_DEEP)
+    d.ellipse((cx - 19, cy - 19, cx + 19, cy + 19), fill=ACID_MID)
+    for bx, by, br in ((-7, -5, 6), (8, -8, 4), (5, 7, 5), (-9, 8, 3)):
+        d.ellipse((cx + bx - br, cy + by - br, cx + bx + br, cy + by + br), fill=ACID_HI)
+        d.ellipse((cx + bx - br + 1, cy + by - br + 1, cx + bx, cy + by), fill=(248, 255, 210, 255))
+    return outlined(glow(im, ACID_MID, radius=6, strength=0.6), 2)
+
+
+def spr_watchtower() -> Image.Image:
+    im = shadow_base(S, 44, 38, 70)
+    tower_pedestal(im, 44, GOLD_LIGHT, STONE_MID)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.ellipse((cx - 28, cy - 28, cx + 28, cy + 28), fill=GOLD_DARK)
+    d.ellipse((cx - 24, cy - 24, cx + 24, cy + 24), fill=STONE_LIGHT)
+    for i in range(8):
+        a = math.pi * i / 4
+        x2 = cx + 32 * math.cos(a)
+        y2 = cy + 32 * math.sin(a)
+        d.line([(cx, cy), (x2, y2)], fill=GOLD_LIGHT, width=3)
+    d.ellipse((cx - 16, cy - 16, cx + 16, cy + 16), fill=FIRE_DEEP)
+    d.ellipse((cx - 12, cy - 12, cx + 12, cy + 12), fill=AMBER)
+    d.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), fill=AMBER_HI)
+    return outlined(glow(im, AMBER, radius=8, strength=0.75), 2)
+
+
+def spr_fire_ult() -> Image.Image:
+    im = shadow_base(S, 48, 42, 72)
+    tower_pedestal(im, 48, GOLD_LIGHT, FIRE_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    for i in range(12):
+        a = 2 * math.pi * i / 12
+        r_tip = 44 if i % 2 == 0 else 36
+        tip = (cx + r_tip * math.cos(a), cy + r_tip * math.sin(a))
+        l = (cx + 20 * math.cos(a - 0.22), cy + 20 * math.sin(a - 0.22))
+        r = (cx + 20 * math.cos(a + 0.22), cy + 20 * math.sin(a + 0.22))
+        d.polygon([tip, l, r], fill=FIRE_MID if i % 2 == 0 else FIRE_HI)
+    d.ellipse((cx - 24, cy - 24, cx + 24, cy + 24), fill=FIRE_DEEP)
+    d.ellipse((cx - 18, cy - 18, cx + 18, cy + 18), fill=FIRE_MID)
+    d.ellipse((cx - 11, cy - 11, cx + 11, cy + 11), fill=FIRE_HI)
+    d.ellipse((cx - 5, cy - 5, cx + 5, cy + 5), fill=(255, 250, 220, 255))
+    return outlined(glow(im, FIRE_MID, radius=9, strength=0.8), 2)
+
+
+def spr_water_ult() -> Image.Image:
+    im = shadow_base(S, 48, 42, 72)
+    tower_pedestal(im, 48, ICE_HI, ICE_DEEP)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    for i in range(6):
+        a = 2 * math.pi * i / 6
+        tip = (cx + 44 * math.cos(a), cy + 44 * math.sin(a))
+        l = (cx + 18 * math.cos(a - 0.28), cy + 18 * math.sin(a - 0.28))
+        r = (cx + 18 * math.cos(a + 0.28), cy + 18 * math.sin(a + 0.28))
+        d.polygon([tip, l, r], fill=ICE_HI)
+        b = a + math.pi / 6
+        tip2 = (cx + 34 * math.cos(b), cy + 34 * math.sin(b))
+        l2 = (cx + 16 * math.cos(b - 0.2), cy + 16 * math.sin(b - 0.2))
+        r2 = (cx + 16 * math.cos(b + 0.2), cy + 16 * math.sin(b + 0.2))
+        d.polygon([tip2, l2, r2], fill=ICE_MID)
+    d.polygon(reg_poly(cx, cy, 20, 6, rot=0), fill=ICE_DEEP)
+    d.polygon(reg_poly(cx, cy, 14, 6, rot=math.pi / 6), fill=ICE_MID)
+    d.ellipse((cx - 7, cy - 7, cx + 7, cy + 7), fill=(255, 255, 255, 245))
+    return outlined(glow(im, ICE_HI, radius=9, strength=0.8), 2)
+
+
+def spr_earth_ult() -> Image.Image:
+    im = shadow_base(S, 48, 42, 72)
+    tower_pedestal(im, 48, STONE_HI, STONE_DARK)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.polygon(reg_poly(cx, cy, 36, 8, rot=0), fill=STONE_MID)
+    d.polygon(reg_poly(cx, cy, 28, 8, rot=math.pi / 8), fill=STONE_LIGHT)
+    for a_deg in (20, 85, 145, 210, 275, 330):
+        a = math.radians(a_deg)
+        x1 = cx + 8 * math.cos(a)
+        y1 = cy + 8 * math.sin(a)
+        x2 = cx + 32 * math.cos(a)
+        y2 = cy + 32 * math.sin(a)
+        d.line([(x1, y1), (x2, y2)], fill=AMBER_HI, width=4)
+        d.line([(x1, y1), (x2, y2)], fill=FIRE_MID, width=2)
+    d.polygon(reg_poly(cx, cy, 15, 6, rot=0), fill=STONE_DARK)
+    d.polygon(reg_poly(cx, cy, 10, 6, rot=math.pi / 6), fill=AMBER)
+    d.ellipse((cx - 5, cy - 5, cx + 5, cy + 5), fill=AMBER_HI)
+    return outlined(glow(im, AMBER, radius=8, strength=0.7), 2)
+
+
+def spr_nature_ult() -> Image.Image:
+    im = shadow_base(S, 48, 42, 72)
+    tower_pedestal(im, 48, WOOD_LIGHT, PINE_DARK)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    for i in range(6):
+        a = 2 * math.pi * i / 6
+        x2 = cx + 40 * math.cos(a)
+        y2 = cy + 40 * math.sin(a)
+        d.line([(cx, cy), (x2, y2)], fill=WOOD_MID, width=7)
+        d.line([(cx, cy), (x2, y2)], fill=WOOD_LIGHT, width=3)
+    for i in range(8):
+        a = 2 * math.pi * i / 8
+        lx = cx + 22 * math.cos(a)
+        ly = cy + 22 * math.sin(a)
+        d.ellipse((lx - 14, ly - 14, lx + 14, ly + 14), fill=PINE_DARK)
+        d.ellipse((lx - 11, ly - 11, lx + 11, ly + 11), fill=PINE_MID)
+    d.ellipse((cx - 22, cy - 22, cx + 22, cy + 22), fill=PINE_LIGHT)
+    d.ellipse((cx - 10, cy - 10, cx + 10, cy + 10), fill=AMBER)
+    d.ellipse((cx - 5, cy - 5, cx + 5, cy + 5), fill=AMBER_HI)
+    return outlined(glow(im, PINE_LIGHT, radius=8, strength=0.7), 2)
+
+
+# ---------------------------------------------------------------------------
+# ENEMIES (5) + HERO (1)
+# ---------------------------------------------------------------------------
+
+def spr_grunt() -> Image.Image:
+    im = shadow_base(S, 34, 28, 76)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2 + 4
+    d.polygon([(cx + 30, cy - 30), (cx + 48, cy - 18), (cx + 42, cy + 4), (cx + 26, cy - 8)], fill=IRON_LIGHT)
+    d.line([(cx + 20, cy + 22), (cx + 34, cy - 26)], fill=WOOD_MID, width=5)
+    d.ellipse((cx - 34, cy - 18, cx + 34, cy + 22), fill=CRIMSON_DARK)
+    d.ellipse((cx - 28, cy - 14, cx + 28, cy + 18), fill=FLESH_DARK)
+    d.ellipse((cx - 36, cy - 14, cx - 12, cy + 14), fill=IRON_MID)
+    d.ellipse((cx + 12, cy - 14, cx + 36, cy + 14), fill=IRON_MID)
+    d.ellipse((cx - 28, cy - 8, cx - 20, cy), fill=STONE_HI)
+    d.ellipse((cx + 20, cy - 8, cx + 28, cy), fill=STONE_HI)
+    d.ellipse((cx - 18, cy - 24, cx + 18, cy + 10), fill=IRON_DARK)
+    d.ellipse((cx - 15, cy - 22, cx + 15, cy + 6), fill=IRON_LIGHT)
+    d.polygon([(cx - 14, cy - 16), (cx - 28, cy - 34), (cx - 6, cy - 20)], fill=STONE_HI)
+    d.polygon([(cx + 14, cy - 16), (cx + 28, cy - 34), (cx + 6, cy - 20)], fill=STONE_HI)
+    d.ellipse((cx - 9, cy - 12, cx - 3, cy - 6), fill=FIRE_HI)
+    d.ellipse((cx + 3, cy - 12, cx + 9, cy - 6), fill=FIRE_HI)
+    return outlined(im, 2)
+
+
+def spr_runner() -> Image.Image:
+    im = shadow_base(S, 30, 26, 74)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    d.polygon([(cx, cy - 36), (cx - 26, cy + 20), (cx, cy + 10), (cx + 26, cy + 20)], fill=PINE_DARK)
+    d.polygon([(cx, cy - 32), (cx - 20, cy + 16), (cx, cy + 6), (cx + 20, cy + 16)], fill=PINE_MID)
+    d.polygon([(cx - 18, cy + 6), (cx - 38, cy - 20), (cx - 30, cy - 24), (cx - 12, cy)], fill=IRON_LIGHT)
+    d.polygon([(cx + 18, cy + 6), (cx + 38, cy - 20), (cx + 30, cy - 24), (cx + 12, cy)], fill=IRON_LIGHT)
+    d.polygon([(cx, cy - 38), (cx - 14, cy - 10), (cx + 14, cy - 10)], fill=PINE_LIGHT)
+    d.ellipse((cx - 8, cy - 22, cx - 2, cy - 16), fill=AMBER_HI)
+    d.ellipse((cx + 2, cy - 22, cx + 8, cy - 16), fill=AMBER_HI)
+    return outlined(im, 2)
+
+
+def spr_golem() -> Image.Image:
+    im = shadow_base(S, 44, 38, 76)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2 + 2
+    d.polygon(reg_poly(cx, cy, 42, 7, rot=0.2), fill=STONE_DARK)
+    d.polygon(reg_poly(cx, cy - 2, 36, 7, rot=0.2), fill=STONE_MID)
+    d.polygon(reg_poly(cx - 28, cy - 4, 16, 6), fill=STONE_LIGHT)
+    d.polygon(reg_poly(cx + 28, cy - 4, 16, 6), fill=STONE_LIGHT)
+    d.line([(cx - 18, cy - 20), (cx, cy - 4), (cx + 16, cy - 18)], fill=AMBER_HI, width=4)
+    d.line([(cx, cy - 4), (cx - 6, cy + 22)], fill=AMBER, width=4)
+    d.line([(cx, cy - 4), (cx + 12, cy + 18)], fill=AMBER, width=3)
+    d.polygon(reg_poly(cx, cy - 20, 14, 6), fill=STONE_LIGHT)
+    d.ellipse((cx - 8, cy - 24, cx - 2, cy - 18), fill=AMBER_HI)
+    d.ellipse((cx + 2, cy - 24, cx + 8, cy - 18), fill=AMBER_HI)
+    return outlined(glow(im, AMBER, radius=5, strength=0.45), 2)
+
+
+def spr_wyvern() -> Image.Image:
+    im = shadow_base(S, 42, 32, 80)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2
+    left_wing = [(cx - 6, cy - 6), (cx - 54, cy - 28), (cx - 48, cy + 6), (cx - 32, cy + 18), (cx - 10, cy + 10)]
+    right_wing = [(cx + 6, cy - 6), (cx + 54, cy - 28), (cx + 48, cy + 6), (cx + 32, cy + 18), (cx + 10, cy + 10)]
+    d.polygon(left_wing, fill=ARC_DEEP)
+    d.polygon(right_wing, fill=ARC_DEEP)
+    d.polygon([(cx - 8, cy - 4), (cx - 48, cy - 22), (cx - 40, cy + 4), (cx - 12, cy + 6)], fill=ARC_MID)
+    d.polygon([(cx + 8, cy - 4), (cx + 48, cy - 22), (cx + 40, cy + 4), (cx + 12, cy + 6)], fill=ARC_MID)
+    d.line([(cx - 8, cy - 4), (cx - 48, cy - 22)], fill=ARC_HI, width=2)
+    d.line([(cx + 8, cy - 4), (cx + 48, cy - 22)], fill=ARC_HI, width=2)
+    d.ellipse((cx - 14, cy - 24, cx + 14, cy + 22), fill=ARC_DEEP)
+    d.ellipse((cx - 10, cy - 20, cx + 10, cy + 18), fill=ARC_HI)
+    d.polygon([(cx, cy + 20), (cx - 6, cy + 46), (cx, cy + 54), (cx + 6, cy + 46)], fill=ARC_MID)
+    d.polygon([(cx, cy - 42), (cx - 12, cy - 18), (cx + 12, cy - 18)], fill=ARC_MID)
+    d.ellipse((cx - 7, cy - 28, cx - 2, cy - 23), fill=AMBER_HI)
+    d.ellipse((cx + 2, cy - 28, cx + 7, cy - 23), fill=AMBER_HI)
+    return outlined(im, 2)
+
+
+def spr_boss_goliath() -> Image.Image:
+    im = shadow_base(S, 50, 44, 74)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2 + 2
+    for i in range(10):
+        a = 2 * math.pi * i / 10
+        tip = (cx + 54 * math.cos(a), cy + 54 * math.sin(a))
+        l = (cx + 34 * math.cos(a - 0.22), cy + 34 * math.sin(a - 0.22))
+        r = (cx + 34 * math.cos(a + 0.22), cy + 34 * math.sin(a + 0.22))
+        d.polygon([tip, l, r], fill=GOLD_LIGHT if i % 2 == 0 else CRIMSON)
+    d.polygon(reg_poly(cx, cy, 40, 8, rot=math.pi / 8), fill=CRIMSON_DARK)
+    d.polygon(reg_poly(cx, cy, 34, 8, rot=math.pi / 8), fill=IRON_DARK)
+    d.polygon(reg_poly(cx, cy, 26, 8, rot=0), fill=CRIMSON)
+    d.ellipse((cx - 16, cy - 12, cx + 16, cy + 18), fill=FIRE_MID)
+    d.ellipse((cx - 10, cy - 6, cx + 10, cy + 12), fill=FIRE_HI)
+    d.polygon(reg_poly(cx, cy - 22, 16, 6), fill=IRON_LIGHT)
+    d.polygon([(cx - 12, cy - 28), (cx - 32, cy - 48), (cx - 6, cy - 34)], fill=GOLD_LIGHT)
+    d.polygon([(cx + 12, cy - 28), (cx + 32, cy - 48), (cx + 6, cy - 34)], fill=GOLD_LIGHT)
+    d.ellipse((cx - 9, cy - 24, cx - 2, cy - 17), fill=FIRE_HI)
+    d.ellipse((cx + 2, cy - 24, cx + 9, cy - 17), fill=FIRE_HI)
+    return outlined(glow(im, FIRE_MID, radius=7, strength=0.65), 2)
+
+
+def spr_hero() -> Image.Image:
+    im = shadow_base(S, 38, 34, 76)
+    d = ImageDraw.Draw(im)
+    cx, cy = S // 2, S // 2 + 2
+    d.polygon([(cx - 28, cy - 10), (cx + 28, cy - 10), (cx + 36, cy + 38), (cx - 36, cy + 38)], fill=CRIMSON_DARK)
+    d.polygon([(cx - 24, cy - 8), (cx + 24, cy - 8), (cx + 30, cy + 34), (cx - 30, cy + 34)], fill=CRIMSON)
+    d.line([(cx + 28, cy + 24), (cx + 34, cy - 34)], fill=WOOD_LIGHT, width=6)
+    d.rounded_rectangle((cx + 20, cy - 46, cx + 48, cy - 28), radius=4, fill=GOLD_LIGHT)
+    d.rounded_rectangle((cx + 23, cy - 43, cx + 45, cy - 31), radius=3, fill=AMBER)
+    d.polygon([(cx - 38, cy - 16), (cx - 16, cy - 16), (cx - 18, cy + 16), (cx - 27, cy + 26), (cx - 36, cy + 16)], fill=GOLD_LIGHT)
+    d.polygon([(cx - 35, cy - 13), (cx - 19, cy - 13), (cx - 21, cy + 13), (cx - 27, cy + 21), (cx - 33, cy + 13)], fill=AMBER)
+    d.ellipse((cx - 28, cy - 16, cx + 28, cy + 16), fill=GOLD_MID)
+    d.ellipse((cx - 22, cy - 12, cx + 22, cy + 12), fill=GOLD_LIGHT)
+    d.ellipse((cx - 15, cy - 22, cx + 15, cy + 8), fill=GOLD_LIGHT)
+    d.polygon([(cx - 12, cy - 20), (cx - 6, cy - 34), (cx, cy - 22), (cx + 6, cy - 34), (cx + 12, cy - 20)], fill=AMBER_HI)
+    d.ellipse((cx - 5, cy - 12, cx + 5, cy - 2), fill=AMBER_HI)
+    return outlined(glow(im, AMBER, radius=7, strength=0.7), 2)
+
+
+# ---------------------------------------------------------------------------
+# MAP LANDMARKS: CITADEL (160x160) & SPAWN PORTAL (112x112)
+# ---------------------------------------------------------------------------
+
+def spr_citadel() -> Image.Image:
+    """160x160 Baltic Amber Hall — strictly 4-way / mirror symmetric for art.test.mjs."""
+    sz = 160
+    im = new(sz)
+    d = ImageDraw.Draw(im)
+    cx, cy = sz // 2, sz // 2
+    d.polygon(reg_poly(cx, cy, 72, 8, rot=math.pi / 8), fill=STONE_DARK)
+    d.polygon(reg_poly(cx, cy, 66, 8, rot=math.pi / 8), fill=STONE_MID)
+    d.polygon(reg_poly(cx, cy, 58, 8, rot=math.pi / 8), fill=STONE_LIGHT)
+    for dx, dy in ((0, -60), (0, 60), (-60, 0), (60, 0)):
+        d.ellipse((cx + dx - 10, cy + dy - 10, cx + dx + 10, cy + dy + 10), fill=GOLD_MID)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            bx, by = cx + sx * 42, cy + sy * 42
+            d.ellipse((bx - 18, by - 18, bx + 18, by + 18), fill=STONE_DARK)
+            d.ellipse((bx - 15, by - 15, bx + 15, by + 15), fill=PINE_DARK)
+            d.ellipse((bx - 11, by - 11, bx + 11, by + 11), fill=PINE_MID)
+            d.ellipse((bx - 5, by - 5, bx + 5, by + 5), fill=GOLD_LIGHT)
+    d.rounded_rectangle((cx - 38, cy - 38, cx + 38, cy + 38), radius=10, fill=WOOD_DARK)
+    d.rounded_rectangle((cx - 34, cy - 34, cx + 34, cy + 34), radius=8, fill=WOOD_MID)
+    d.rectangle((cx - 34, cy - 4, cx + 34, cy + 4), fill=GOLD_MID)
+    d.rectangle((cx - 4, cy - 34, cx + 4, cy + 34), fill=GOLD_MID)
+    d.ellipse((cx - 24, cy - 24, cx + 24, cy + 24), fill=GOLD_DARK)
+    d.ellipse((cx - 20, cy - 20, cx + 20, cy + 20), fill=AMBER)
+    d.ellipse((cx - 12, cy - 12, cx + 12, cy + 12), fill=AMBER_HI)
+    d.ellipse((cx - 5, cy - 5, cx + 5, cy + 5), fill=(255, 252, 230, 255))
+    d.polygon([(cx - 42, cy - 42), (cx - 58, cy - 48), (cx - 42, cy - 54)], fill=AMBER)
+    d.polygon([(cx + 42, cy - 42), (cx + 58, cy - 48), (cx + 42, cy - 54)], fill=AMBER)
+    return outlined(glow(im, AMBER, radius=6, strength=0.55), 2)
+
+
+def spr_spawn_portal() -> Image.Image:
+    """112x112 Runic Void Portal — strictly 4-way symmetric for art.test.mjs."""
+    sz = 112
+    im = new(sz)
+    d = ImageDraw.Draw(im)
+    cx, cy = sz // 2, sz // 2
+    d.ellipse((cx - 46, cy - 46, cx + 46, cy + 46), fill=STONE_DARK)
+    d.ellipse((cx - 42, cy - 42, cx + 42, cy + 42), fill=STONE_MID)
+    for i in range(8):
+        a = 2 * math.pi * i / 8
+        rx = cx + 38 * math.cos(a)
+        ry = cy + 38 * math.sin(a)
+        d.ellipse((rx - 5, ry - 5, rx + 5, ry + 5), fill=ARC_HI)
+    d.ellipse((cx - 32, cy - 32, cx + 32, cy + 32), fill=ARC_DEEP)
+    d.ellipse((cx - 25, cy - 25, cx + 25, cy + 25), fill=ARC_MID)
     for k in range(4):
-        a = k * math.pi / 2 + 0.45
-        blade = rot_rect(64 + math.cos(a) * 26, 50 + math.sin(a) * 26, 52, 12, a)
-        paint(im, lambda d, blade=blade: d.polygon(sc(blade), fill=255), dark(cyc, .3), light(cyc, .35), 'y', 'tri')
-        lines(im, [(64 + math.cos(a) * 6, 50 + math.sin(a) * 6), (64 + math.cos(a) * 50, 50 + math.sin(a) * 50)], (70, 52, 36, 255), 1.8)
-    dots(im, [(64, 50, 6, AMBER + (255,)), (64, 50, 3, (120, 70, 20, 255))])
-    if t2:
-        for x, h in ((34, 22), (94, 26), (24, 14)):
-            paint(im, poly([(x - 5, 114), (x, 114 - h), (x + 5, 114)]), (110, 190, 235), (235, 250, 255), 'x')
-    return im
+        base = 2 * math.pi * k / 4
+        pts = []
+        for s_idx in range(14):
+            t = s_idx / 13
+            ang = base + t * 1.8
+            r = 4 + t * 24
+            pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
+        d.line(pts, fill=ARC_HI, width=3)
+    d.ellipse((cx - 12, cy - 12, cx + 12, cy + 12), fill=ARC_HI)
+    d.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), fill=(255, 255, 255, 250))
+    return outlined(glow(im, ARC_MID, radius=5, strength=0.6), 2)
 
 
-def acid():
-    im = canvas()
-    glow(im, 64, 38, 30, (150, 240, 90), 110)
-    cyl(im, 34, 66, 94, 114, (86, 70, 54), (150, 126, 96), 7)
-    paint(im, rrect(54, 92, 74, 114, 8), (40, 28, 20), (90, 62, 38), 'x', 'tri')
-    cone(im, 64, 48, 70, 38, (56, 104, 62), (112, 176, 92))
-    paint(im, ell(40, 34, 88, 58), (40, 36, 36), (100, 96, 96), 'x', 'tri')
-    paint(im, ell(44, 36, 84, 52), (80, 170, 50), (180, 250, 110), 'y')
-    dots(im, [(54, 40, 4, (220, 255, 190, 255)), (70, 44, 3, (235, 255, 210, 255)), (62, 28, 5, (190, 250, 140, 200)), (72, 18, 3, (200, 255, 160, 180)), (56, 12, 2.5, (210, 255, 170, 160))])
-    paint(im, rrect(88, 70, 98, 100, 4), (60, 60, 64), (140, 140, 148), 'x', 'tri')
-    dots(im, [(93, 104, 5, (130, 220, 80, 255))])
-    return im
+def main() -> None:
+    sprites = {
+        "arrow_t1": spr_arrow_t1,
+        "arrow_t2": spr_arrow_t2,
+        "cannon_t1": spr_cannon_t1,
+        "cannon_t2": spr_cannon_t2,
+        "magic_t1": spr_magic_t1,
+        "magic_t2": spr_magic_t2,
+        "slow_t1": spr_slow_t1,
+        "slow_t2": spr_slow_t2,
+        "acid_t1": spr_acid_t1,
+        "watchtower": spr_watchtower,
+        "fire_ult": spr_fire_ult,
+        "water_ult": spr_water_ult,
+        "earth_ult": spr_earth_ult,
+        "nature_ult": spr_nature_ult,
+        "grunt": spr_grunt,
+        "runner": spr_runner,
+        "golem": spr_golem,
+        "wyvern": spr_wyvern,
+        "boss_goliath": spr_boss_goliath,
+        "hero": spr_hero,
+        "citadel": spr_citadel,
+        "spawn_portal": spr_spawn_portal,
+    }
+    for name, fn in sprites.items():
+        save(name, fn())
+    print(f"Generated {len(sprites)} sprites in {OUT}")
 
 
-def watchtower():
-    im = canvas()
-    glow(im, 64, 24, 30, (255, 170, 60), 140)
-    paint(im, rrect(42, 38, 86, 116, 3), dark(STONE_D, .1), STONE, 'x', 'tri')
-    bricks(im, 42, 38, 86, 116, 8)
-    paint(im, rrect(34, 30, 94, 44, 3), STONE_D, light(STONE, .1), 'x', 'tri')
-    merlons(im, 34, 94, 32, 5, light(STONE, .05))
-    paint(im, poly([(64, 6), (74, 28), (54, 28)]), (210, 110, 30), (255, 220, 120), 'x', 'tri')
-    paint(im, rrect(56, 96, 72, 116, 7), (50, 34, 22), (96, 66, 40), 'x', 'tri')
-    paint(im, rrect(58, 54, 70, 74, 3), (20, 14, 10), (70, 50, 34), 'x')
-    paint(im, poly([(86, 50), (108, 50), (108, 84), (97, 94), (86, 84)]), dark(AMBER, .3), GOLD, 'x')
-    dots(im, [(97, 66, 6, (120, 70, 20, 255)), (97, 66, 3, (255, 236, 170, 255))])
-    return im
-
-
-
-def ultimate(base, color):
-    """An ultimate tower (v0.20.0): the tier-2 tower of its line on an elemental halo, with a gold base band and gems."""
-    im = canvas()
-    glow(im, 64, 66, 60, color, 170)
-    im.alpha_composite(base(True))
-    lines(im, [(26, 117), (102, 117)], GOLD + (255,), 3)
-    dots(im, [(x, 117, 4, light(color, .35) + (255,)) for x in (34, 64, 94)] + [(64, 7, 5, light(color, .55) + (255,))])
-    return im
-
-# ── map objects (v0.22.0) ───────────────────────────────────────────────────
-# The base fills the 2x2 centre of the square map (80 px, drawn from a 160 px texture); a portal marks a spawn tile
-# (56 px, drawn from a 112 px texture). Both are symmetric enough to repeat four times without a mirrored copy.
-
-def citadel():
-    im = canvas(160)
-    shadow = Image.new('RGBA', im.size, (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).ellipse([8 * S, 128 * S, 152 * S, 156 * S], fill=INK + (150,))
-    im.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(3 * S)))
-    glow(im, 80, 64, 34, (255, 176, 66), 140)   # small enough that the blur stays inside the canvas (no clipped box)
-    paint(im, rrect(10, 116, 150, 148, 4), dark(STONE_D, .15), STONE_D, 'y')
-    paint(im, rrect(26, 58, 134, 124, 3), dark(STONE_D, .1), STONE, 'x', 'tri')
-    bricks(im, 26, 58, 134, 124, 9)
-    merlons(im, 26, 134, 60, 7, light(STONE, .05))
-    for x0 in (6, 122):
-        cyl(im, x0, 46, x0 + 32, 128, STONE_D, STONE, 4)
-        bricks(im, x0, 46, x0 + 32, 128, 9)
-        cone(im, x0 + 16, 16, 50, 21, (140, 64, 24), (232, 150, 50))
-        paint(im, rrect(x0 + 12, 74, x0 + 20, 92, 3), (20, 14, 10), dark(AMBER, .3), 'y')
-    glow(im, 80, 106, 22, (255, 170, 60), 130)
-    paint(im, rrect(64, 86, 96, 126, 13), (34, 22, 14), (110, 74, 42), 'x', 'tri')
-    lines(im, [(80, 90), (80, 126)], (26, 18, 12, 200), 1.4)
-    for y in (100, 112):
-        lines(im, [(66, y), (94, y)], (200, 150, 70, 170), 1.2)
-    paint(im, poly([(80, 8), (94, 34), (80, 64), (66, 34)]), (196, 112, 28), (255, 224, 140), 'x', 'tri')
-    paint(im, poly([(80, 8), (94, 34), (80, 36)]), (255, 214, 120), (255, 250, 220), 'x')
-    dots(im, [(80, 36, 4, (255, 250, 226, 220))])
-    flag(im, 22, 44, AMBER)
-    flag(im, 138, 44, AMBER)
-    return im
-
-
-def spawn_portal():
-    im = canvas(112)
-    c = 56
-    d = ImageDraw.Draw(im, 'RGBA')
-    ring = Image.new('RGBA', im.size, (0, 0, 0, 0))
-    paint(ring, ell(6, 6, 106, 106), STONE_D, light(STONE, .05), 'y')
-    paint(ring, ell(12, 12, 100, 100), dark(STONE_D, .35), STONE_D, 'y')
-    im.alpha_composite(ring)
-    d = ImageDraw.Draw(im, 'RGBA')
-    for r in range(38, 2, -1):
-        t = 1 - r / 38
-        col = lerp((96, 40, 128), (8, 4, 14), t ** 0.7)
-        d.ellipse([(c - r) * S, (c - r) * S, (c + r) * S, (c + r) * S], fill=col + (255,))
-    d.ellipse([(c - 33) * S, (c - 33) * S, (c + 33) * S, (c + 33) * S], outline=(196, 70, 56, 255), width=2 * S)
-    for k in range(3):
-        a0 = k * 2 * math.pi / 3
-        pts = [(c + math.cos(a0 + t * 2.2) * (30 - t * 20), c + math.sin(a0 + t * 2.2) * (30 - t * 20)) for t in [i / 12 for i in range(13)]]
-        lines(im, pts, (190, 150, 240, 200), 2.0)
-    for k in range(8):
-        a = k * math.pi / 4 + math.pi / 8
-        d.polygon(sc([(c + math.cos(a - .12) * 40, c + math.sin(a - .12) * 40), (c + math.cos(a + .12) * 40, c + math.sin(a + .12) * 40),
-                      (c + math.cos(a + .1) * 47, c + math.sin(a + .1) * 47), (c + math.cos(a - .1) * 47, c + math.sin(a - .1) * 47)]), fill=AMBER + (255,))
-    dots(im, [(c, c, 3, (255, 230, 200, 255))])
-    return im
-
-
-# ── enemies ─────────────────────────────────────────────────────────────────
-
-def grunt():
-    im = canvas()
-    paint(im, ell(42, 100, 60, 116), (40, 28, 20), (86, 60, 40))
-    paint(im, ell(68, 100, 86, 116), (40, 28, 20), (86, 60, 40))
-    paint(im, rrect(38, 62, 90, 108, 14), (110, 52, 40), (196, 104, 70), 'x', 'tri')
-    lines(im, [(40, 86), (88, 86)], (60, 36, 24, 255), 3)
-    paint(im, poly([(34, 40), (14, 30), (30, 56)]), (96, 150, 60), (150, 200, 90))
-    paint(im, poly([(94, 40), (114, 30), (98, 56)]), (96, 150, 60), (150, 200, 90))
-    paint(im, ell(34, 20, 94, 76), (84, 128, 50), (150, 204, 92), 'x', 'tri')
-    dots(im, [(52, 46, 7, (250, 232, 90, 255)), (76, 46, 7, (250, 232, 90, 255)), (53, 47, 3, (20, 14, 8, 255)), (77, 47, 3, (20, 14, 8, 255))])
-    lines(im, [(50, 62), (64, 68), (78, 62)], (40, 26, 16, 255), 2.4)
-    paint(im, poly([(54, 63), (58, 63), (56, 71)]), (230, 230, 220), (250, 250, 240))
-    paint(im, poly(rot_rect(106, 82, 28, 7, -0.9)), (120, 128, 140), (214, 222, 232), 'y', 'tri')
-    return im
-
-
-def runner():
-    im = canvas()
-    lines(im, [(26, 70), (10, 58), (6, 66)], (80, 90, 98, 255), 5)
-    for x in (44, 56, 78, 90):
-        lines(im, [(x, 82), (x + (-5 if x < 64 else 6), 108)], (52, 60, 68, 255), 5)
-    paint(im, ell(22, 56, 100, 96), (74, 84, 94), (150, 162, 172), 'y', 'tri')
-    paint(im, poly([(86, 50), (96, 36), (100, 52)]), (74, 84, 94), (130, 140, 150))
-    paint(im, ell(82, 48, 116, 80), (84, 94, 104), (164, 176, 186), 'y', 'tri')
-    paint(im, poly([(108, 58), (124, 70), (108, 76)]), (60, 68, 76), (110, 120, 130))
-    dots(im, [(100, 58, 4, (255, 90, 70, 255)), (101, 58, 2, (30, 8, 8, 255)), (122, 70, 3, (20, 20, 22, 255))])
-    lines(im, [(104, 74), (114, 76)], (240, 240, 230, 255), 2)
-    return im
-
-
-def golem():
-    im = canvas()
-    paint(im, rrect(34, 100, 58, 118, 4), (70, 62, 56), (130, 120, 108), 'x', 'tri')
-    paint(im, rrect(70, 100, 94, 118, 4), (70, 62, 56), (130, 120, 108), 'x', 'tri')
-    paint(im, rrect(8, 44, 34, 100, 8), (86, 76, 66), (150, 138, 122), 'x', 'tri')
-    paint(im, rrect(94, 44, 120, 100, 8), (86, 76, 66), (150, 138, 122), 'x', 'tri')
-    paint(im, rrect(30, 36, 98, 106, 10), (92, 82, 72), (176, 162, 144), 'x', 'tri')
-    paint(im, rrect(46, 12, 82, 44, 6), (96, 86, 76), (170, 156, 138), 'x', 'tri')
-    glow(im, 64, 28, 16, (255, 170, 40), 110)
-    dots(im, [(56, 28, 4.5, (255, 200, 70, 255)), (72, 28, 4.5, (255, 200, 70, 255))])
-    lines(im, [(44, 54), (54, 70), (48, 84)], (50, 42, 36, 200), 2.2)
-    lines(im, [(84, 60), (76, 76), (86, 92)], (50, 42, 36, 200), 2.2)
-    dots(im, [(20, 52, 5, (90, 130, 60, 220)), (100, 96, 4, (90, 130, 60, 220)), (60, 100, 4, (90, 130, 60, 200))])
-    return im
-
-
-def wyvern():
-    im = canvas()
-    glow(im, 64, 70, 36, (150, 80, 220), 60)
-    for sign in (-1, 1):
-        wing = [(60, 72 + sign * 6), (28, 72 + sign * 50), (42, 72 + sign * 34), (34, 72 + sign * 60), (54, 72 + sign * 38), (58, 72 + sign * 66), (72, 72 + sign * 14)]
-        paint(im, poly(wing), (70, 40, 120), (170, 110, 220), 'x')
-        lines(im, [(62, 72 + sign * 8), (30, 72 + sign * 48)], (50, 28, 90, 255), 2)
-        lines(im, [(64, 72 + sign * 10), (58, 72 + sign * 62)], (50, 28, 90, 255), 2)
-    paint(im, poly([(40, 66), (6, 88), (14, 80), (42, 78)]), (88, 52, 140), (150, 100, 200))
-    paint(im, ell(36, 60, 96, 84), (92, 54, 150), (176, 128, 232), 'y', 'tri')
-    paint(im, poly([(88, 64), (118, 72), (88, 82)]), (100, 60, 160), (188, 140, 240))
-    dots(im, [(100, 69, 3.5, (255, 220, 70, 255)), (101, 69, 1.6, (30, 10, 20, 255))])
-    return im
-
-
-def goliath():
-    im = canvas()
-    glow(im, 64, 66, 52, (230, 40, 30), 110)
-    paint(im, rrect(34, 98, 60, 120, 5), (30, 24, 28), (80, 70, 76), 'x', 'tri')
-    paint(im, rrect(68, 98, 94, 120, 5), (30, 24, 28), (80, 70, 76), 'x', 'tri')
-    paint(im, poly([(26, 52), (102, 52), (92, 108), (36, 108)]), (36, 28, 34), (96, 82, 90), 'x', 'tri')
-    paint(im, rrect(2, 40, 34, 100, 9), (36, 28, 34), (88, 74, 82), 'x', 'tri')
-    paint(im, rrect(94, 40, 126, 100, 9), (36, 28, 34), (88, 74, 82), 'x', 'tri')
-    for cx in (22, 106):
-        paint(im, ell(cx - 18, 30, cx + 18, 62), (60, 44, 30), (180, 140, 60), 'x', 'tri')
-        for k in (-1, 0, 1):
-            paint(im, poly([(cx + k * 9 - 4, 36), (cx + k * 9, 14), (cx + k * 9 + 4, 36)]), (120, 100, 50), GOLD)
-    paint(im, ell(40, 6, 88, 54), (30, 24, 30), (92, 80, 90), 'x', 'tri')
-    paint(im, poly([(42, 20), (22, 2), (30, 28)]), (150, 130, 110), (236, 224, 200))
-    paint(im, poly([(86, 20), (106, 2), (98, 28)]), (150, 130, 110), (236, 224, 200))
-    paint(im, rrect(48, 26, 80, 38, 3), (10, 6, 8), (30, 20, 24), 'y')
-    glow(im, 56, 32, 7, (255, 60, 40), 190)
-    glow(im, 72, 32, 7, (255, 60, 40), 190)
-    dots(im, [(56, 32, 3, (255, 150, 110, 255)), (72, 32, 3, (255, 150, 110, 255)), (64, 76, 6, (255, 70, 50, 255))])
-    glow(im, 64, 76, 12, (255, 70, 40), 160)
-    return im
-
-
-def hero():
-    im = canvas()
-    glow(im, 64, 66, 46, (255, 190, 70), 110)
-    paint(im, poly([(64, 46), (96, 118), (32, 118)]), (140, 40, 30), (230, 110, 60), 'x', 'tri')
-    paint(im, ell(40, 104, 88, 120), (60, 50, 44), (120, 108, 96), 'x', 'tri')
-    paint(im, rrect(40, 54, 88, 104, 12), (96, 100, 112), (210, 214, 226), 'x', 'tri')
-    lines(im, [(42, 82), (86, 82)], (190, 140, 50, 255), 4)
-    paint(im, ell(42, 22, 86, 66), (110, 114, 126), (226, 230, 240), 'x', 'tri')
-    paint(im, rrect(50, 40, 78, 48, 2), (14, 12, 16), (50, 44, 50), 'y')
-    paint(im, poly([(64, 24), (74, 4), (84, 28)]), (190, 120, 30), GOLD)
-    paint(im, poly(rot_rect(104, 66, 62, 9, -1.2)), (130, 138, 150), (240, 244, 252), 'y', 'tri')
-    paint(im, rrect(96, 84, 112, 90, 2), (130, 90, 30), GOLD)
-    paint(im, ell(14, 62, 44, 98), (150, 100, 30), GOLD, 'x', 'tri')
-    dots(im, [(29, 80, 5, (120, 60, 20, 255))])
-    return im
-
-
-SPRITES = {
-    'arrow_t1': lambda: arrow(False), 'arrow_t2': lambda: arrow(True), 'cannon_t1': lambda: cannon(False), 'cannon_t2': lambda: cannon(True),
-    'magic_t1': lambda: magic(False), 'magic_t2': lambda: magic(True), 'slow_t1': lambda: slow(False), 'slow_t2': lambda: slow(True),
-    'fire_ult': lambda: ultimate(magic, (255, 120, 50)), 'water_ult': lambda: ultimate(slow, (140, 220, 250)),
-    'earth_ult': lambda: ultimate(cannon, (200, 150, 90)), 'nature_ult': lambda: ultimate(arrow, (120, 220, 110)),
-    'citadel': citadel, 'spawn_portal': spawn_portal,
-    'acid_t1': acid, 'watchtower': watchtower, 'grunt': grunt, 'runner': runner, 'golem': golem, 'wyvern': wyvern, 'boss_goliath': goliath, 'hero': hero,
-}
-
-
-def main():
-    for name, fn in SPRITES.items():
-        done(fn(), name)
-    print('wrote', len(SPRITES), 'sprites to', OUT)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
