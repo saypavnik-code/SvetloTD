@@ -304,6 +304,8 @@ export class Enemy implements Poolable {
     const barW   = this.radius * 2.4;
     const barX   = this.x - barW / 2;
     const barY   = this.y - this.radius - 8;
+    // Dark 1px frame so the bar stays readable on bright terrain
+    g.fillStyle(0x000000, 0.4); g.fillRect(barX - 1, barY - 1, barW + 2, 5);
     g.fillStyle(COLORS.walnutDark, 0.45); g.fillRect(barX, barY, barW, 3);
     const col = ratio>0.6 ? COLORS.success : ratio>0.3 ? COLORS.amberWarm : COLORS.danger;
     g.fillStyle(col, 1); g.fillRect(barX, barY, barW * ratio, 3);

@@ -114,6 +114,11 @@ export class Projectile implements Poolable {
     // White-hot centre of the projectile
     g.fillStyle(0xffffff, 0.7); g.fillCircle(this.x, this.y, 1.4);
     g.lineStyle(1.5, COLORS.amberGlow, 0.55); g.strokeCircle(this.x, this.y, 3.5);
+    // Comet streak from the oldest trail point to the projectile
+    if (this._trail.length > 1) {
+      g.lineStyle(2, this._color, 0.3);
+      g.beginPath(); g.moveTo(this._trail[0].x, this._trail[0].y); g.lineTo(this.x, this.y); g.strokePath();
+    }
     // Trail dots
     for (let i=1;i<this._trail.length;i++) {
       const a=(i/this._trail.length)*0.45;
@@ -137,5 +142,11 @@ export class Projectile implements Poolable {
     g.fillStyle(this._color, a*0.10); g.fillCircle(this._splashX, this._splashY, r);
     // Inner shockwave ring
     g.lineStyle(1.2, 0xffffff, a*0.5); g.strokeCircle(this._splashX, this._splashY, r*0.68);
+    // Eight sparks flying outward with the shockwave
+    for (let k = 0; k < 8; k++) {
+      const ang = k * (Math.PI / 4) + 0.3;
+      g.fillStyle(0xffffff, a);
+      g.fillCircle(this._splashX + Math.cos(ang) * r, this._splashY + Math.sin(ang) * r, 0.5 + (1 - t) * 1.4);
+    }
   }
 }
