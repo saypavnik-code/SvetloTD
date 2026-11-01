@@ -77,6 +77,7 @@ export class WaveManager {
   get currentWaveData(): WaveData | null { return this._waves[this._waveIndex] ?? null; }
   get waveNumber():  number { return this._waveIndex + 1; }
   get totalWaves():  number { return this._waves.length; }
+  get enemiesRemaining(): number { return this._enemiesRemaining; }
   get countdownSecs(): number { return Math.ceil(this._countdownSecs); }
 
   startGame(): void { this._beginCountdown(); }

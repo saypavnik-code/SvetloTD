@@ -236,12 +236,13 @@ export class WaveInfo {
   update(_delta: number): void {
     if (!this._waveRoot.visible) return;
 
-    const active = this._wm.activeEnemies.length;
+    const remaining = this._wm.enemiesRemaining;
     const total = this._wm.currentWaveData?.count ?? 1;
-    const pct = total > 0 ? Math.max(0, 1 - active / total) : 1;
+    const totalWaves = this._wm.totalWaves || WAVES.length;
+    const pct = total > 0 ? Math.max(0, Math.min(1, 1 - remaining / total)) : 1;
     const isBoss = this._wm.currentWaveData?.isBoss ?? false;
 
-    this._waveTitleTxt.setText(`Волна ${Math.min(this._wm.waveNumber, WAVES.length)} • Осталось: ${active}/${total}`);
+    this._waveTitleTxt.setText(`Волна ${Math.min(this._wm.waveNumber, totalWaves)} • Осталось: ${remaining}/${total}`);
     this._waveBarFill.clear();
     this._waveBarFill.fillStyle(isBoss ? COLORS.danger : COLORS.amberWarm, 0.95);
     this._waveBarFill.fillRoundedRect(LEFT, BAR_Y + 40, WAVE_W * pct, 8, 2);
