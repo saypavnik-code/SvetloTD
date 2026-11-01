@@ -102,6 +102,8 @@ export const BUILDS = {
   balanced: staged([{ arrow: 1, magic: 1 }, { arrow: 2, magic: 2, cannon: 1, slow: 1 }, { arrow: 3, magic: 3, cannon: 2, slow: 2, acid: 1 }, { arrow: 5, magic: 5, cannon: 4, slow: 3, acid: 2 }, { arrow: 8, magic: 7, cannon: 6, slow: 4, acid: 3 }]),
 };
 
+// With `ultimates: true` (v0.26.0) a seat that has nothing left on its list researches the mastery of a builder (lumber) and upgrades its tier-2 towers to the
+// ultimates (gold and lumber) as long as it can pay; `waveSeed: n` plays the seeded expert shuffle of the wave list.
 // Licensed team (v0.24.0): `team: ['fire', 'earth', 'nature', 'water']` gives seat i only that builder (the free first license of the real game)
 // and the rule list of its line; with `gifts` a seat whose list is exhausted passes its whole purse to the seat that still has something to buy.
 export const TEAM_PLANS = {
@@ -159,7 +161,7 @@ export function simulate(options = {}) {
   return withScenario(options.scenario, () => runSimulation(options));
 }
 
-function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null, seats = 1, sharedIncome = false, placement = 'coverage', team = null, gifts = true } = {}) {
+function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null, seats = 1, sharedIncome = false, placement = 'coverage', team = null, gifts = true, ultimates = false, waveSeed = null } = {}) {
   const spec = baseline ? BASELINES[baseline] : { towers: true };
   if (team && (team.length !== seats || build || layout)) throw new Error('a team has one builder per seat and replaces the build and the layout');
   const plan = team ? [] : build ? BUILDS[build] : (layout ? [] : null);
@@ -180,7 +182,9 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
     if (startDelta > 0) economy.addGold(share, seat);
     else if (startDelta < 0) economy.spendGold(share, seat);
   });
-  const waves = new game.WaveManager(null, enemyPool);
+  // An expert game plays a seeded shuffle of the wave list (`waveSeed`), the others the data order.
+  const waveList = waveSeed === null ? WAVES : game.randomizedWaves(waveSeed);
+  const waves = new game.WaveManager(null, enemyPool, waveList);
   // The real kill and leak rules (bounty, lumber, lives), registered right after WaveManager exactly as in GameScene.
   const outcomes = new game.EnemyOutcomes(economy, lumber, sharedIncome);
   const { scene, click } = createScene();
@@ -219,7 +223,7 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
   const towerValue = () => builder.towers.reduce((sum, t) => sum + t.totalInvested, 0);
   const handlers = [
     [GameEvents.WAVE_STARTED, (n) => {
-      const wave = WAVES[n - 1];
+      const wave = waveList[n - 1];
       current = {
         wave: n, enemyType: wave.enemyType, count: wave.count, startedAt: time,
         goldAtStart: totalGold(), spentBefore: spentPending, towers: builder.towers.length, invested: towerValue(),
@@ -258,20 +262,46 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
     for (let seat = 0; seat < seats; seat++) buyForSeat(seat);
     if (!team || !gifts) return;
     // A seat with nothing left to buy gives its whole purse to the seat with the most expensive unfinished plan step (one round of gifts).
-    const hungry = Array.from({ length: seats }, (_, seat) => seat).filter((seat) => nextAction(seat));
+    const hungry = Array.from({ length: seats }, (_, seat) => seat).filter(hasWork);
     if (hungry.length === 0) return;
     for (let seat = 0; seat < seats; seat++) {
-      if (nextAction(seat) || economy.goldOf(seat) <= 0) continue;
+      if (hasWork(seat) || economy.goldOf(seat) <= 0) continue;
       const to = hungry.reduce((a, b) => (economy.goldOf(b) < economy.goldOf(a) ? b : a));
       economy.transferGold(economy.goldOf(seat), seat, to);
     }
     for (const seat of hungry) buyForSeat(seat);
   };
+  // The next ultimate this seat could buy: a tower whose upgrade costs lumber (mastery of its builder is researched on the way).
+  const ultimateTarget = (seat) => {
+    for (const t of builder.towers) {
+      if (t.ownerSeat !== seat) continue;
+      const ult = TOWER_DEFS[t.towerId].upgradeTo.find((id) => TOWER_DEFS[id].lumberCost > 0);
+      if (ult) return { tower: t, ult };
+    }
+    return null;
+  };
+  const hasWork = (seat) => Boolean(nextAction(seat)) || (ultimates && Boolean(ultimateTarget(seat)));
+  const buyUltimates = (seat) => {
+    for (let guard = 0; guard < 100; guard++) {
+      const next = ultimateTarget(seat);
+      if (!next) return;
+      const maker = game.builderOfTower(next.ult);
+      if (!builders.owns(seat, maker)) return;
+      if (!builders.hasMastery(seat, maker) && !builders.research(seat, maker)) return;
+      const price = TOWER_DEFS[next.ult].cost;
+      if (economy.goldOf(seat) < price || !builders.canAffordLumber(seat, TOWER_DEFS[next.ult].lumberCost)) return;
+      click(next.tower.gridCol, next.tower.gridRow);
+      builder.upgradeSelected(next.ult);
+      if (next.tower.towerId !== next.ult) return;
+      spentPending += price;
+    }
+  };
   const buyForSeat = (seat) => {
     seatRules.setActive(seat);
     for (let guard = 0; guard < 200; guard++) {
       const action = nextAction(seat);
-      if (!action || economy.goldOf(seat) < action.price) return;
+      if (!action) break;
+      if (economy.goldOf(seat) < action.price) return;
       if (action.rule.kind === 'place') {
         const slot = freeSlot(seat);
         builder.selectTowerType(action.rule.id);
@@ -282,6 +312,7 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
       }
       spentPending += action.price;
     }
+    if (ultimates && !nextAction(seat)) buyUltimates(seat);
   };
 
   const casts = { q: 0, w: 0 };
@@ -323,6 +354,8 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
     result = {
       build: team ? `team:${team.join('+')}` : (build ?? baseline), difficulty, result: terminal ?? 'unfinished', reachedWave: current ? current.wave : 0,
       livesLeft: economy.lives, goldEnd: totalGold(), lumberEnd: totalLumber(), seconds: Math.round(time),
+      masteryEnd: Array.from({ length: seats }, (_, seat) => game.BUILDER_IDS.filter((id) => builders.hasMastery(seat, id)).length).reduce((a, b) => a + b, 0),
+      ultimatesEnd: builder.towers.filter((t) => TOWER_DEFS[t.towerId].lumberCost > 0).length,
       towerCells: builder.towers.map((t) => ({ seat: t.ownerSeat, id: t.towerId, col: t.gridCol, row: t.gridRow })),
       seats, perSeat: Array.from({ length: seats }, (_, seat) => ({
         seat, goldEnd: economy.goldOf(seat), lumberEnd: lumber.lumberOf(seat), kills: killsBySeat[seat],

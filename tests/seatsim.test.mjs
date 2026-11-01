@@ -100,6 +100,36 @@ test('the default mixed team ends within the limit of the best mono team', () =>
   assert(m.monoBest - m.teams.default.reachedWave <= TEAM_GAP_LIMIT, `default team ends in wave ${m.teams.default.reachedWave}, best mono team in wave ${m.monoBest}`);
 });
 
+// ── Ultimates and expert orders (v0.26.0) ───────────────────────────────────
+
+test('ultimates are paid in gold and lumber, and nothing else is lost: mastery, ultimates, kill yields and milestones add up', () => {
+  const result = simulate({ seats: 4, team: ['nature', 'nature', 'nature', 'nature'], placement: 'zones', ultimates: true, extraGold: 20000, maxWave: 16 });
+  assert(result.ultimatesEnd >= 3 && result.masteryEnd >= 3, `bought ${result.ultimatesEnd} ultimates and ${result.masteryEnd} masteries`);
+  const earned = sum(result.rows, 'bounty') + sum(result.rows, 'interest') + sum(result.rows, 'bonus');
+  const invested = result.perSeat.reduce((total, seat) => total + seat.invested, 0);
+  assert.equal(result.goldEnd + invested, DIFFICULTY_PRESETS.normal.startingGold + 20000 + earned, 'gold');
+  const cleared = result.rows.filter((row) => row.cleared).length;
+  const yields = result.rows.reduce((total, row) => total + row.kills * ENEMY_DEFS[row.enemyType].lumberYield, 0);
+  const spent = result.ultimatesEnd * game.TOWER_DEFS.nature_ult.lumberCost + result.masteryEnd * game.MASTERY_LUMBER;
+  assert.equal(result.lumberEnd + spent, yields + 4 * Math.floor(cleared / 5), 'lumber');
+});
+
+test('an ultimate never ends a run earlier than the tier-2 towers it replaces', () => {
+  for (const c of measure().ultimates) {
+    assert(c.withUlt.reachedWave >= c.plain.reachedWave, `${c.name}: ${c.plain.reachedWave} with tier 2 only, ${c.withUlt.reachedWave} with ultimates`);
+  }
+});
+
+test('an expert run plays the seeded shuffle of the wave list, and the same seed replays the same run', () => {
+  const options = { build: 'magic_slow', seats: 1, placement: 'zones', ultimates: true, difficulty: 'insane', waveSeed: 5 };
+  const first = simulate(options);
+  assert.deepEqual(first, simulate(options), 'replay');
+  const list = game.randomizedWaves(5);
+  first.rows.forEach((row, index) => assert.equal(row.enemyType, list[index].enemyType, `wave ${index + 1} comes from the shuffled list`));
+  assert(list.some((wave, index) => wave.enemyType !== game.WAVES[index].enemyType), 'seed 5 differs from the data order');
+  assert.notDeepEqual(simulate({ ...options, waveSeed: 4 }).rows.map((row) => row.enemyType), first.rows.map((row) => row.enemyType));
+});
+
 // ── Bars measured by docs/SEAT_REPORT.md ────────────────────────────────────
 
 test('co-operation is no handicap: with 2 or 4 seats no build ends more than the limit earlier than with one seat', () => {

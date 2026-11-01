@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.25.0)
+## Current state (v0.26.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -108,6 +108,12 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   arrow 40 to 35, cannon_arrow 17 to 17, magic_slow 35 to 40, balanced 35 to 31 (old coverage cells: arrow 31 to 27, cannon_arrow 25 to 20, magic_slow 23 to 27, balanced 27 to 30);
   the late-game bar holds (best build 10 lives after wave 30). The lumber bar of v0.23.0 was dropped: lumber comes in drops of 1 and 2 and its spread stays 1.1-1.5 whatever the
   routes do, so the report shows it and no longer bars it (kills stay barred at 1.25). Not measured: ultimates and licenses (the harness buys neither), a hero that plays, real players.
+- v0.26.0 ultimates and expert orders in the harness (track step B6, part 4; B6 is done): `simulate({ ultimates: true })` makes a finished seat research mastery (3 lumber per builder) and upgrade
+  its tier-2 towers to ultimates (360-450 gold and 3 lumber each); `simulate({ waveSeed: n })` plays the seeded expert shuffle of the wave list. `docs/SEAT_REPORT.md` tables 4-6. Findings: ultimates
+  move the defeat wave by 0 to 9 waves and never backwards (balanced 31 to 40, four Pyromancers 35 to 40, the rest unchanged); four Wardens buy 18 ultimates and still die at the wave-35 boss because
+  piercing deals x0.35 to fortified armor; the default mixed team buys 3 and stays at wave 27 (its wall is air). Expert (insane, 1 life) over 12 seeds: arrow 6-8, magic_slow 6-20, balanced 6-12 against
+  7 in the data order: the first leak ends the run and the rule lists do not react to a leak, so it is a floor, not a bar. Tests: gold and lumber ledger with ultimates, no regression, seeded replay.
+  No game source file and no game number changed. Not measured: a second builder license bought with lumber, a hero that plays, a build that reacts to a leak, real players.
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
 
 The owner's verdict on v0.15.0: the game does not resemble Burbenog TD. In the original everything is built around a square and up to four
@@ -121,7 +127,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B3 | v0.19.0 (done) | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
 | B5 (done) | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1, shuffled waves for expert); the lives are one team pool, no seat scaling (gold is conserved across seats) | Data tests: lives per mode, same totals for 1, 2, 4 seats, seeded order |
-| B6 | v0.23.0 to v0.25.0 (parts 1-3 done: seats in the harness, route fairness, late-game bar, licensed teams, line rebalance; part 4 open) | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat. Open: licenses bought with lumber, mastery, ultimates and expert orders in the harness | New acceptance bars, regenerated reports |
+| B6 (done) | v0.23.0 to v0.26.0 (seats in the harness, route fairness, late-game bar, licensed teams, line rebalance, ultimates and expert orders) | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat. Left over: a second builder license bought with lumber and a build that reacts to a leak are not in the harness | New acceptance bars, regenerated reports |
 | B7 | v0.22.0 (part 1 done; the rest later) | Art pass 3 on the square map: citadel base and spawn portals, builder emblems, damage and armor icons are done; seat-coloured pads, panel frames are open | Screenshots of menu, empty, built and boss field |
 | B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
 
@@ -235,15 +241,14 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.26.0 harness for licenses, mastery and ultimates; expert orders (Burbenog track, step B6 part 4)
-- Done: v0.23.0 seats, route fairness, late-game bar; v0.24.0 licensed teams; v0.25.0 line rebalance (the mixed-team TODO is closed).
-- Objective: the headless harness buys what the real game sells with lumber (second to fourth builder licenses, mastery, ultimates) and plays the seeded expert wave order, so that the
-  ultimates (80 dps nature, 73 earth, 56 fire, 45 water) and the licensed rosters are measured instead of assumed. Priority: P1: it decides whether the late game of a real team is
-  easier or harder than the 24-cell, tier-2 proxy that every bar uses.
-- Scope (proposal): `simulate` takes a purchase list for licenses and ultimates (lumber is already counted per seat), a build that reacts to a leak, and a wave list so expert orders
-  can be measured with seeds; report tables in `docs/SEAT_REPORT.md`; bars: a four-seat team that buys its ultimates ends later than one that does not, and no expert order is a
-  guaranteed loss for the best team. Not in scope: a hero that plays, art, a menu for seats.
-- Acceptance: all gates; regenerated reports; if the ultimates move the walls, the finding is a TODO test with numbers, not a silent data change.
+## Next sprint (recommended): v0.27.0 art pass 3, the rest (Burbenog track, step B7 part 2)
+- Done: B1-B6 (square map, four seats, gifts, builders and ultimates, lives and difficulties, harness and rebalance); B7 part 1 (v0.22.0).
+- Objective: the square map looks like four players share it: seat-coloured build pads and a nine-slice panel and button frame set, so the HUD stops being flat rectangles. Priority: P2: no
+  rule changes, but it is the first thing a new player sees, and the only part of the track the owner can judge by eye.
+- Scope (proposal): `scripts/generate_ui_art.py` (Pillow, deterministic) adds `pad_seat_0..3.png` (the cell marker in the seat colour, 40x40) and `panel_9.png`, `button_9.png` (nine-slice);
+  `BuildSystem` and the HUD use them; fallbacks stay for a missing texture. Not in scope: menu background, projectiles and hit effects, road-edge tiles (the later part of B7).
+- Acceptance: all gates (the PNG count and sizes in `validate_game.py` grow), `tests/art.test.mjs` for the new files, screenshots of menu, empty, built and boss field from the owner (the browser
+  smoke has never been run: this patch is the reason to do it).
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); the checklists of
   v0.20.0, v0.21.0 and v0.22.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
 - Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; a build with more than 24 cells (the best build ends with 17347 gold unspent, `docs/SEAT_REPORT.md`); hero summon and a tech/aura building paid with

@@ -31,6 +31,12 @@ seat or economy data. Browser smoke: not run. This report measures; the bars it 
    four Pyromancers at w35. The mixed team is 8 waves behind the best mono team (limit 10): within the limit.
    The mixed team ends where the first wave of wyverns it cannot kill arrives: cannons cannot hit air, so the earth seat adds nothing there.
 
+9. **Ultimates.** Buying them with the lumber that was lying unused (mastery 3 lumber per builder, 3 lumber and 360-450 gold per tower) moves the defeat wave by 0 to 9
+   waves over 7 cases (table 4) and never backwards. Four Wardens with 18 ultimates still end in wave 35, a boss wave (fortified armor: piercing deals x0.35),
+   so the wall of a team is its weakest answer to air and to fortified bosses, not its number of ultimates.
+10. **Expert (1 life, shuffled waves).** Over 12 seeds the catalogued builds end at arrow 6-8 (fixed order w7), magic_slow 6-20 (fixed order w7), balanced 6-12 (fixed order w7): the first leak ends the run and the rule lists do not react to a leak,
+   so this is a floor and no bar; it shows that the order of the first five waves alone moves a run by up to 14 waves.
+
 ## Table 1: defeat wave by layout and seat count (normal)
 
 | build | 1 seat, coverage cells | 1 seat | 2 seats | 4 seats | gold unspent at the end (4 seats) |
@@ -59,7 +65,27 @@ seat or economy data. Browser smoke: not run. This report measures; the bars it 
 | mono_magic: fire fire fire fire | w35 | 74 / 87 / 87 / 84 | 9289 |
 | mono_arrow: nature nature nature nature | w35 | 85 / 84 / 84 / 82 | 10189 |
 
-## Table 4: lives left after late waves (zones, one seat, normal)
+## Table 4: ultimates (zones, normal)
+
+| case | tier 2 only | with ultimates | ultimates bought | lumber left |
+| --- | --- | --- | --- | --- |
+| team default | w27 | w27 | 3 | 35 |
+| team mono_arrow | w35 | w35 | 18 | 20 |
+| team mono_magic | w35 | w40 | 16 | 48 |
+| one seat arrow | w35 | w35 | 18 | 11 |
+| one seat cannon_arrow | w17 | w17 | 0 | 17 |
+| one seat magic_slow | w40 | w40 | 24 | 9 |
+| one seat balanced | w31 | w40 | 22 | 9 |
+
+## Table 5: expert, one seat, ultimates on (insane difficulty, defeat wave per seed)
+
+| build | fixed order | seed 1 | seed 2 | seed 3 | seed 4 | seed 5 | seed 6 | seed 7 | seed 8 | seed 9 | seed 10 | seed 11 | seed 12 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| arrow | w7 | w6 | w7 | w6 | w7 | w7 | w8 | w8 | w8 | w7 | w8 | w7 | w6 |
+| magic_slow | w7 | w6 | w7 | w6 | w16 | w20 | w16 | w16 | w20 | w7 | w16 | w7 | w6 |
+| balanced | w7 | w6 | w7 | w6 | w7 | w7 | w12 | w8 | w8 | w7 | w8 | w7 | w6 |
+
+## Table 6: lives left after late waves (zones, one seat, normal)
 
 | build | after 20 | after 25 | after 30 | after 35 | after 40 |
 | --- | --- | --- | --- | --- | --- |

@@ -50,7 +50,7 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
   headlessly; regenerate the report with `npm run report:economy -- --write` whenever wave, enemy, tower,
   difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
 - `simulate({ seats: 2|4, placement: 'zones' })` plays the shared screen (v0.23.0); `docs/SEAT_REPORT.md` (`node scripts/seat_report.mjs --write`, compared by
-  `tests/seatsim.test.mjs`) holds the seat, layout and late-game bars. Compare seat counts only on the same cells (`placement: 'zones'`): the old `coverage` list is not rotation-symmetric.
+  `tests/seatsim.test.mjs`) holds the seat, layout and late-game bars. Compare seat counts only on the same cells (`placement: 'zones'`): the old `coverage` list is not rotation-symmetric. `team: [...]` plays licensed seats (v0.24.0), `ultimates: true` buys mastery and ultimates, `waveSeed: n` plays the seeded expert shuffle (v0.26.0).
 - Kill bounty, lumber yield and leak lives are paid by the real `EnemyOutcomes`: a harness builds it right after
   `WaveManager` and registers only its own bookkeeping after that, instead of copying the scene's handlers.
 - Real rendering can be checked headlessly in the assistant's sandbox: `@sparticuz/chromium` + `puppeteer-core` (not project

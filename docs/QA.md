@@ -368,7 +368,7 @@ No game number and no screen changed. Browser smoke: not run.
 
 ## v0.24.0 handoff: activation block and owner queue
 
-From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0, v0.25.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
+From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0, v0.25.0, v0.26.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
 refuses any untracked file except sibling patch files), then run the block of the v0.22.1 handoff (Step 2): it skips applied versions, runs `--dry-run` and then
 `--commit --push --self-delete` for each patch in version order, and stops at the first failure.
 
@@ -385,11 +385,11 @@ cd /workspaces/SvetloTD && (
 git log --oneline -4 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
 ```
 
-Expected after the whole chain: 154 unit tests, 154 pass, 0 fail, 0 TODO (after v0.24.0 alone: 153, 152 pass, 1 TODO, the open mixed-team finding); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
+Expected after the whole chain: 157 unit tests, 157 pass, 0 fail, 0 TODO (after v0.24.0 alone: 153, 152 pass, 1 TODO, the open mixed-team finding; after v0.25.0: 154); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
 touched file and writes `.git/svetlo-patch/<version>_report.txt`; a push that fails after the commit is reported and must be finished by hand (`git push origin main`), never by rerunning the patch.
 
 Owner queue: browser run of waves 1-40, victory, defeat, pause and restart (never executed since v0.2.1); the checklists of v0.20.0-v0.22.0; look at a few waves of a one-seat game and
-confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.26.0, licenses, mastery and ultimates in the harness (`ROADMAP.md`, "Next sprint").
+confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.27.0, the rest of art pass 3 (`ROADMAP.md`, "Next sprint").
 
 ## v0.25.0 builder-line rebalance: owner checklist
 
@@ -400,3 +400,11 @@ Visible change: five tower damage values moved, so the numbers in the tower pane
 - `tests/balance.test.mjs` pins the numbers and checks that every ultimate out-damages the tier it upgrades from; `tests/seatsim.test.mjs` has the mixed-team test as a plain test (it failed on the old numbers).
 - Reports regenerated: `docs/ECONOMY_REPORT.md`, `docs/BALANCE_PROPOSALS.md`, `docs/SEAT_REPORT.md`. One-seat numbers moved (see the v0.25.0 bullet in `ROADMAP.md`).
 - If it feels wrong: the old values are in the v0.25.0 history row and in this checklist; reverting is a one-line change per tower in `src/data/towers.ts` and a regeneration of the three reports.
+
+## v0.26.0 ultimates and expert orders in the harness: owner checklist
+
+Nothing visible changed: no game source file was touched (tests, scripts and documents only). Browser smoke: not run.
+
+- `docs/SEAT_REPORT.md` has findings 9-10 and tables 4-6 (ultimates, expert seeds, late-game lives). `tests/seatsim.test.mjs` has 16 tests (3 new: the ultimate ledger, no regression, seeded replay).
+- To replay an expert run in the browser, open the game with `?seed=5` on the expert difficulty; the harness plays the same shuffle for the same seed (`waveSeed: 5`).
+- Expert is a floor in the report (catalogued builds end at wave 6-20 with 1 life); judge the real difficulty by playing it.

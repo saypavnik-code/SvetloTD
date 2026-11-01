@@ -30,6 +30,15 @@ export const TEAMS = {
 /** Team bar (open, owner decision): the default mixed team may end at most this many waves earlier than the best mono team. */
 export const TEAM_GAP_LIMIT = 10;
 
+/** Where ultimates are measured (zones, normal): the licensed teams and the catalogued one-seat builds. */
+export const ULTIMATE_CASES = [
+  ...['default', 'mono_arrow', 'mono_magic'].map((name) => ({ name: `team ${name}`, options: { seats: 4, team: TEAMS[name], placement: 'zones' } })),
+  ...['arrow', 'cannon_arrow', 'magic_slow', 'balanced'].map((name) => ({ name: `one seat ${name}`, options: { build: name, seats: 1, placement: 'zones' } })),
+];
+/** Expert (difficulty insane: 1 life, shuffled waves): the builds and the seeds that are replayed. A measurement, not a bar. */
+export const EXPERT_BUILDS = ['arrow', 'magic_slow', 'balanced'];
+export const EXPERT_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
 const cache = new Map();
 export function run(options) {
   const key = JSON.stringify(options);
@@ -64,7 +73,13 @@ export function measure() {
   const best = names.reduce((a, b) => (bySeats[b][1].reachedWave > bySeats[a][1].reachedWave ? b : a));
   const teams = Object.fromEntries(Object.entries(TEAMS).map(([name, team]) => [name, run({ seats: 4, team, placement: 'zones' })]));
   const monoBest = Math.max(teams.mono_arrow.reachedWave, teams.mono_magic.reachedWave);
-  return { names, coverage, bySeats, hard, best, teams, monoBest };
+  const ultimates = ULTIMATE_CASES.map((c) => ({ ...c, plain: run(c.options), withUlt: run({ ...c.options, ultimates: true }) }));
+  const expertOptions = { seats: 1, placement: 'zones', ultimates: true, difficulty: 'insane' };
+  const expert = Object.fromEntries(EXPERT_BUILDS.map((name) => [name, {
+    fixed: run({ ...expertOptions, build: name }),
+    seeded: EXPERT_SEEDS.map((seed) => run({ ...expertOptions, build: name, waveSeed: seed })),
+  }]));
+  return { names, coverage, bySeats, hard, best, teams, monoBest, ultimates, expert };
 }
 
 const table = (header, rows) => [
@@ -115,6 +130,19 @@ export function buildReport() {
   push(`8. **Licensed teams.** The default four-seat team (${TEAMS.default.join(', ')}; 6 cells each, gifts from a finished seat) ends at ${label(team.default)}; four Wardens end at ${label(team.mono_arrow)},`);
   push(`   four Pyromancers at ${label(team.mono_magic)}. The mixed team is ${m.monoBest - team.default.reachedWave} waves behind the best mono team (limit ${TEAM_GAP_LIMIT}): ${m.monoBest - team.default.reachedWave <= TEAM_GAP_LIMIT ? 'within the limit' : 'over the limit'}.`);
   push('   The mixed team ends where the first wave of wyverns it cannot kill arrives: cannons cannot hit air, so the earth seat adds nothing there.', '');
+  const ult = m.ultimates;
+  const gains = ult.map((c) => c.withUlt.reachedWave - c.plain.reachedWave);
+  push(`9. **Ultimates.** Buying them with the lumber that was lying unused (mastery 3 lumber per builder, 3 lumber and 360-450 gold per tower) moves the defeat wave by ${Math.min(...gains)} to ${Math.max(...gains)}`);
+  const wardens = ult.find((c) => c.name === 'team mono_arrow').withUlt;
+  const wallWave = game.WAVES[wardens.reachedWave - 1];
+  push(`   waves over ${ult.length} cases (table 4) ${Math.min(...gains) >= 0 ? 'and never backwards' : 'and sometimes backwards'}. Four Wardens with ${wardens.ultimatesEnd} ultimates still end in wave ${wardens.reachedWave}${wallWave && wallWave.isBoss ? `, a boss wave (fortified armor: piercing deals x${game.DAMAGE_MATRIX.piercing.fortified})` : ''},`);
+  push('   so the wall of a team is its weakest answer to air and to fortified bosses, not its number of ultimates.');
+  const spread = Object.entries(m.expert).map(([name, e]) => {
+    const waves = e.seeded.map((r) => r.reachedWave).sort((a, b) => a - b);
+    return `${name} ${waves[0]}-${waves[waves.length - 1]} (fixed order ${label(e.fixed)})`;
+  });
+  push(`10. **Expert (1 life, shuffled waves).** Over ${EXPERT_SEEDS.length} seeds the catalogued builds end at ${spread.join(', ')}: the first leak ends the run and the rule lists do not react to a leak,`);
+  push('   so this is a floor and no bar; it shows that the order of the first five waves alone moves a run by up to ' + Math.max(...Object.values(m.expert).map((e) => { const w = e.seeded.map((r) => r.reachedWave); return Math.max(...w) - Math.min(...w); })) + ' waves.', '');
   push('## Table 1: defeat wave by layout and seat count (normal)', '');
   push(table(['build', '1 seat, coverage cells', '1 seat', '2 seats', '4 seats', 'gold unspent at the end (4 seats)'],
     m.names.map((n) => [n, label(m.coverage[n]), ...SEAT_COUNTS.map((c) => label(m.bySeats[n][c])), m.bySeats[n][4].goldEnd])), '');
@@ -128,7 +156,13 @@ export function buildReport() {
   push('## Table 3: licensed four-seat teams (zones, normal, gifts on)', '');
   push(table(['team (seats I-IV)', 'result', 'kills I / II / III / IV', 'gold unspent'],
     Object.entries(TEAMS).map(([name, members]) => [`${name}: ${members.join(' ')}`, label(team[name]), team[name].perSeat.map((s) => s.kills).join(' / '), team[name].goldEnd])), '');
-  push('## Table 4: lives left after late waves (zones, one seat, normal)', '');
+  push('## Table 4: ultimates (zones, normal)', '');
+  push(table(['case', 'tier 2 only', 'with ultimates', 'ultimates bought', 'lumber left'],
+    ult.map((c) => [c.name, label(c.plain), label(c.withUlt), c.withUlt.ultimatesEnd, c.withUlt.lumberEnd])), '');
+  push('## Table 5: expert, one seat, ultimates on (insane difficulty, defeat wave per seed)', '');
+  push(table(['build', 'fixed order', ...EXPERT_SEEDS.map((s) => `seed ${s}`)],
+    EXPERT_BUILDS.map((name) => [name, label(m.expert[name].fixed), ...m.expert[name].seeded.map((r) => label(r))])), '');
+  push('## Table 6: lives left after late waves (zones, one seat, normal)', '');
   const checkpoints = [20, 25, 30, 35, 40];
   push(table(['build', ...checkpoints.map((w) => `after ${w}`)],
     m.names.map((n) => [n, ...checkpoints.map((w) => livesLeftAfter(m.bySeats[n][1], w))])), '');
