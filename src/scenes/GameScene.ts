@@ -343,6 +343,15 @@ export class GameScene extends Phaser.Scene {
     // Hero — drawn above projectiles, below HUD
     this._heroGfx.clear();
     this._hero.drawTo(this._heroGfx, false);
+    // [3b:touch-hero] A finger tap on bare ground sends the hero there (touch has no right button).
+    // Wired lazily here so it never depends on the order of construction in create().
+    if (!this._buildSystem.onTouchGroundTap) {
+      this._buildSystem.onTouchGroundTap = (x: number, y: number): void => {
+        if (this._isPaused || this._gameOver || this._tutorialActive) return;
+        if (x < 0 || x > 720 || y < 0 || y > 720) return;
+        this._hero.moveTo(x, y);
+      };
+    }
     this._views.update(this._buildSystem.towers, enemies, this._hero, this.time.now);
 
     // VFX rings (skill Q expand, skill W pulse)
@@ -385,7 +394,9 @@ export class GameScene extends Phaser.Scene {
     const messages = [
       'Ставьте башни вдоль путей\n(клавиши 1–6).\nРазные башни эффективны\nпротив разной брони.',
       'Кликните на башню для\nинформации. Улучшайте\nбашни кнопкой U.',
-      'Управляйте героем правой\nкнопкой мыши.\nQ — ударная волна,\nW — щит башням.',
+      detectInputCapabilities().hasTouch // [3b:tutorial-touch]
+        ? 'Коснитесь земли — герой\nидёт туда. Навыки Q и W —\nкнопки слева внизу:\nволна и щит башням.'
+        : 'Управляйте героем правой\nкнопкой мыши.\nQ — ударная волна,\nW — щит башням.',
     ];
     const btnLabels = ['Понятно →', 'Далее →', 'Начать игру!'];
 

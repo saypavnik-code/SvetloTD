@@ -361,7 +361,7 @@ export class TowerPanel {
     this._sellLbl = s.add.text(PX+PAD+sellW/2, sellY+13, '✕ Продать  35◆', {
       fontFamily: FONT, fontSize: '13px', color: COLORS.dangerSoft_css, align:'center',
     }).setOrigin(0.5).setDepth(DEPTH.PANEL+3);
-    this._sellZone = s.add.zone(PX+PAD, sellY, sellW, 36).setOrigin(0).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+4);
+    this._sellZone = s.add.zone(PX+PAD, sellY - 4, sellW, 44).setOrigin(0).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+4); // [3b:sell-zone] 44 px target around the 36 px button
     this._sellZone.on('pointerover',  () => { this._sellGfx.clear(); this._sellGfx.fillStyle(COLORS.danger,0.24); this._sellGfx.fillRoundedRect(PX+PAD,sellY,sellW,36,6); this._sellGfx.lineStyle(2,COLORS.dangerSoft,0.95); this._sellGfx.strokeRoundedRect(PX+PAD,sellY,sellW,36,6); });
     this._sellZone.on('pointerout',   () => this._redrawSellBtn(this._tower));
     this._sellZone.on('pointerdown',  () => this._build.sellSelected());

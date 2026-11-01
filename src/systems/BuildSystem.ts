@@ -124,6 +124,8 @@ export class BuildSystem {
   private _bindTouch(): void {
     this._scene.input.on('pointerup', () => { this._touchUiDown = false; });
   }
+  // [3b:touch-hero-field] Set by the scene: a finger tap on bare ground (no tower, not placing) sends the hero there.
+  onTouchGroundTap: ((x: number, y: number) => void) | null = null;
   private _buildGhostGraphics(): void {
     this._ghostGfx   = this._scene.add.graphics().setDepth(DEPTH.GRID+1).setVisible(false);
     this._ghostRange = this._scene.add.graphics().setDepth(DEPTH.TOWER_BASE).setVisible(false);
@@ -186,7 +188,8 @@ export class BuildSystem {
       }
       if (!inGrid) { this._selectTower(null); return; }
       const hit=this.towers.find(t=>t.gridCol===col&&t.gridRow===row);
-      this._selectTower(hit??null);
+      this._selectTower(hit??null); // [3b:touch-hero-call]
+      if (!hit && this._isTouchPtr(ptr) && this.onTouchGroundTap) this.onTouchGroundTap(ptr.x, ptr.y);
     });
 
     this._scene.input.on('pointerdown', (arg: unknown) => {
