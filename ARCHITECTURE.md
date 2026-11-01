@@ -76,7 +76,8 @@ Do not mistake a shim-only typecheck for runtime verification.
 - `Hero.update()` uses the same cooldown model for its auto-attack (v0.6.0): the overshoot is carried and an
   idle hero cannot bank attacks.
 - `tests/support/simulate.mjs` is the headless economy harness (real wave, tower, hero and build code, no
-  randomness); `scripts/economy_report.mjs` renders `docs/ECONOMY_REPORT.md` from it.
+  randomness); `scripts/economy_report.mjs` renders `docs/ECONOMY_REPORT.md` from it. With `seats` it plays the shared screen and `scripts/seat_report.mjs` renders
+  `docs/SEAT_REPORT.md`. `WaveManager` deals the enemies of a wave to the routes starting at route `(wave - 1) mod routes`; a wave that pins a route keeps it.
 - Scenarios (`withScenario` in the harness) replace wave, enemy and starting-gold data for one run and restore it in a
   `finally`; `scripts/balance_proposals.mjs` renders `docs/BALANCE_PROPOSALS.md` from them. The scripted hero skill rule
   (`castSkills`) lives in the harness, not in the game.

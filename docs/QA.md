@@ -344,3 +344,15 @@ Expected: 140 unit tests, 140 pass, 0 fail, 0 TODO; `git log` shows one commit p
 
 Owner queue: the checklists of v0.20.0, v0.21.0 and v0.22.0 above (menu difficulty row, `?builders=fire`, `?seats=4`, the art checklist); a browser run of waves 1-40,
 victory, defeat, pause and restart; the decision whether a lone player keeps every builder. Then v0.23.0 (B6), see `ROADMAP.md`, "Next sprint".
+
+## v0.23.0 seats in the harness: owner checklist
+
+Nothing visible changed except the spawn order: a wave now starts on a different corner each time (wave 1 on the north-west portal, wave 2 on the north-east, and so on).
+Watch a few waves of a one-seat game: the first enemy of each wave should come out of a different portal. Browser smoke: not run.
+
+- `docs/SEAT_REPORT.md` equals the generator output (`node scripts/seat_report.mjs --write` after any wave, enemy, tower, seat or economy change).
+- `tests/seatsim.test.mjs` (10 tests): the harness is deterministic, towers stand in their seat's zones, 1, 2 and 4 seats use the same 24 cells, gold and lumber are
+  conserved across seats, the real `WaveManager` stays within 5% of the mean per route (it fails on the old spawn: 111 / 106 / 98 / 86), pinned routes stay pinned,
+  no build ends more than 5 waves earlier with more seats, the best build's four seats earn kills and lumber within 1.25x, and the late-game bar holds.
+- `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md` were regenerated: the route fix moved the one-seat numbers (cannon_arrow 27 to 25, balanced 30 to 27).
+- Limits: every seat owns every builder in the harness; builders, licenses, mastery, ultimates and the shuffled expert order are measured in v0.24.0.

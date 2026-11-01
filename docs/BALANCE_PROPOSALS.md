@@ -34,12 +34,12 @@ Opening bar: idle hero **PASS**, scripted skills **PASS**. Mid-game bar: idle he
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | arrow | idle | defeated in wave 31 | 30 | 25 | 20 | 0 | 0 |
 | arrow | skills | defeated in wave 31 | 30 | 25 | 20 | 1 | 0 |
-| cannon_arrow | idle | defeated in wave 27 | 26 | 21 | 6 | 0 | 0 |
-| cannon_arrow | skills | defeated in wave 30 | 29 | 25 | 10 | 2 | 0 |
-| magic_slow | idle | defeated in wave 23 | 22 | 23 | 10 | 0 | 0 |
-| magic_slow | skills | defeated in wave 27 | 26 | 23 | 14 | 2 | 0 |
-| balanced | idle | defeated in wave 30 | 29 | 23 | 16 | 0 | 0 |
-| balanced | skills | defeated in wave 30 | 29 | 23 | 16 | 0 | 0 |
+| cannon_arrow | idle | defeated in wave 25 | 24 | 19 | 4 | 0 | 0 |
+| cannon_arrow | skills | defeated in wave 27 | 26 | 23 | 8 | 2 | 0 |
+| magic_slow | idle | defeated in wave 23 | 22 | 21 | 8 | 0 | 0 |
+| magic_slow | skills | defeated in wave 25 | 24 | 21 | 12 | 2 | 0 |
+| balanced | idle | defeated in wave 27 | 26 | 21 | 14 | 0 | 0 |
+| balanced | skills | defeated in wave 30 | 29 | 21 | 14 | 1 | 0 |
 
 ### Other difficulties (informational, waves 1-11 only)
 
@@ -50,9 +50,9 @@ player; the harness also runs insane with the written wave order, not with a shu
 | difficulty | lives | hero | best build | lives@11 | opening bar |
 | --- | --- | --- | --- | --- | --- |
 | hard | 1 | idle | arrow | 0 | FAIL |
-| hard | 1 | skills | cannon_arrow | 1 | PASS |
+| hard | 1 | skills | arrow | 0 | FAIL |
 | insane | 1 | idle | arrow | 0 | FAIL |
-| insane | 1 | skills | cannon_arrow | 1 | PASS |
+| insane | 1 | skills | arrow | 0 | FAIL |
 
 ### Where the best build loses (normal, scripted skills)
 
@@ -62,9 +62,9 @@ Best build: `arrow`, defeated in wave 31, 30 waves cleared. Waves in which it le
 | --- | --- | --- | --- | --- | --- |
 | 20 | boss_goliath | 1 of 1 | 5 | 24 | 3960 |
 | 25 | boss_goliath | 1 of 1 | 5 | 24 | 4080 |
-| 27 | wyvern | 2 of 14 | 4 | 24 | 4080 |
+| 27 | wyvern | 4 of 14 | 8 | 24 | 4080 |
 | 30 | boss_goliath | 1 of 1 | 5 | 24 | 4080 |
-| 31 | wyvern | 3 of 16 | 6 | 24 | 4080 |
+| 31 | wyvern | 1 of 16 | 2 | 24 | 4080 |
 
 ## Mid-game alternatives that were not taken (E and F)
 
@@ -72,7 +72,7 @@ Scenarios against the waves as written; the applied data is proposal D (see "Dec
 
 | proposal | what changes | idle hero | scripted skills |
 | --- | --- | --- | --- |
-| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: arrow, 12 lives at wave 21, defeated in wave 27 | PASS: arrow, 16 lives at wave 21, defeated in wave 30 |
+| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: arrow, 12 lives at wave 21, defeated in wave 27 | PASS: arrow, 16 lives at wave 21, defeated in wave 27 |
 | F: Waves only | HP and count from 40% / 80% at wave 1, linear to 20% at wave 40; wave bonus unchanged; upgrade costs unchanged | PASS: arrow, 20 lives at wave 21, defeated in wave 35 | PASS: arrow, 20 lives at wave 21, defeated in wave 35 |
 
 ### Proposal E: all builds
@@ -82,13 +82,13 @@ The curve is only half as soft as in D; the economy answers with a 1.5x bonus an
 | build | hero | outcome | cleared | lives@11 | lives@21 |
 | --- | --- | --- | --- | --- | --- |
 | arrow | idle | defeated in wave 27 | 26 | 25 | 12 |
-| arrow | skills | defeated in wave 30 | 29 | 25 | 16 |
-| cannon_arrow | idle | defeated in wave 17 | 16 | 17 | 0 |
-| cannon_arrow | skills | defeated in wave 20 | 19 | 21 | 0 |
-| magic_slow | idle | defeated in wave 23 | 22 | 21 | 8 |
-| magic_slow | skills | defeated in wave 27 | 26 | 25 | 16 |
-| balanced | idle | defeated in wave 27 | 26 | 21 | 10 |
-| balanced | skills | defeated in wave 27 | 26 | 25 | 16 |
+| arrow | skills | defeated in wave 27 | 26 | 25 | 16 |
+| cannon_arrow | idle | defeated in wave 17 | 16 | 15 | 0 |
+| cannon_arrow | skills | defeated in wave 20 | 19 | 19 | 0 |
+| magic_slow | idle | defeated in wave 23 | 22 | 17 | 4 |
+| magic_slow | skills | defeated in wave 25 | 24 | 21 | 12 |
+| balanced | idle | defeated in wave 23 | 22 | 17 | 6 |
+| balanced | skills | defeated in wave 27 | 26 | 21 | 12 |
 
 ### Proposal F: all builds
 
@@ -98,12 +98,12 @@ Softer than the applied D at the end (20% instead of 30%) but with the wave bonu
 | --- | --- | --- | --- | --- | --- |
 | arrow | idle | defeated in wave 35 | 34 | 25 | 20 |
 | arrow | skills | defeated in wave 35 | 34 | 25 | 20 |
-| cannon_arrow | idle | defeated in wave 30 | 29 | 21 | 6 |
-| cannon_arrow | skills | defeated in wave 30 | 29 | 25 | 10 |
-| magic_slow | idle | defeated in wave 27 | 26 | 23 | 14 |
-| magic_slow | skills | defeated in wave 27 | 26 | 23 | 14 |
-| balanced | idle | defeated in wave 31 | 30 | 23 | 16 |
-| balanced | skills | defeated in wave 31 | 30 | 23 | 16 |
+| cannon_arrow | idle | defeated in wave 25 | 24 | 19 | 4 |
+| cannon_arrow | skills | defeated in wave 30 | 29 | 23 | 8 |
+| magic_slow | idle | defeated in wave 23 | 22 | 21 | 12 |
+| magic_slow | skills | defeated in wave 25 | 24 | 21 | 12 |
+| balanced | idle | defeated in wave 31 | 30 | 21 | 14 |
+| balanced | skills | defeated in wave 31 | 30 | 21 | 14 |
 
 ## What-ifs for the design questions (not proposals, waves 1-20)
 
@@ -113,7 +113,7 @@ Each row changes one thing against the current data and reports the best build.
 | --- | --- | --- |
 | W0: Current data | PASS: arrow, 20 lives at wave 21, alive in wave 21 | PASS: arrow, 20 lives at wave 21, alive in wave 21 |
 | W1: Tier-2/3 upgrades cost 30% less | PASS: arrow, 20 lives at wave 21, alive in wave 21 | PASS: arrow, 20 lives at wave 21, alive in wave 21 |
-| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | PASS: arrow, 12 lives at wave 21, alive in wave 21 | PASS: balanced, 16 lives at wave 21, alive in wave 21 |
+| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | PASS: arrow, 12 lives at wave 21, alive in wave 21 | PASS: arrow, 14 lives at wave 21, alive in wave 21 |
 
 ## Tower efficiency (analytic, from the data)
 

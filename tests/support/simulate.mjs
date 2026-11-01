@@ -4,6 +4,9 @@ import { loadModules } from './load-source.mjs';
 // It mirrors the per-frame order of GameScene.update (waves, hero, towers, projectiles). The hero is parked
 // on the base and auto-attacks; with `skills: true` it also casts Q and W by a fixed rule (see `castSkills`).
 // The watchtower aura and hero movement are NOT simulated.
+// With `seats: 2|4` (v0.23.0) every seat is a player: its own wallet, its own zones, the same build plan run on its own
+// share of the gold, and the real Seats / BuilderManager / BuildSystem rules (zone rule, owner credit). Every seat owns every
+// builder here, so the measurement isolates what the zones and the split gold do.
 
 const game = loadModules(
   'src/entities/Tower.ts',
@@ -16,6 +19,8 @@ const game = loadModules(
   'src/systems/InterestSystem.ts',
   'src/systems/EnemyOutcomes.ts',
   'src/systems/LumberManager.ts',
+  'src/systems/BuilderManager.ts',
+  'src/systems/Seats.ts',
   'src/systems/StatusEffectSystem.ts',
   'src/systems/HitEffects.ts',
   'src/systems/GameSpeed.ts',
@@ -27,6 +32,7 @@ const game = loadModules(
   'src/data/waves.ts',
   'src/data/mapData.ts',
   'src/data/damageMatrix.ts',
+  'src/data/seats.ts',
   'src/config/difficulty.ts',
   'src/config.ts',
 );
@@ -143,27 +149,53 @@ export function simulate(options = {}) {
   return withScenario(options.scenario, () => runSimulation(options));
 }
 
-function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null } = {}) {
+function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null, seats = 1, sharedIncome = false, placement = 'coverage' } = {}) {
   const spec = baseline ? BASELINES[baseline] : { towers: true };
   const plan = build ? BUILDS[build] : (layout ? [] : null);
+  if (layout && seats !== 1) throw new Error('an opening layout is a one-seat tool');
   if (baseline ? !spec : !plan) throw new Error(`unknown build/baseline: ${build ?? baseline}`);
 
   GameConfig.setDifficulty(difficulty);
   game.GameSpeed.reset();
-  const economy = new game.EconomyManager();
-  const lumber = new game.LumberManager();
+  const economy = new game.EconomyManager(seats);
+  const lumber = new game.LumberManager(seats);
   const interest = new game.InterestSystem(economy, lumber);
   const enemyPool = new game.ObjectPool(() => new game.Enemy(), 64);
   const projectilePool = new game.ObjectPool(() => new game.Projectile(), 64);
   const startDelta = extraGold + (scenario?.startGold == null ? 0 : scenario.startGold - DIFFICULTY_PRESETS[difficulty].startingGold);
-  if (startDelta > 0) economy.addGold(startDelta);
-  else if (startDelta < 0) economy.spendGold(-startDelta);
+  // Extra or missing starting gold is split between the seats like the real starting gold (nothing lost).
+  game.splitEvenly(Math.abs(startDelta), seats).forEach((share, seat) => {
+    if (startDelta > 0) economy.addGold(share, seat);
+    else if (startDelta < 0) economy.spendGold(share, seat);
+  });
   const waves = new game.WaveManager(null, enemyPool);
   // The real kill and leak rules (bounty, lumber, lives), registered right after WaveManager exactly as in GameScene.
-  const outcomes = new game.EnemyOutcomes(economy, lumber);
+  const outcomes = new game.EnemyOutcomes(economy, lumber, sharedIncome);
   const { scene, click } = createScene();
-  const builder = new game.BuildSystem(scene, economy, projectilePool, () => waves.activeEnemies);
-  const slots = rankedSlots().slice(0, slotCap);
+  const seatRules = new game.Seats(seats, sharedIncome);
+  const builders = new game.BuilderManager(lumber, seats, 'all');
+  const builder = new game.BuildSystem(scene, economy, projectilePool, () => waves.activeEnemies, () => true, seatRules, builders);
+  // The best-covered cells inside each seat's own zones; the cell budget is split between the seats (one seat: the old list).
+  // placement 'coverage': the best cells of the seat's zones taken together. placement 'zones': the best slotCap / 4 cells of zone 0
+  // turned by 90 degrees into every other zone (the map is rotation-symmetric), so the cells are the same for 1, 2 and 4 seats
+  // and only the wallets and the zone rule differ between them.
+  const ranked = rankedSlots();
+  if (!['coverage', 'zones'].includes(placement)) throw new Error(`unknown placement: ${placement}`);
+  const turn = (cell, times) => {
+    let { row, col } = cell;
+    for (let i = 0; i < times; i++) [row, col] = [col, game.GRID_ROWS - 1 - row];
+    if (MAP_DATA[row][col] !== 'E') throw new Error(`the turned cell ${col},${row} is not buildable: the map is not rotation-symmetric`);
+    return { row, col };
+  };
+  const zoneZero = ranked.filter((s) => game.zoneOfCell(s.row, s.col) === 0).slice(0, Math.floor(slotCap / 4));
+  // Interleaved by rank (best cell of every zone first), so a one-seat game does not fill one quadrant before the next.
+  const zoneCells = (zone) => (zone === 0 ? zoneZero : zoneZero.map((s) => turn(s, zone)));
+  const slotsOf = Array.from({ length: seats }, (_, seat) => placement === 'zones'
+    ? zoneZero.flatMap((_, rank) => [0, 1, 2, 3].filter((zone) => game.seatOfZone(zone, seats) === seat).map((zone) => zoneCells(zone)[rank]))
+    : ranked.filter((s) => seatRules.ownerOfCell(s.row, s.col) === seat).slice(0, Math.floor(slotCap / seats)));
+  const totalGold = () => Array.from({ length: seats }, (_, seat) => economy.goldOf(seat)).reduce((a, b) => a + b, 0);
+  const totalLumber = () => Array.from({ length: seats }, (_, seat) => lumber.lumberOf(seat)).reduce((a, b) => a + b, 0);
+  const killsBySeat = new Array(seats).fill(0);
   const heroUnit = hero && !baseline ? new game.Hero() : null;
 
   const rows = [];
@@ -178,43 +210,48 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
       const wave = WAVES[n - 1];
       current = {
         wave: n, enemyType: wave.enemyType, count: wave.count, startedAt: time,
-        goldAtStart: economy.gold, spentBefore: spentPending, towers: builder.towers.length, invested: towerValue(),
+        goldAtStart: totalGold(), spentBefore: spentPending, towers: builder.towers.length, invested: towerValue(),
         livesAtStart: economy.lives, kills: 0, leaks: 0, livesLost: 0, bounty: 0, interest: 0, bonus: 0,
-        lumberAtStart: lumber.lumber, clearSecs: null, goldAfterAward: null, cleared: false,
+        lumberAtStart: totalLumber(), routes: ALL_PATHS.map(() => 0), clearSecs: null, goldAfterAward: null, cleared: false,
       };
       spentPending = 0;
       rows.push(current);
     }],
-    [GameEvents.ENEMY_KILLED, ({ goldReward }) => { if (current) { current.kills++; current.bounty += goldReward; } }],
+    [GameEvents.ENEMY_KILLED, ({ enemy, goldReward }) => { killsBySeat[enemy.creditSeat ?? 0]++; if (current) { current.kills++; current.bounty += goldReward; } }],
+    [GameEvents.ENEMY_SPAWNED, (enemy) => { const route = ALL_PATHS.findIndex((p) => p[0].x === enemy.x && p[0].y === enemy.y); if (current && route >= 0) current.routes[route]++; }],
     [GameEvents.ENEMY_REACHED_END, (enemy) => { if (current) { current.leaks++; current.livesLost += enemy.def.livesCost; } }],
     [GameEvents.INTEREST_AWARDED, (amount) => { if (current) current.interest += amount; }],
     [GameEvents.WAVE_BONUS_AWARDED, (amount) => { if (current) current.bonus += amount; }],
-    [GameEvents.WAVE_COMPLETED, (n) => { if (current && current.wave === n) { current.cleared = true; current.clearSecs = time - current.startedAt; current.goldAfterAward = economy.gold; } }],
+    [GameEvents.WAVE_COMPLETED, (n) => { if (current && current.wave === n) { current.cleared = true; current.clearSecs = time - current.startedAt; current.goldAfterAward = totalGold(); } }],
     [GameEvents.GAME_OVER, ({ victory }) => { if (!terminal) terminal = victory ? 'victory' : 'defeat'; }],
   ];
   for (const [event, handler] of handlers) EventBus.on(event, handler);
 
   const priceOf = (id) => TOWER_DEFS[id].cost;
-  const familyCount = (family) => builder.towers.filter((t) => t.towerId.startsWith(`${family}_`)).length;
-  const freeSlot = () => slots.find((s) => !builder.towers.some((t) => t.gridCol === s.col && t.gridRow === s.row));
+  const familyCount = (seat, family) => builder.towers.filter((t) => t.ownerSeat === seat && t.towerId.startsWith(`${family}_`)).length;
+  const freeSlot = (seat) => slotsOf[seat].find((s) => !builder.towers.some((t) => t.gridCol === s.col && t.gridRow === s.row));
   // Returns the next applicable rule with its price, or null when the plan is exhausted.
-  const nextAction = () => {
+  const nextAction = (seat) => {
     for (const rule of plan) {
       if (rule.kind === 'place') {
-        if (familyCount(rule.family) < rule.max && freeSlot()) return { rule, price: priceOf(rule.id) };
+        if (familyCount(seat, rule.family) < rule.max && freeSlot(seat)) return { rule, price: priceOf(rule.id) };
       } else {
-        const target = builder.towers.find((t) => t.towerId === `${rule.family}_t1` && TOWER_DEFS[t.towerId].upgradeTo.length > 0);
+        const target = builder.towers.find((t) => t.ownerSeat === seat && t.towerId === `${rule.family}_t1` && TOWER_DEFS[t.towerId].upgradeTo.length > 0);
         if (target) return { rule, target, price: priceOf(TOWER_DEFS[target.towerId].upgradeTo[0]) };
       }
     }
     return null;
   };
   const buyAccordingToPlan = () => {
+    for (let seat = 0; seat < seats; seat++) buyForSeat(seat);
+  };
+  const buyForSeat = (seat) => {
+    seatRules.setActive(seat);
     for (let guard = 0; guard < 200; guard++) {
-      const action = nextAction();
-      if (!action || economy.gold < action.price) return;
+      const action = nextAction(seat);
+      if (!action || economy.goldOf(seat) < action.price) return;
       if (action.rule.kind === 'place') {
-        const slot = freeSlot();
+        const slot = freeSlot(seat);
         builder.selectTowerType(action.rule.id);
         click(slot.col, slot.row);
       } else {
@@ -253,7 +290,9 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
         }
       }
       if (waves.state === 'countdown') {
-        if (spec.spendAll && economy.gold > 0) { spentPending += economy.gold; economy.spendGold(economy.gold); }
+        if (spec.spendAll && totalGold() > 0) {
+          for (let seat = 0; seat < seats; seat++) { const gold = economy.goldOf(seat); if (gold > 0) { spentPending += gold; economy.spendGold(gold, seat); } }
+        }
         else if (plan) buyAccordingToPlan();
       }
       if (current && current.wave >= maxWave && current.cleared) break;
@@ -261,7 +300,13 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
 
     result = {
       build: build ?? baseline, difficulty, result: terminal ?? 'unfinished', reachedWave: current ? current.wave : 0,
-      livesLeft: economy.lives, goldEnd: economy.gold, lumberEnd: lumber.lumber, seconds: Math.round(time),
+      livesLeft: economy.lives, goldEnd: totalGold(), lumberEnd: totalLumber(), seconds: Math.round(time),
+      towerCells: builder.towers.map((t) => ({ seat: t.ownerSeat, id: t.towerId, col: t.gridCol, row: t.gridRow })),
+      seats, perSeat: Array.from({ length: seats }, (_, seat) => ({
+        seat, goldEnd: economy.goldOf(seat), lumberEnd: lumber.lumberOf(seat), kills: killsBySeat[seat],
+        towers: builder.towers.filter((t) => t.ownerSeat === seat).length,
+        invested: builder.towers.filter((t) => t.ownerSeat === seat).reduce((sum, t) => sum + t.totalInvested, 0),
+      })),
       towersEnd: builder.towers.length, investedEnd: towerValue(), casts, rows,
     };
   } finally {

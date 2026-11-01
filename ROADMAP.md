@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.22.1)
+## Current state (v0.23.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -88,6 +88,13 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   (`# tests N`) and the Node there prints the spec form (`ℹ tests N`); the engine in v0.20.0-v0.22.1 reads both and shows the output tail when it finds none
   (`AGENTS.md`, defect class 15). The activation block and the working-directory cleanup are in `docs/QA.md`, "v0.22.1 handoff".
 - Resume procedure for a new session: `AGENTS.md`, "Resuming in a new session".
+- v0.23.0 seats in the harness (track step B6, part 1): `simulate` runs 1, 2 or 4 seats with the real `Seats`, `BuilderManager` and `BuildSystem` (own wallets, zone rule, owner credit),
+  layout `coverage` (the old 24 cells) or `zones` (the best 6 cells of one zone turned into all four, so 1, 2 and 4 seats use the same cells). Finding: the four routes
+  received 111 / 106 / 98 / 86 enemies because the remainder of every wave and every small wave went to the first routes; the first route of a wave now turns with the wave
+  number (100 / 103 / 100 / 98), a change of the wave spawn only (no enemy, tower or economy number moved). The one-seat figures shifted: cannon_arrow 27 to 25, balanced 30 to 27
+  (arrow 31 and magic_slow 23 did not move). `docs/SEAT_REPORT.md` (generated, a test compares it): with spread cells one seat ends at arrow 40, magic_slow 35, balanced 35,
+  cannon_arrow 17; 2 and 4 seats end within 4 waves below one seat for every build; the best build keeps 6 lives after wave 30 (late-game bar: at least 3) and ends with 17347 gold
+  unspent, so a defeat in wave 40 is not a ceiling. Hard (1 life) ends at wave 7-17 for the catalogued builds. No wave number was changed: the late game meets its bar.
 
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
 
@@ -102,12 +109,13 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B3 | v0.19.0 (done) | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
 | B5 (done) | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1, shuffled waves for expert); the lives are one team pool, no seat scaling (gold is conserved across seats) | Data tests: lives per mode, same totals for 1, 2, 4 seats, seeded order |
-| B6 | v0.23.0 | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat | New acceptance bars, regenerated reports |
+| B6 | v0.23.0 (part 1 done: seats in the harness, route fairness, late-game bar; part 2 open) | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat. Open: builders, licenses, ultimates and expert orders in the harness | New acceptance bars, regenerated reports |
 | B7 | v0.22.0 (part 1 done; the rest later) | Art pass 3 on the square map: citadel base and spawn portals, builder emblems, damage and armor icons are done; seat-coloured pads, panel frames are open | Screenshots of menu, empty, built and boss field |
 | B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
 
 Open design questions (the assistant proposes, the owner decides): the exact road layout of the original (a screenshot would settle it);
-whether a lone player owns all four seats (proposed) or one; how many bosses a boss wave sends (today one, on one spawn).
+whether a lone player owns all four seats (proposed) or one; how many bosses a boss wave sends (today one; its route is pinned in the wave data and turns through 0-1-2-0-1-2-3, so
+it visits every seat; one boss per seat would multiply the HP against a gold total that does not grow with the seats, so it stays one).
 
 ## P0 - correctness / playable baseline
 
@@ -215,19 +223,20 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.23.0 harness for seats and builders, re-measure and rebalance (Burbenog track, step B6)
-- Objective: the headless harness learns the shared screen (several seats, builders, licenses, mastery, ultimates) and a build that reacts to a leak,
+## Next sprint (recommended): v0.24.0 harness for builders, licenses and ultimates, expert orders (Burbenog track, step B6 part 2)
+- Done in v0.23.0: `simulate` takes `seats`, `sharedIncome` and `placement`; `docs/SEAT_REPORT.md` measures layout and seat count; the first route of a wave turns
+  with the wave number (no route and no seat gets the remainder every time); bars for route load, seat count, per-seat kills and lumber, and the late game.
+- Objective: the headless harness learns builders, licenses, mastery and ultimates and a build that reacts to a leak,
   then re-measures everything the track changed: lives 25 on normal, the thin builder rosters (a Water seat has no damage tower), the ultimates (draft
   numbers), expert with a shuffled order, and the late game (waves 21-40, no bar yet). Priority: P0 for the track.
-- Scope (proposal): `simulate` takes seats, builders and a wave list (so expert orders can be measured with seeds); add builds that buy a license,
+- Scope (proposal): `simulate` takes builders and a wave list (so expert orders can be measured with seeds); add builds that buy a license,
   mastery and an ultimate; adaptive builds for one-life modes; then change data only where a bar says so, in a separate patch if the diff is large.
 - Acceptance: all gates; a measured table per seat count and per builder start in `docs/BALANCE_PROPOSALS.md`; one-seat normal reports reviewed by
   the owner before any number moves.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); the checklists of
   v0.20.0, v0.21.0 and v0.22.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
-- Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; hero summon and a tech/aura building paid with
-  lumber; a real roster for the light and shadow builders; the margin around the field (the field now touches the canvas edge at 720 px); late-game
-  acceptance bar for waves 21-40; official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently
+- Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; a build with more than 24 cells (the best build ends with 17347 gold unspent, `docs/SEAT_REPORT.md`); hero summon and a tech/aura building paid with
+  lumber; a real roster for the light and shadow builders; the margin around the field (the field now touches the canvas edge at 720 px); official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently
   it does); structured save schema; the menu prints a hard-coded "v0.1.0"; `tsconfig.json` compatibility with TypeScript 6 (a 6.0.3 compiler reports
   TS5101 for `baseUrl` and TS5011 for `rootDir`; ^5.7.2 is pinned);
   a soft round halo instead of the amber square glow behind the citadel (`_animateBase`); redraw the older sprites whose glow is cut by the canvas edge;

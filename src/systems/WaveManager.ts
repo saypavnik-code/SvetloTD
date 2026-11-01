@@ -30,6 +30,8 @@ const BETWEEN_WAVE_SECS = 20;
 interface SpawnContext {
   enemyType:  EnemyId;
   paths:      Waypoint[][];
+  /** Which route the first enemy of the wave takes (wave n starts on route (n - 1) mod routes), so no route and no seat gets the remainder every time. */
+  rotation:   number;
   speedMult:  number;
   isHealing:  boolean;
   hpMult:     number;
@@ -152,6 +154,7 @@ export class WaveManager {
     this._spawnCtx = {
       enemyType:  wave.enemyType,
       paths:      paths as Waypoint[][],
+      rotation:   this._waveIndex % paths.length,
       speedMult:  (wave.modifier === 'fast' ? 1.5 : 1.0) * GameConfig.difficulty.enemySpeedMult,
       isHealing:  wave.modifier === 'healing',
       hpMult:     wave.hpMult * GameConfig.difficulty.enemyHpMult,
@@ -174,7 +177,7 @@ export class WaveManager {
     const ctx = this._spawnCtx;
     if (!ctx || this.state === 'victory') return;
 
-    const waypoints = ctx.paths[this._spawnedCount % ctx.paths.length];
+    const waypoints = ctx.paths[(this._spawnedCount + ctx.rotation) % ctx.paths.length];
     const enemy     = this._pool.get();
 
     enemy.init(ctx.enemyType, waypoints, {
