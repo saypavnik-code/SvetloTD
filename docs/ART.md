@@ -44,3 +44,20 @@ edge and shows as a faint rectangle; fixing it changes existing PNGs, so it belo
   - `Enemy`: dark 1px health bar frame, top specular sheen, boss golden bezel, ground AO contact ellipse, and status aura rings.
   - `Tower`: stone/amber foundation pad rim, tier pips (`I..IV`), and muzzle flash glow.
   - `Hero`: dual harmonic command aura rings and directional footlight.
+
+<!-- [3a:fx-layers] -->
+
+## Gameplay rendering layers (patch 3a)
+
+All layers below are drawn procedurally with Phaser Graphics on top of the baked sprites.
+They are cosmetic only: no gameplay state is changed and Math.random is not used.
+
+- Enemy status overlays: poison ring with rising bubbles, frost ring with orbiting sparkles,
+  and a pulsing heal plus while a healing enemy is wounded.
+- Boss bezel: double gold ring with 12 rotating ticks, every third tick is a long major tick.
+- Tower tier pips: one pip under the pad per tier (I, II, III). Tier III adds a pulsing ring.
+- Hero aura: two soft glow layers; orbit markers appear for each ready skill
+  (Q amber, W sea blue) and spin around the hero.
+- Field vignette: static 14-band edge darkening (ambient occlusion look) at DEPTH.BASE + 1.
+
+Regression coverage lives in tests/fx.test.mjs.
