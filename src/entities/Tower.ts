@@ -287,6 +287,22 @@ export class Tower {
     g.beginPath(); g.moveTo(cx+fp-1, cy-fp+4); g.lineTo(cx+fp-1, cy+fp-1); g.lineTo(cx-fp+4, cy+fp-1); g.strokePath();
 
     // ── Buff rings ──────────────────────────────────────────────────────────
+    // [3a:tower-pips] tier markers under the pad (one pip per tier); ultimates also glow
+    const tierN = this.towerId.endsWith('_ult') ? 3 : this.towerId.endsWith('_t2') ? 2 : this.towerId === 'watchtower' ? 0 : 1;
+    if (tierN > 0) {
+      const pipY = cy + fp + 4;
+      for (let i = 0; i < tierN; i++) {
+        const pipX = cx + (i - (tierN - 1) / 2) * 7;
+        g.fillStyle(0x1A120A, 0.75); g.fillCircle(pipX, pipY, 3);
+        g.fillStyle(tierN === 3 ? COLORS.amberGlow : tierN === 2 ? COLORS.amberWarm : COLORS.amberPale, 1); g.fillCircle(pipX, pipY, 2);
+        g.fillStyle(0xFFFFFF, 0.6); g.fillCircle(pipX - 0.6, pipY - 0.6, 0.7);
+      }
+    }
+    if (tierN === 3) {
+      const glowT = (Date.now() % 2000) / 2000;
+      g.lineStyle(2, this.data.color, 0.25 + 0.2 * Math.sin(glowT * Math.PI * 2));
+      g.strokeCircle(cx, cy, fp + 3);
+    }
     if (this.isAuraBoosted) {
       g.lineStyle(2.5, 0x44CCAA, 0.60); g.strokeCircle(cx, cy, h + 7);
       g.lineStyle(1.0, 0x88FFDD, 0.20); g.strokeCircle(cx, cy, h + 10);

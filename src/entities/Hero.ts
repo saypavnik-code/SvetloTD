@@ -193,6 +193,18 @@ export class Hero {
     const pulse = 0.08 + Math.sin(this._glowT * Math.PI) * 0.035;
     g.fillStyle(COLORS.amberGlow, pulse);
     g.fillCircle(cx, cy, 20);
+    // [3a:hero-aura] layered ambient aura and orbiting ready-skill markers
+    {
+      g.fillStyle(COLORS.amberGlow, pulse * 0.6); g.fillCircle(cx, cy, 28);
+      g.fillStyle(COLORS.amberBright, pulse * 0.8); g.fillCircle(cx, cy, 13);
+      const qReady = this.skillQCooldown <= 0, wReady = this.skillWCooldown <= 0;
+      if (qReady || wReady) {
+        g.lineStyle(1, COLORS.amberPale, 0.25); g.strokeCircle(cx, cy, 24);
+        const spin = this._glowT * 1.4;
+        if (qReady) { g.fillStyle(COLORS.amberBright, 0.95); g.fillCircle(cx + Math.cos(spin) * 24, cy + Math.sin(spin) * 24, 2.2); }
+        if (wReady) { g.fillStyle(COLORS.seaLight, 0.95); g.fillCircle(cx + Math.cos(spin + Math.PI) * 24, cy + Math.sin(spin + Math.PI) * 24, 2.2); }
+      }
+    }
 
     // Body triangle (placeholder body, replaced by the sprite)
     if (withBody) {

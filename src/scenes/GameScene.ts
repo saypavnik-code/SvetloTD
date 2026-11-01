@@ -582,6 +582,7 @@ export class GameScene extends Phaser.Scene {
     }
     this._drawPathEdges();
     this._drawSpawnPortals();
+    this._drawVignette();
   }
 
   // One portal per ring corner: the four equal starting points of the square map.
@@ -592,6 +593,21 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // [3a:vignette] ambient occlusion: the field edge fades into walnut shadow (one static graphics object)
+  private _drawVignette(): void {
+    const w = GRID_COLS * TILE_SIZE, h = GRID_ROWS * TILE_SIZE;
+    const g = this.add.graphics().setDepth(DEPTH.BASE + 1);
+    const bands = 14, depthPx = 84, step = depthPx / bands;
+    for (let i = 0; i < bands; i++) {
+      const t = i / bands;
+      const inset = step * i;
+      g.fillStyle(COLORS.walnutDark, 0.22 * (1 - t) * (1 - t));
+      g.fillRect(inset, inset, w - inset * 2, step);
+      g.fillRect(inset, h - inset - step, w - inset * 2, step);
+      g.fillRect(inset, inset + step, step, h - inset * 2 - step * 2);
+      g.fillRect(w - inset - step, inset + step, step, h - inset * 2 - step * 2);
+    }
+  }
   private _drawPathEdges(): void {
     const g = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
     g.lineStyle(1.5, COLORS.pathBorder, 0.55);

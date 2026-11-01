@@ -298,6 +298,46 @@ export class Enemy implements Poolable {
     }
 
     // FX overlays
+    // [3a:enemy-fx] animated status overlays and boss bezel (cosmetic clock; circles and lines only)
+    const fxT = (Date.now() % 4000) / 4000;
+    if (this.def.isBoss) {
+      const spin = this._bossGlowT * 0.6;
+      g.lineStyle(3, COLORS.amberDeep, 0.85); g.strokeCircle(cx, cy, r + 11);
+      g.lineStyle(1.5, COLORS.amberGlow, 0.9); g.strokeCircle(cx, cy, r + 13.5);
+      for (let i = 0; i < 12; i++) {
+        const a = spin + i * Math.PI / 6;
+        const major = i % 3 === 0;
+        const inner = r + 11, outer = r + (major ? 18 : 15);
+        g.lineStyle(major ? 2.5 : 1.5, major ? COLORS.amberBright : COLORS.amberWarm, 0.9);
+        g.beginPath();
+        g.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+        g.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+        g.strokePath();
+      }
+    }
+    if (this.fx.hasPoison()) {
+      g.lineStyle(1.5, 0x7ED957, 0.45); g.strokeCircle(cx, cy, r + 2);
+      for (let i = 0; i < 3; i++) {
+        const a = fxT * Math.PI * 2 + i * 2.094;
+        const rise = (fxT * 2 + i / 3) % 1;
+        g.fillStyle(0x9BE564, 0.85 - rise * 0.6);
+        g.fillCircle(cx + Math.cos(a) * (r + 2), cy + Math.sin(a) * (r + 2) - rise * 4, 1.8 - rise * 0.6);
+      }
+    }
+    if (this.fx.hasSlow()) {
+      g.lineStyle(1, 0xCFF3FF, 0.55); g.strokeCircle(cx, cy, r + 5.5);
+      for (let i = 0; i < 4; i++) {
+        const a = -fxT * Math.PI * 2 + i * Math.PI / 2;
+        g.fillStyle(0xE8FAFF, 0.85);
+        g.fillCircle(cx + Math.cos(a) * (r + 5.5), cy + Math.sin(a) * (r + 5.5), 1.4);
+      }
+    }
+    if (this._isHealing && this.hp < this.maxHp) {
+      const pulse = 0.5 + 0.5 * Math.sin(fxT * Math.PI * 2);
+      g.lineStyle(2, COLORS.successSoft, 0.35 + pulse * 0.5);
+      g.beginPath(); g.moveTo(cx - 3, cy - r - 13); g.lineTo(cx + 3, cy - r - 13); g.strokePath();
+      g.beginPath(); g.moveTo(cx, cy - r - 16); g.lineTo(cx, cy - r - 10); g.strokePath();
+    }
     if (this.fx.hasSlow()) { g.lineStyle(2,COLORS.seaMuted,0.75); g.strokeCircle(cx,cy,r+3); }
     if (this.fx.hasArmorReduce()) {
       g.lineStyle(1.5,COLORS.amberWarm,0.85);
