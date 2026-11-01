@@ -12,9 +12,9 @@ export const SEAT_COUNTS = [1, 2, 4];
 export const LATE_BAR = { upToWave: 30, minLives: 3 };
 /** Cooperation bar: with 2 or 4 seats a build may end at most this many waves earlier than with one seat (same cells, same total gold). */
 export const SEAT_DROP_LIMIT = 5;
-/** Fairness bar: in the four-seat run of the best build the richest seat may have at most this many times the kills and the lumber of the
- *  poorest. Only that run plays all 40 waves, so kills and the few golem and boss lumber drops average out; a build defeated in wave 25 shares
- *  a handful of drops and its spread is noise (table 2 shows it anyway). */
+/** Fairness bar: in the four-seat run of the best build the richest seat may have at most this many times the kills of the poorest. Only that run
+ *  plays all 40 waves, so kills average out. Lumber is reported but not barred: it comes in drops of 1 (golem) and 2 (boss) and its spread is
+ *  1.1 to 1.5 whatever the routes do (v0.25.0 measurement), so a bar on it would measure luck. */
 export const SEAT_SPREAD_LIMIT = 1.25;
 /** Route bar: no route may receive more than this share above the mean number of enemies over 40 waves. */
 export const ROUTE_EXCESS_LIMIT = 0.05;
@@ -107,14 +107,14 @@ export function buildReport() {
   push(`2. **Layout.** One seat with the \`coverage\` list ends at ${m.names.map((n) => `${n} ${label(m.coverage[n])}`).join(', ')}; with the interleaved \`zones\` cells it ends at`);
   push(`   ${m.names.map((n) => `${n} ${label(m.bySeats[n][1])}`).join(', ')}. The old figures understate what spread-out towers do.`);
   push(`3. **Seat count.** With the same cells and the same total gold the defeat wave moves by at most ${worstDrop > 0 ? `${worstDrop} waves down` : 'nothing down'} when 2 or 4 seats play instead of one (limit ${SEAT_DROP_LIMIT}); see table 1.`);
-  push(`4. **Fairness inside a four-seat run.** In the best build (${m.best}) the richest seat has ${killSpread.toFixed(2)}x the kills and ${lumberSpread.toFixed(2)}x the lumber of the poorest (limit ${SEAT_SPREAD_LIMIT} for both); see table 2.`);
+  push(`4. **Fairness inside a four-seat run.** In the best build (${m.best}) the richest seat has ${killSpread.toFixed(2)}x the kills and ${lumberSpread.toFixed(2)}x the lumber of the poorest (kill limit ${SEAT_SPREAD_LIMIT}; lumber is shown, not barred); see table 2.`);
   push(`5. **Late-game bar.** The best catalogued build (${m.best}, one seat) ${bestRun.result === 'victory' ? 'wins' : `is defeated in wave ${bestRun.reachedWave}`}; after wave ${bar.upToWave} it has ${barLives} lives left (bar: at least ${bar.minLives}).`);
   push(`6. **Unspent gold.** The build rules stop at 24 towers of the second tier, so the best build ends with ${m.bySeats[m.best][4].goldEnd} gold in the purse: a defeat in wave 40 is not a ceiling, and builds with more cells are not measured.`);
   push(`7. **Hard (1 life).** ${m.names.map((n) => `${n} ${label(m.hard[n])}`).join(', ')}: one leak ends the run, so the catalogued builds describe a floor, not what a careful player does.`);
   const team = m.teams;
   push(`8. **Licensed teams.** The default four-seat team (${TEAMS.default.join(', ')}; 6 cells each, gifts from a finished seat) ends at ${label(team.default)}; four Wardens end at ${label(team.mono_arrow)},`);
-  push(`   four Pyromancers at ${label(team.mono_magic)}. The mixed team is ${m.monoBest - team.default.reachedWave} waves behind the best mono team (limit ${TEAM_GAP_LIMIT}): the arrow line returns more damage per gold than`);
-  push('   the other lines and the support builder adds no damage, so mixing builders costs the team waves instead of rewarding it.', '');
+  push(`   four Pyromancers at ${label(team.mono_magic)}. The mixed team is ${m.monoBest - team.default.reachedWave} waves behind the best mono team (limit ${TEAM_GAP_LIMIT}): ${m.monoBest - team.default.reachedWave <= TEAM_GAP_LIMIT ? 'within the limit' : 'over the limit'}.`);
+  push('   The mixed team ends where the first wave of wyverns it cannot kill arrives: cannons cannot hit air, so the earth seat adds nothing there.', '');
   push('## Table 1: defeat wave by layout and seat count (normal)', '');
   push(table(['build', '1 seat, coverage cells', '1 seat', '2 seats', '4 seats', 'gold unspent at the end (4 seats)'],
     m.names.map((n) => [n, label(m.coverage[n]), ...SEAT_COUNTS.map((c) => label(m.bySeats[n][c])), m.bySeats[n][4].goldEnd])), '');

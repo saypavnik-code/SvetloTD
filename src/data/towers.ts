@@ -57,14 +57,14 @@ export const TOWER_DEFS: Record<TowerId, TowerData> = {
   }),
   magic_t1: def({
     id: 'magic_t1', name: 'Лёйхттурм',
-    damage: 20, attackSpeed: 0.7, range: 140, damageType: 'magic', cost: 60,
+    damage: 26, attackSpeed: 0.7, range: 140, damageType: 'magic', cost: 60,
     color: 0xF5A623, canTargetAir: true, canTargetGround: true, splash: 0,
     special: [], upgradeTo: ['magic_t2'],
     description: 'Большая дальность. Магический урон.',
   }),
   slow_t1: def({
     id: 'slow_t1', name: 'Виндмюле',
-    damage: 5, attackSpeed: 0.8, range: 100, damageType: 'magic', cost: 50,
+    damage: 15, attackSpeed: 0.8, range: 100, damageType: 'magic', cost: 50,
     color: 0x5F8A8B, canTargetAir: true, canTargetGround: true, splash: 0,
     special: [{ type: 'slow', value: 0.3, duration: 2.0 }],
     upgradeTo: ['slow_t2'], description: 'Замедляет врагов на 30%.',
@@ -81,7 +81,7 @@ export const TOWER_DEFS: Record<TowerId, TowerData> = {
   }),
   arrow_t2: def({
     id: 'arrow_t2', name: 'Руна бури',
-    damage: 25, attackSpeed: 1.4, range: 140, damageType: 'piercing', cost: 120,
+    damage: 21, attackSpeed: 1.4, range: 140, damageType: 'piercing', cost: 120,
     color: 0xFFBF00, canTargetAir: true, canTargetGround: true, splash: 0,
     special: [], upgradeTo: ['nature_ult'], description: 'Быстрее и сильнее Вахтурм.',
   }),
@@ -93,13 +93,13 @@ export const TOWER_DEFS: Record<TowerId, TowerData> = {
   }),
   magic_t2: def({
     id: 'magic_t2', name: 'Кристалл хаоса',
-    damage: 45, attackSpeed: 0.6, range: 160, damageType: 'chaos', cost: 200,
+    damage: 58, attackSpeed: 0.6, range: 160, damageType: 'chaos', cost: 200,
     color: 0xFFD700, canTargetAir: true, canTargetGround: true, splash: 0,
     special: [], upgradeTo: ['fire_ult'], description: 'Хаос-урон — игнорирует броню.',
   }),
   slow_t2: {
     id: 'slow_t2', name: 'Ледяной Бастион',
-    damage: 10, attackSpeed: 0.9, range: 130, damageType: 'magic', cost: 150,
+    damage: 30, attackSpeed: 0.9, range: 130, damageType: 'magic', cost: 150,
     color: 0x7EC8E3, canTargetAir: true, canTargetGround: true, splash: 0,
     special: [
       { type: 'slow',     value: 0.55, duration: 2.5 },
@@ -129,7 +129,7 @@ export const TOWER_DEFS: Record<TowerId, TowerData> = {
   }),
   water_ult: def({
     id: 'water_ult', name: 'Айсбург',
-    damage: 28, attackSpeed: 1.0, range: 150, damageType: 'magic', cost: 360, lumberCost: 3,
+    damage: 45, attackSpeed: 1.0, range: 150, damageType: 'magic', cost: 360, lumberCost: 3,
     color: 0x9FE3F7, canTargetAir: true, canTargetGround: true, splash: 0,
     special: [
       { type: 'slow',     value: 0.65, duration: 3.0 },

@@ -29,6 +29,15 @@ test('the decisions are in the data: opening C (v0.8.0) and mid-game proposal D 
   for (let i = 1; i < 10; i++) assert(WAVES[i].hpMult * WAVES[i].count > 0);
 });
 
+test('the line rebalance of v0.25.0 is in the data, and every ultimate out-damages the tier it upgrades from', () => {
+  const dps = (id) => TOWER_DEFS[id].damage * TOWER_DEFS[id].attackSpeed;
+  assert.deepEqual([TOWER_DEFS.arrow_t2.damage, TOWER_DEFS.magic_t1.damage, TOWER_DEFS.magic_t2.damage, TOWER_DEFS.slow_t1.damage, TOWER_DEFS.slow_t2.damage, TOWER_DEFS.water_ult.damage],
+    [21, 26, 58, 15, 30, 45]);
+  for (const id of Object.keys(TOWER_DEFS)) {
+    for (const next of TOWER_DEFS[id].upgradeTo) assert(dps(next) > dps(id), `${next} (${dps(next)} dps) must out-damage ${id} (${dps(id)} dps)`);
+  }
+});
+
 test('the applied opening meets the acceptance bar with an idle hero and with the scripted skills', () => {
   const result = evaluate(null, 11);
   assert(passes(result.idle), `idle: best build has ${bestOf(result.idle).lives10} lives at wave 11`);

@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.24.0)
+## Current state (v0.25.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
@@ -100,6 +100,14 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   (finding 8, table 3): the default four-seat team (fire, earth, nature, water; 6 cells each) is defeated in wave 23, four Wardens in wave 40, four Pyromancers in wave 31, so a mixed team
   is 17 waves behind a mono team: arrow tier 2 returns 0.29 dps per gold against 0.18 for cannon and 0.14 for magic, and the Hydromancer's slow line deals 4-9 dps. The finding is a TODO
   test (limit 10 waves) that fails on purpose until the lines are rebalanced (owner decision: ROADMAP, next sprint). No game number changed in v0.24.0.
+- v0.25.0 builder-line rebalance (track step B6, part 3), measured with `scenario.towerTweak` before it was written: arrow tier 2 damage 25 to 21, magic tier 1 / tier 2 damage
+  20 / 45 to 26 / 58, slow tier 1 / tier 2 damage 5 / 10 to 15 / 30, water ultimate damage 28 to 45 (keeps every ultimate above the tier it upgrades from; a test checks all of them).
+  Why: the walls of a team are the wyvern waves (23, 27, 31, 39: cannons cannot hit air, arrows deal x2 to light) and the bosses, and with 6 cells per seat the line with the most damage
+  per cell wins. Result (`docs/SEAT_REPORT.md`): default mixed team wave 23 to 27, four Wardens 40 to 35, four Pyromancers 31 to 35, four Hydromancers 15 to 35; the gap of the mixed
+  team to the best mono team is 8 waves (was 17; bar 10), so the TODO test is a plain test and the suite has 154 tests and no TODO. One-seat catalogued builds with spread cells:
+  arrow 40 to 35, cannon_arrow 17 to 17, magic_slow 35 to 40, balanced 35 to 31 (old coverage cells: arrow 31 to 27, cannon_arrow 25 to 20, magic_slow 23 to 27, balanced 27 to 30);
+  the late-game bar holds (best build 10 lives after wave 30). The lumber bar of v0.23.0 was dropped: lumber comes in drops of 1 and 2 and its spread stays 1.1-1.5 whatever the
+  routes do, so the report shows it and no longer bars it (kills stay barred at 1.25). Not measured: ultimates and licenses (the harness buys neither), a hero that plays, real players.
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
 
 The owner's verdict on v0.15.0: the game does not resemble Burbenog TD. In the original everything is built around a square and up to four
@@ -113,7 +121,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B3 | v0.19.0 (done) | Give gold and lumber to a seat, cede a tower to another seat, optional shared-income mode | Conservation tests, refund goes to the current owner |
 | B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
 | B5 (done) | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1, shuffled waves for expert); the lives are one team pool, no seat scaling (gold is conserved across seats) | Data tests: lives per mode, same totals for 1, 2, 4 seats, seeded order |
-| B6 | v0.23.0 and v0.24.0 (parts 1-2 done: seats in the harness, route fairness, late-game bar, licensed teams; part 3 open: line rebalance) | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat. Open: the line rebalance, licenses bought with lumber, mastery, ultimates and expert orders in the harness | New acceptance bars, regenerated reports |
+| B6 | v0.23.0 to v0.25.0 (parts 1-3 done: seats in the harness, route fairness, late-game bar, licensed teams, line rebalance; part 4 open) | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat. Open: licenses bought with lumber, mastery, ultimates and expert orders in the harness | New acceptance bars, regenerated reports |
 | B7 | v0.22.0 (part 1 done; the rest later) | Art pass 3 on the square map: citadel base and spawn portals, builder emblems, damage and armor icons are done; seat-coloured pads, panel frames are open | Screenshots of menu, empty, built and boss field |
 | B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
 
@@ -227,15 +235,15 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.25.0 rebalance the builder lines so a mixed team is competitive (Burbenog track, step B6 part 3)
-- Done: v0.23.0 seats in the harness, route fairness, late-game bar; v0.24.0 licensed teams, gifts, the open TODO test.
-- Objective: close the TODO test `the default mixed team ends within the limit of the best mono team` (default team wave 23 against 40 for four Wardens). The pillar is four-seat
-  interdependence: a team that mixes builders must not be punished for it. Priority: P0 for the track.
-- Scope (proposal, decided by the assistant under the owner's delegation, measured before it is written): scenarios with `withScenario({ towerTweak })` in `scripts/balance_proposals.mjs`:
-  (A) arrow cost or damage down; (B) magic, cannon and acid damage per gold up; (C) the Hydromancer line gets a damage share (slow damage up, or a water damage tower), because a support seat
-  cannot convert its gold into kills; pick by the default team, the mono teams and the one-seat catalogued builds; then write the data change in the same or a following patch.
-- Acceptance: all gates; the TODO test is a plain test and passes; the late-game bar (best build holds wave 30 with 3 lives) still passes; the reports are regenerated and the
-  one-seat figures are listed before and after in the patch history. Still open after it: licenses bought with lumber, mastery and ultimates in the harness, expert orders (seeded).
+## Next sprint (recommended): v0.26.0 harness for licenses, mastery and ultimates; expert orders (Burbenog track, step B6 part 4)
+- Done: v0.23.0 seats, route fairness, late-game bar; v0.24.0 licensed teams; v0.25.0 line rebalance (the mixed-team TODO is closed).
+- Objective: the headless harness buys what the real game sells with lumber (second to fourth builder licenses, mastery, ultimates) and plays the seeded expert wave order, so that the
+  ultimates (80 dps nature, 73 earth, 56 fire, 45 water) and the licensed rosters are measured instead of assumed. Priority: P1: it decides whether the late game of a real team is
+  easier or harder than the 24-cell, tier-2 proxy that every bar uses.
+- Scope (proposal): `simulate` takes a purchase list for licenses and ultimates (lumber is already counted per seat), a build that reacts to a leak, and a wave list so expert orders
+  can be measured with seeds; report tables in `docs/SEAT_REPORT.md`; bars: a four-seat team that buys its ultimates ends later than one that does not, and no expert order is a
+  guaranteed loss for the best team. Not in scope: a hero that plays, art, a menu for seats.
+- Acceptance: all gates; regenerated reports; if the ultimates move the walls, the finding is a TODO test with numbers, not a silent data change.
 - Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); the checklists of
   v0.20.0, v0.21.0 and v0.22.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
 - Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; a build with more than 24 cells (the best build ends with 17347 gold unspent, `docs/SEAT_REPORT.md`); hero summon and a tech/aura building paid with

@@ -20,50 +20,50 @@ seat or economy data. Browser smoke: not run. This report measures; the bars it 
 1. **Route load.** Over 40 waves the four routes receive 111 / 106 / 98 / 86 enemies when every wave starts on route 0 and 100 / 103 / 100 / 98 when the
    first route turns with the wave number (the game does the latter). Without the rotation the remainder of every wave, and every small wave,
    landed on the first routes, so some seats met more enemies and earned more kills and lumber than others.
-2. **Layout.** One seat with the `coverage` list ends at arrow w31, cannon_arrow w25, magic_slow w23, balanced w27; with the interleaved `zones` cells it ends at
-   arrow w40, cannon_arrow w17, magic_slow w35, balanced w35. The old figures understate what spread-out towers do.
-3. **Seat count.** With the same cells and the same total gold the defeat wave moves by at most 4 waves down when 2 or 4 seats play instead of one (limit 5); see table 1.
-4. **Fairness inside a four-seat run.** In the best build (arrow) the richest seat has 1.03x the kills and 1.20x the lumber of the poorest (limit 1.25 for both); see table 2.
-5. **Late-game bar.** The best catalogued build (arrow, one seat) is defeated in wave 40; after wave 30 it has 6 lives left (bar: at least 3).
-6. **Unspent gold.** The build rules stop at 24 towers of the second tier, so the best build ends with 17347 gold in the purse: a defeat in wave 40 is not a ceiling, and builds with more cells are not measured.
-7. **Hard (1 life).** arrow w7, cannon_arrow w7, magic_slow w17, balanced w12: one leak ends the run, so the catalogued builds describe a floor, not what a careful player does.
-8. **Licensed teams.** The default four-seat team (fire, earth, nature, water; 6 cells each, gifts from a finished seat) ends at w23; four Wardens end at w40,
-   four Pyromancers at w31. The mixed team is 17 waves behind the best mono team (limit 10): the arrow line returns more damage per gold than
-   the other lines and the support builder adds no damage, so mixing builders costs the team waves instead of rewarding it.
+2. **Layout.** One seat with the `coverage` list ends at arrow w27, cannon_arrow w20, magic_slow w27, balanced w30; with the interleaved `zones` cells it ends at
+   arrow w35, cannon_arrow w17, magic_slow w40, balanced w31. The old figures understate what spread-out towers do.
+3. **Seat count.** With the same cells and the same total gold the defeat wave moves by at most 5 waves down when 2 or 4 seats play instead of one (limit 5); see table 1.
+4. **Fairness inside a four-seat run.** In the best build (magic_slow) the richest seat has 1.21x the kills and 1.47x the lumber of the poorest (kill limit 1.25; lumber is shown, not barred); see table 2.
+5. **Late-game bar.** The best catalogued build (magic_slow, one seat) is defeated in wave 40; after wave 30 it has 10 lives left (bar: at least 3).
+6. **Unspent gold.** The build rules stop at 24 towers of the second tier, so the best build ends with 7519 gold in the purse: a defeat in wave 40 is not a ceiling, and builds with more cells are not measured.
+7. **Hard (1 life).** arrow w7, cannon_arrow w7, magic_slow w20, balanced w12: one leak ends the run, so the catalogued builds describe a floor, not what a careful player does.
+8. **Licensed teams.** The default four-seat team (fire, earth, nature, water; 6 cells each, gifts from a finished seat) ends at w27; four Wardens end at w35,
+   four Pyromancers at w35. The mixed team is 8 waves behind the best mono team (limit 10): within the limit.
+   The mixed team ends where the first wave of wyverns it cannot kill arrives: cannons cannot hit air, so the earth seat adds nothing there.
 
 ## Table 1: defeat wave by layout and seat count (normal)
 
 | build | 1 seat, coverage cells | 1 seat | 2 seats | 4 seats | gold unspent at the end (4 seats) |
 | --- | --- | --- | --- | --- | --- |
-| arrow | w31 | w40 | w40 | w40 | 17347 |
-| cannon_arrow | w25 | w17 | w31 | w25 | 974 |
-| magic_slow | w23 | w35 | w35 | w35 | 7560 |
-| balanced | w27 | w35 | w31 | w39 | 13370 |
+| arrow | w27 | w35 | w40 | w35 | 10211 |
+| cannon_arrow | w20 | w17 | w31 | w30 | 3915 |
+| magic_slow | w27 | w40 | w40 | w35 | 7519 |
+| balanced | w30 | w31 | w31 | w39 | 13421 |
 
 ## Table 2: four seats, per seat (kills / lumber at the end)
 
 | build | kills I / II / III / IV | lumber I / II / III / IV | kill spread | lumber spread |
 | --- | --- | --- | --- | --- |
-| arrow | 98 / 98 / 101 / 99 | 27 / 25 / 26 / 30 | 1.03 | 1.20 |
-| cannon_arrow | 58 / 45 / 54 / 49 | 13 / 10 / 14 / 12 | 1.29 | 1.40 |
-| magic_slow | 91 / 80 / 86 / 75 | 23 / 21 / 21 / 23 | 1.21 | 1.10 |
-| balanced | 88 / 99 / 100 / 103 | 21 / 29 / 28 / 30 | 1.17 | 1.43 |
+| arrow | 84 / 82 / 86 / 83 | 19 / 21 / 22 / 24 | 1.05 | 1.26 |
+| cannon_arrow | 67 / 68 / 63 / 66 | 16 / 19 / 15 / 18 | 1.08 | 1.27 |
+| magic_slow | 88 / 87 / 84 / 73 | 22 / 25 / 24 / 17 | 1.21 | 1.47 |
+| balanced | 101 / 94 / 100 / 96 | 27 / 26 / 27 / 28 | 1.07 | 1.08 |
 
 ## Table 3: licensed four-seat teams (zones, normal, gifts on)
 
 | team (seats I-IV) | result | kills I / II / III / IV | gold unspent |
 | --- | --- | --- | --- |
-| default: fire earth nature water | w23 | 80 / 24 / 72 / 15 | 253 |
-| no_support: fire earth nature nature | w27 | 60 / 34 / 78 / 58 | 2319 |
-| two_water: fire nature water water | w27 | 100 / 52 / 34 / 41 | 2448 |
-| mono_magic: fire fire fire fire | w31 | 75 / 71 / 71 / 59 | 5345 |
-| mono_arrow: nature nature nature nature | w40 | 105 / 97 / 97 / 97 | 17292 |
+| default: fire earth nature water | w27 | 80 / 30 / 73 / 48 | 2124 |
+| no_support: fire earth nature nature | w27 | 75 / 28 / 74 / 54 | 2338 |
+| two_water: fire nature water water | w35 | 93 / 70 / 94 / 76 | 9439 |
+| mono_magic: fire fire fire fire | w35 | 74 / 87 / 87 / 84 | 9289 |
+| mono_arrow: nature nature nature nature | w35 | 85 / 84 / 84 / 82 | 10189 |
 
 ## Table 4: lives left after late waves (zones, one seat, normal)
 
 | build | after 20 | after 25 | after 30 | after 35 | after 40 |
 | --- | --- | --- | --- | --- | --- |
-| arrow | 16 | 11 | 6 | 1 | 0 |
+| arrow | 11 | 6 | 1 | 0 | 0 |
 | cannon_arrow | 0 | 0 | 0 | 0 | 0 |
-| magic_slow | 16 | 11 | 6 | 0 | 0 |
+| magic_slow | 20 | 15 | 10 | 5 | 0 |
 | balanced | 16 | 11 | 6 | 0 | 0 |

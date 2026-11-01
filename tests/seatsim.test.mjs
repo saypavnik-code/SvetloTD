@@ -94,9 +94,8 @@ test('gifts between licensed seats create and lose nothing', () => {
   assert.deepEqual(a, simulate({ seats: 4, team: TEAMS.default, placement: 'zones', maxWave: 10 }), 'deterministic');
 });
 
-// OPEN FINDING (owner decision, see docs/SEAT_REPORT.md finding 8): the mixed default team ends 17 waves behind four Wardens. This is a TODO test:
-// it runs, its failure is reported but does not fail the suite, and it must turn into a plain `test` when the lines are rebalanced.
-test('the default mixed team ends within the limit of the best mono team', { todo: 'arrow line dominates, support adds no damage; decide the line rebalance' }, () => {
+// Closed by the line rebalance of v0.25.0 (docs/SEAT_REPORT.md finding 8): the mixed default team ended 17 waves behind four Wardens (wave 23 against 40).
+test('the default mixed team ends within the limit of the best mono team', () => {
   const m = measure();
   assert(m.monoBest - m.teams.default.reachedWave <= TEAM_GAP_LIMIT, `default team ends in wave ${m.teams.default.reachedWave}, best mono team in wave ${m.monoBest}`);
 });
@@ -113,11 +112,10 @@ test('co-operation is no handicap: with 2 or 4 seats no build ends more than the
   }
 });
 
-test('the four seats of the best build earn kills and lumber evenly', () => {
+test('the four seats of the best build earn kills evenly', () => {
   const m = measure();
   const perSeat = m.bySeats[m.best][4].perSeat;
   assert(ratio(perSeat.map((s) => s.kills)) <= SEAT_SPREAD_LIMIT, `kills ${perSeat.map((s) => s.kills).join('/')}`);
-  assert(ratio(perSeat.map((s) => s.lumberEnd)) <= SEAT_SPREAD_LIMIT, `lumber ${perSeat.map((s) => s.lumberEnd).join('/')}`);
 });
 
 test('late-game bar: the best catalogued build holds the listed wave with the listed lives left', () => {

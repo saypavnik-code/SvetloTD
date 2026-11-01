@@ -32,14 +32,14 @@ Opening bar: idle hero **PASS**, scripted skills **PASS**. Mid-game bar: idle he
 
 | build | hero | outcome | cleared | lives@11 | lives@21 | Q casts | W casts |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 31 | 30 | 25 | 20 | 0 | 0 |
-| arrow | skills | defeated in wave 31 | 30 | 25 | 20 | 1 | 0 |
-| cannon_arrow | idle | defeated in wave 25 | 24 | 19 | 4 | 0 | 0 |
-| cannon_arrow | skills | defeated in wave 27 | 26 | 23 | 8 | 2 | 0 |
-| magic_slow | idle | defeated in wave 23 | 22 | 21 | 8 | 0 | 0 |
-| magic_slow | skills | defeated in wave 25 | 24 | 21 | 12 | 2 | 0 |
-| balanced | idle | defeated in wave 27 | 26 | 21 | 14 | 0 | 0 |
-| balanced | skills | defeated in wave 30 | 29 | 21 | 14 | 1 | 0 |
+| arrow | idle | defeated in wave 27 | 26 | 25 | 7 | 0 | 0 |
+| arrow | skills | defeated in wave 27 | 26 | 25 | 11 | 1 | 0 |
+| cannon_arrow | idle | defeated in wave 20 | 19 | 19 | 0 | 0 | 0 |
+| cannon_arrow | skills | defeated in wave 25 | 24 | 23 | 4 | 2 | 0 |
+| magic_slow | idle | defeated in wave 27 | 26 | 21 | 12 | 0 | 0 |
+| magic_slow | skills | defeated in wave 27 | 26 | 21 | 12 | 2 | 0 |
+| balanced | idle | defeated in wave 30 | 29 | 21 | 12 | 0 | 0 |
+| balanced | skills | defeated in wave 30 | 29 | 21 | 12 | 0 | 0 |
 
 ### Other difficulties (informational, waves 1-11 only)
 
@@ -56,15 +56,16 @@ player; the harness also runs insane with the written wave order, not with a shu
 
 ### Where the best build loses (normal, scripted skills)
 
-Best build: `arrow`, defeated in wave 31, 30 waves cleared. Waves in which it leaked:
+Best build: `balanced`, defeated in wave 30, 29 waves cleared. Waves in which it leaked:
 
 | wave | enemy | leaks of count | lives lost | towers | invested |
 | --- | --- | --- | --- | --- | --- |
-| 20 | boss_goliath | 1 of 1 | 5 | 24 | 3960 |
-| 25 | boss_goliath | 1 of 1 | 5 | 24 | 4080 |
-| 27 | wyvern | 4 of 14 | 8 | 24 | 4080 |
-| 30 | boss_goliath | 1 of 1 | 5 | 24 | 4080 |
-| 31 | wyvern | 1 of 16 | 2 | 24 | 4080 |
+| 7 | wyvern | 2 of 6 | 4 | 6 | 985 |
+| 17 | wyvern | 2 of 9 | 4 | 15 | 2930 |
+| 20 | boss_goliath | 1 of 1 | 5 | 20 | 3960 |
+| 25 | boss_goliath | 1 of 1 | 5 | 24 | 4940 |
+| 27 | wyvern | 1 of 14 | 2 | 24 | 4940 |
+| 30 | boss_goliath | 1 of 1 | 5 | 24 | 4940 |
 
 ## Mid-game alternatives that were not taken (E and F)
 
@@ -72,8 +73,8 @@ Scenarios against the waves as written; the applied data is proposal D (see "Dec
 
 | proposal | what changes | idle hero | scripted skills |
 | --- | --- | --- | --- |
-| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: arrow, 12 lives at wave 21, defeated in wave 27 | PASS: arrow, 16 lives at wave 21, defeated in wave 27 |
-| F: Waves only | HP and count from 40% / 80% at wave 1, linear to 20% at wave 40; wave bonus unchanged; upgrade costs unchanged | PASS: arrow, 20 lives at wave 21, defeated in wave 35 | PASS: arrow, 20 lives at wave 21, defeated in wave 35 |
+| E: Moderate curve, 1.5x bonus, cheaper upgrades | HP and count from 40% / 80% at wave 1, linear to 50% at wave 40; wave bonus x1.5; tier-2/3 upgrade costs x0.7 | PASS: balanced, 8 lives at wave 21, defeated in wave 27 | PASS: balanced, 14 lives at wave 21, defeated in wave 30 |
+| F: Waves only | HP and count from 40% / 80% at wave 1, linear to 20% at wave 40; wave bonus unchanged; upgrade costs unchanged | PASS: magic_slow, 17 lives at wave 21, defeated in wave 31 | PASS: magic_slow, 17 lives at wave 21, defeated in wave 31 |
 
 ### Proposal E: all builds
 
@@ -81,14 +82,14 @@ The curve is only half as soft as in D; the economy answers with a 1.5x bonus an
 
 | build | hero | outcome | cleared | lives@11 | lives@21 |
 | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 27 | 26 | 25 | 12 |
-| arrow | skills | defeated in wave 27 | 26 | 25 | 16 |
+| arrow | idle | defeated in wave 25 | 24 | 25 | 7 |
+| arrow | skills | defeated in wave 25 | 24 | 25 | 9 |
 | cannon_arrow | idle | defeated in wave 17 | 16 | 15 | 0 |
 | cannon_arrow | skills | defeated in wave 20 | 19 | 19 | 0 |
 | magic_slow | idle | defeated in wave 23 | 22 | 17 | 4 |
-| magic_slow | skills | defeated in wave 25 | 24 | 21 | 12 |
-| balanced | idle | defeated in wave 23 | 22 | 17 | 6 |
-| balanced | skills | defeated in wave 27 | 26 | 21 | 12 |
+| magic_slow | skills | defeated in wave 27 | 26 | 21 | 12 |
+| balanced | idle | defeated in wave 27 | 26 | 17 | 8 |
+| balanced | skills | defeated in wave 30 | 29 | 21 | 14 |
 
 ### Proposal F: all builds
 
@@ -96,14 +97,14 @@ Softer than the applied D at the end (20% instead of 30%) but with the wave bonu
 
 | build | hero | outcome | cleared | lives@11 | lives@21 |
 | --- | --- | --- | --- | --- | --- |
-| arrow | idle | defeated in wave 35 | 34 | 25 | 20 |
-| arrow | skills | defeated in wave 35 | 34 | 25 | 20 |
-| cannon_arrow | idle | defeated in wave 25 | 24 | 19 | 4 |
-| cannon_arrow | skills | defeated in wave 30 | 29 | 23 | 8 |
-| magic_slow | idle | defeated in wave 23 | 22 | 21 | 12 |
-| magic_slow | skills | defeated in wave 25 | 24 | 21 | 12 |
-| balanced | idle | defeated in wave 31 | 30 | 21 | 14 |
-| balanced | skills | defeated in wave 31 | 30 | 21 | 14 |
+| arrow | idle | defeated in wave 30 | 29 | 25 | 12 |
+| arrow | skills | defeated in wave 30 | 29 | 25 | 16 |
+| cannon_arrow | idle | defeated in wave 20 | 19 | 19 | 0 |
+| cannon_arrow | skills | defeated in wave 25 | 24 | 23 | 4 |
+| magic_slow | idle | defeated in wave 31 | 30 | 21 | 17 |
+| magic_slow | skills | defeated in wave 31 | 30 | 21 | 17 |
+| balanced | idle | defeated in wave 31 | 30 | 21 | 12 |
+| balanced | skills | defeated in wave 31 | 30 | 21 | 12 |
 
 ## What-ifs for the design questions (not proposals, waves 1-20)
 
@@ -111,9 +112,9 @@ Each row changes one thing against the current data and reports the best build.
 
 | what-if | idle hero | scripted skills |
 | --- | --- | --- |
-| W0: Current data | PASS: arrow, 20 lives at wave 21, alive in wave 21 | PASS: arrow, 20 lives at wave 21, alive in wave 21 |
-| W1: Tier-2/3 upgrades cost 30% less | PASS: arrow, 20 lives at wave 21, alive in wave 21 | PASS: arrow, 20 lives at wave 21, alive in wave 21 |
-| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | PASS: arrow, 12 lives at wave 21, alive in wave 21 | PASS: arrow, 14 lives at wave 21, alive in wave 21 |
+| W0: Current data | PASS: magic_slow, 12 lives at wave 21, alive in wave 21 | PASS: magic_slow, 12 lives at wave 21, alive in wave 21 |
+| W1: Tier-2/3 upgrades cost 30% less | PASS: magic_slow, 21 lives at wave 21, alive in wave 21 | PASS: magic_slow, 21 lives at wave 21, alive in wave 21 |
+| W2: Arrow towers deal `normal` damage (x1.5 against medium armor) | PASS: arrow, 12 lives at wave 21, alive in wave 21 | PASS: arrow, 12 lives at wave 21, alive in wave 21 |
 
 ## Tower efficiency (analytic, from the data)
 
@@ -124,20 +125,20 @@ targeting are ignored, so it is an aid for reading the simulation, not a result.
 | --- | --- | --- | --- | --- | --- | --- |
 | arrow_t1 | 50 | piercing | 0.480 | 0.180 | 0.240 | 0.084 |
 | cannon_t1 | 75 | siege | 0.107 | 0.107 | 0.213 | 0.320 |
-| magic_t1 | 60 | magic | 0.292 | 0.175 | 0.467 | 0.082 |
-| slow_t1 | 50 | magic | 0.100 | 0.060 | 0.160 | 0.028 |
+| magic_t1 | 60 | magic | 0.379 | 0.227 | 0.607 | 0.106 |
+| slow_t1 | 50 | magic | 0.300 | 0.180 | 0.480 | 0.084 |
 | acid_t1 | 70 | piercing | 0.214 | 0.080 | 0.107 | 0.037 |
-| arrow_t2 | 170 | piercing | 0.412 | 0.154 | 0.206 | 0.072 |
+| arrow_t2 | 170 | piercing | 0.346 | 0.130 | 0.173 | 0.061 |
 | cannon_t2 | 255 | siege | 0.062 | 0.062 | 0.124 | 0.185 |
-| magic_t2 | 260 | chaos | 0.104 | 0.104 | 0.104 | 0.104 |
-| slow_t2 | 200 | magic | 0.056 | 0.034 | 0.090 | 0.016 |
+| magic_t2 | 260 | chaos | 0.134 | 0.134 | 0.134 | 0.134 |
+| slow_t2 | 200 | magic | 0.169 | 0.101 | 0.270 | 0.047 |
 | fire_ult | 680 | chaos | 0.082 | 0.082 | 0.082 | 0.082 |
-| water_ult | 560 | magic | 0.063 | 0.037 | 0.100 | 0.017 |
+| water_ult | 560 | magic | 0.100 | 0.060 | 0.161 | 0.028 |
 | earth_ult | 705 | siege | 0.052 | 0.052 | 0.104 | 0.156 |
 | nature_ult | 570 | piercing | 0.281 | 0.105 | 0.140 | 0.049 |
 
 Damage types in the matrix that no attacking tower uses: `normal` (x1.5 against medium armor).
-Best tower against medium armor, the armor of the most common enemy: `arrow_t1` at 0.180 dps per gold.
+Best tower against medium armor, the armor of the most common enemy: `magic_t1` at 0.227 dps per gold.
 
 ## Pressure index (analytic aid, waves 1-20, current data and the alternatives)
 
@@ -171,8 +172,8 @@ below 1 means the wave cannot be killed by what the economy could have bought. I
 
 ## Open decisions
 
-1. **Late game (waves 21-40).** The bars cover waves 1-20 only. With the applied curve the best build is defeated in wave 31 with the scripted skills and
-   defeated in wave 31 with an idle hero. A late-game bar, the boss waves and the ultimate towers are the next design decisions.
+1. **Late game (waves 21-40).** The bars cover waves 1-20 only. With the applied curve the best build is defeated in wave 30 with the scripted skills and
+   defeated in wave 30 with an idle hero. A late-game bar, the boss waves and the ultimate towers are the next design decisions.
 2. **Upgrades and damage types.** The what-if rows give the numbers: cheaper upgrades and a `normal`-damage tower are each a
    design decision, not a tuning detail. See the efficiency table.
 3. **Lumber sink.** Licenses, mastery and the four ultimate towers cost lumber since v0.20.0, but no catalogued build buys them and the
