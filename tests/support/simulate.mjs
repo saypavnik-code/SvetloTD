@@ -33,6 +33,7 @@ const game = loadModules(
   'src/data/mapData.ts',
   'src/data/damageMatrix.ts',
   'src/data/seats.ts',
+  'src/data/builders.ts',
   'src/config/difficulty.ts',
   'src/config.ts',
 );
@@ -101,6 +102,15 @@ export const BUILDS = {
   balanced: staged([{ arrow: 1, magic: 1 }, { arrow: 2, magic: 2, cannon: 1, slow: 1 }, { arrow: 3, magic: 3, cannon: 2, slow: 2, acid: 1 }, { arrow: 5, magic: 5, cannon: 4, slow: 3, acid: 2 }, { arrow: 8, magic: 7, cannon: 6, slow: 4, acid: 3 }]),
 };
 
+// Licensed team (v0.24.0): `team: ['fire', 'earth', 'nature', 'water']` gives seat i only that builder (the free first license of the real game)
+// and the rule list of its line; with `gifts` a seat whose list is exhausted passes its whole purse to the seat that still has something to buy.
+export const TEAM_PLANS = {
+  fire:   staged([{ magic: 2 }, { magic: 4, acid: 1 }, { magic: 4, acid: 2 }]),
+  earth:  staged([{ cannon: 2 }, { cannon: 4 }, { cannon: 6 }]),
+  nature: staged([{ arrow: 2 }, { arrow: 4 }, { arrow: 6 }]),
+  water:  staged([{ slow: 2 }, { slow: 4 }, { slow: 6 }]),
+};
+
 // Baselines: `none` builds nothing, `oracle` kills every enemy the moment it spawns. With `bank` the
 // oracle never spends (interest compounds); with `spend` it empties the purse every build phase.
 export const BASELINES = { none: { towers: false }, oracle_bank: { oracle: true }, oracle_spend: { oracle: true, spendAll: true } };
@@ -149,9 +159,11 @@ export function simulate(options = {}) {
   return withScenario(options.scenario, () => runSimulation(options));
 }
 
-function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null, seats = 1, sharedIncome = false, placement = 'coverage' } = {}) {
+function runSimulation({ build = null, baseline = null, difficulty = 'normal', stepMs = 1000 / 30, maxWave = 40, slotCap = 24, hero = true, layout = null, extraGold = 0, skills = false, scenario = null, seats = 1, sharedIncome = false, placement = 'coverage', team = null, gifts = true } = {}) {
   const spec = baseline ? BASELINES[baseline] : { towers: true };
-  const plan = build ? BUILDS[build] : (layout ? [] : null);
+  if (team && (team.length !== seats || build || layout)) throw new Error('a team has one builder per seat and replaces the build and the layout');
+  const plan = team ? [] : build ? BUILDS[build] : (layout ? [] : null);
+  const planOf = (seat) => (team ? TEAM_PLANS[team[seat]] : plan);
   if (layout && seats !== 1) throw new Error('an opening layout is a one-seat tool');
   if (baseline ? !spec : !plan) throw new Error(`unknown build/baseline: ${build ?? baseline}`);
 
@@ -173,7 +185,7 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
   const outcomes = new game.EnemyOutcomes(economy, lumber, sharedIncome);
   const { scene, click } = createScene();
   const seatRules = new game.Seats(seats, sharedIncome);
-  const builders = new game.BuilderManager(lumber, seats, 'all');
+  const builders = new game.BuilderManager(lumber, seats, team ?? 'all');
   const builder = new game.BuildSystem(scene, economy, projectilePool, () => waves.activeEnemies, () => true, seatRules, builders);
   // The best-covered cells inside each seat's own zones; the cell budget is split between the seats (one seat: the old list).
   // placement 'coverage': the best cells of the seat's zones taken together. placement 'zones': the best slotCap / 4 cells of zone 0
@@ -232,7 +244,7 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
   const freeSlot = (seat) => slotsOf[seat].find((s) => !builder.towers.some((t) => t.gridCol === s.col && t.gridRow === s.row));
   // Returns the next applicable rule with its price, or null when the plan is exhausted.
   const nextAction = (seat) => {
-    for (const rule of plan) {
+    for (const rule of planOf(seat)) {
       if (rule.kind === 'place') {
         if (familyCount(seat, rule.family) < rule.max && freeSlot(seat)) return { rule, price: priceOf(rule.id) };
       } else {
@@ -244,6 +256,16 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
   };
   const buyAccordingToPlan = () => {
     for (let seat = 0; seat < seats; seat++) buyForSeat(seat);
+    if (!team || !gifts) return;
+    // A seat with nothing left to buy gives its whole purse to the seat with the most expensive unfinished plan step (one round of gifts).
+    const hungry = Array.from({ length: seats }, (_, seat) => seat).filter((seat) => nextAction(seat));
+    if (hungry.length === 0) return;
+    for (let seat = 0; seat < seats; seat++) {
+      if (nextAction(seat) || economy.goldOf(seat) <= 0) continue;
+      const to = hungry.reduce((a, b) => (economy.goldOf(b) < economy.goldOf(a) ? b : a));
+      economy.transferGold(economy.goldOf(seat), seat, to);
+    }
+    for (const seat of hungry) buyForSeat(seat);
   };
   const buyForSeat = (seat) => {
     seatRules.setActive(seat);
@@ -299,7 +321,7 @@ function runSimulation({ build = null, baseline = null, difficulty = 'normal', s
     }
 
     result = {
-      build: build ?? baseline, difficulty, result: terminal ?? 'unfinished', reachedWave: current ? current.wave : 0,
+      build: team ? `team:${team.join('+')}` : (build ?? baseline), difficulty, result: terminal ?? 'unfinished', reachedWave: current ? current.wave : 0,
       livesLeft: economy.lives, goldEnd: totalGold(), lumberEnd: totalLumber(), seconds: Math.round(time),
       towerCells: builder.towers.map((t) => ({ seat: t.ownerSeat, id: t.towerId, col: t.gridCol, row: t.gridRow })),
       seats, perSeat: Array.from({ length: seats }, (_, seat) => ({

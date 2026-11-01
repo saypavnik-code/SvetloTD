@@ -356,3 +356,37 @@ Watch a few waves of a one-seat game: the first enemy of each wave should come o
   no build ends more than 5 waves earlier with more seats, the best build's four seats earn kills and lumber within 1.25x, and the late-game bar holds.
 - `docs/ECONOMY_REPORT.md` and `docs/BALANCE_PROPOSALS.md` were regenerated: the route fix moved the one-seat numbers (cannon_arrow 27 to 25, balanced 30 to 27).
 - Limits: every seat owns every builder in the harness; builders, licenses, mastery, ultimates and the shuffled expert order are measured in v0.24.0.
+
+## v0.24.0 licensed teams in the harness: owner checklist
+
+No game number and no screen changed. Browser smoke: not run.
+
+- `simulate({ seats: 4, team: ['fire', 'earth', 'nature', 'water'] })` plays the licensed shared screen: each seat builds only its builder's line (test), a finished seat gifts its
+  purse to a seat that still has something to buy (gold conserved, test). `docs/SEAT_REPORT.md` gained finding 8 and table 3 (teams).
+- Expected unit tests after v0.24.0: 153 tests, 152 pass, 0 fail, 1 TODO. The TODO is deliberate: `the default mixed team ends within the limit of the best mono team`
+  (wave 23 against 40). It becomes a plain test when the lines are rebalanced (next sprint in `ROADMAP.md`).
+
+## v0.24.0 handoff: activation block and owner queue
+
+From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
+refuses any untracked file except sibling patch files), then run the block of the v0.22.1 handoff (Step 2): it skips applied versions, runs `--dry-run` and then
+`--commit --push --self-delete` for each patch in version order, and stops at the first failure.
+
+```bash
+cd /workspaces/SvetloTD && (
+  set -e
+  for P in $(ls patch_svetlogorsk_td_v0_*.py | sort -V); do
+    V=$(echo "$P" | sed -E 's/patch_svetlogorsk_td_v([0-9]+)_([0-9]+)_([0-9]+)_.*/\1.\2.\3/')
+    if grep -q "| v$V |" docs/PATCH_HISTORY.md; then echo "skip v$V (already applied)"; continue; fi
+    python3 "$P" --dry-run
+    python3 "$P" --commit --push --self-delete
+  done
+)
+git log --oneline -4 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
+```
+
+Expected: 153 unit tests, 152 pass, 0 fail, 1 TODO (the open mixed-team finding); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
+touched file and writes `.git/svetlo-patch/<version>_report.txt`; a push that fails after the commit is reported and must be finished by hand (`git push origin main`), never by rerunning the patch.
+
+Owner queue: browser run of waves 1-40, victory, defeat, pause and restart (never executed since v0.2.1); the checklists of v0.20.0-v0.22.0; look at a few waves of a one-seat game and
+confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.25.0, the line rebalance (`ROADMAP.md`, "Next sprint").

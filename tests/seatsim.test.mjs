@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
-  LATE_BAR, ROUTE_EXCESS_LIMIT, SEAT_COUNTS, SEAT_DROP_LIMIT, SEAT_SPREAD_LIMIT, buildReport, livesLeftAfter, measure, routeLoad, run,
+  LATE_BAR, ROUTE_EXCESS_LIMIT, SEAT_COUNTS, SEAT_DROP_LIMIT, SEAT_SPREAD_LIMIT, TEAMS, TEAM_GAP_LIMIT, buildReport, livesLeftAfter, measure, routeLoad, run,
 } from '../scripts/seat_report.mjs';
 import { game, simulate } from './support/simulate.mjs';
 
@@ -69,6 +69,36 @@ test('a wave that pins one route keeps it, and the rotation never changes how ma
     if (wave.paths >= 0) assert.equal(routes[wave.paths], wave.count, `wave ${wave.wave} stays on route ${wave.paths}`);
     else assert.equal(routes[index % 4] >= routes[(index + 1) % 4], true, `wave ${wave.wave} starts on route ${index % 4}`);
   });
+});
+
+// ── Licensed teams (v0.24.0) ────────────────────────────────────────────────
+
+test('a licensed seat builds only its own builder line and the common tower', () => {
+  const result = simulate({ seats: 4, team: TEAMS.default, placement: 'zones', extraGold: 20000, maxWave: 1 });
+  assert(result.towerCells.length >= 20, 'the starting purse buys the cells');
+  for (const cell of result.towerCells) {
+    const own = game.BUILDERS[TEAMS.default[cell.seat]].roots.flatMap((root) => game.towerLine(root));
+    assert([...own, ...game.COMMON_TOWER_IDS].includes(cell.id), `seat ${cell.seat} (${TEAMS.default[cell.seat]}) owns ${cell.id}`);
+  }
+  assert.throws(() => simulate({ seats: 4, team: ['fire', 'earth'], maxWave: 1 }), /one builder per seat/);
+});
+
+test('gifts between licensed seats create and lose nothing', () => {
+  for (const gifts of [true, false]) {
+    const result = simulate({ seats: 4, team: TEAMS.default, placement: 'zones', gifts, maxWave: 14 });
+    const earned = sum(result.rows, 'bounty') + sum(result.rows, 'interest') + sum(result.rows, 'bonus');
+    const invested = result.perSeat.reduce((total, seat) => total + seat.invested, 0);
+    assert.equal(result.goldEnd + invested, DIFFICULTY_PRESETS.normal.startingGold + earned, `gifts ${gifts}`);
+  }
+  const a = simulate({ seats: 4, team: TEAMS.default, placement: 'zones', maxWave: 10 });
+  assert.deepEqual(a, simulate({ seats: 4, team: TEAMS.default, placement: 'zones', maxWave: 10 }), 'deterministic');
+});
+
+// OPEN FINDING (owner decision, see docs/SEAT_REPORT.md finding 8): the mixed default team ends 17 waves behind four Wardens. This is a TODO test:
+// it runs, its failure is reported but does not fail the suite, and it must turn into a plain `test` when the lines are rebalanced.
+test('the default mixed team ends within the limit of the best mono team', { todo: 'arrow line dominates, support adds no damage; decide the line rebalance' }, () => {
+  const m = measure();
+  assert(m.monoBest - m.teams.default.reachedWave <= TEAM_GAP_LIMIT, `default team ends in wave ${m.teams.default.reachedWave}, best mono team in wave ${m.monoBest}`);
 });
 
 // ── Bars measured by docs/SEAT_REPORT.md ────────────────────────────────────

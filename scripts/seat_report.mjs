@@ -19,6 +19,17 @@ export const SEAT_SPREAD_LIMIT = 1.25;
 /** Route bar: no route may receive more than this share above the mean number of enemies over 40 waves. */
 export const ROUTE_EXCESS_LIMIT = 0.05;
 
+/** Licensed teams (one free builder per seat, 6 cells each, gifts on): the default picks of a four-seat game and four contrasts. */
+export const TEAMS = {
+  default: ['fire', 'earth', 'nature', 'water'],
+  no_support: ['fire', 'earth', 'nature', 'nature'],
+  two_water: ['fire', 'nature', 'water', 'water'],
+  mono_magic: ['fire', 'fire', 'fire', 'fire'],
+  mono_arrow: ['nature', 'nature', 'nature', 'nature'],
+};
+/** Team bar (open, owner decision): the default mixed team may end at most this many waves earlier than the best mono team. */
+export const TEAM_GAP_LIMIT = 10;
+
 const cache = new Map();
 export function run(options) {
   const key = JSON.stringify(options);
@@ -51,7 +62,9 @@ export function measure() {
   const bySeats = Object.fromEntries(names.map((name) => [name, Object.fromEntries(SEAT_COUNTS.map((n) => [n, zones(name, n)]))]));
   const hard = Object.fromEntries(names.map((name) => [name, zones(name, 1, { difficulty: 'hard' })]));
   const best = names.reduce((a, b) => (bySeats[b][1].reachedWave > bySeats[a][1].reachedWave ? b : a));
-  return { names, coverage, bySeats, hard, best };
+  const teams = Object.fromEntries(Object.entries(TEAMS).map(([name, team]) => [name, run({ seats: 4, team, placement: 'zones' })]));
+  const monoBest = Math.max(teams.mono_arrow.reachedWave, teams.mono_magic.reachedWave);
+  return { names, coverage, bySeats, hard, best, teams, monoBest };
 }
 
 const table = (header, rows) => [
@@ -97,7 +110,11 @@ export function buildReport() {
   push(`4. **Fairness inside a four-seat run.** In the best build (${m.best}) the richest seat has ${killSpread.toFixed(2)}x the kills and ${lumberSpread.toFixed(2)}x the lumber of the poorest (limit ${SEAT_SPREAD_LIMIT} for both); see table 2.`);
   push(`5. **Late-game bar.** The best catalogued build (${m.best}, one seat) ${bestRun.result === 'victory' ? 'wins' : `is defeated in wave ${bestRun.reachedWave}`}; after wave ${bar.upToWave} it has ${barLives} lives left (bar: at least ${bar.minLives}).`);
   push(`6. **Unspent gold.** The build rules stop at 24 towers of the second tier, so the best build ends with ${m.bySeats[m.best][4].goldEnd} gold in the purse: a defeat in wave 40 is not a ceiling, and builds with more cells are not measured.`);
-  push(`7. **Hard (1 life).** ${m.names.map((n) => `${n} ${label(m.hard[n])}`).join(', ')}: one leak ends the run, so the catalogued builds describe a floor, not what a careful player does.`, '');
+  push(`7. **Hard (1 life).** ${m.names.map((n) => `${n} ${label(m.hard[n])}`).join(', ')}: one leak ends the run, so the catalogued builds describe a floor, not what a careful player does.`);
+  const team = m.teams;
+  push(`8. **Licensed teams.** The default four-seat team (${TEAMS.default.join(', ')}; 6 cells each, gifts from a finished seat) ends at ${label(team.default)}; four Wardens end at ${label(team.mono_arrow)},`);
+  push(`   four Pyromancers at ${label(team.mono_magic)}. The mixed team is ${m.monoBest - team.default.reachedWave} waves behind the best mono team (limit ${TEAM_GAP_LIMIT}): the arrow line returns more damage per gold than`);
+  push('   the other lines and the support builder adds no damage, so mixing builders costs the team waves instead of rewarding it.', '');
   push('## Table 1: defeat wave by layout and seat count (normal)', '');
   push(table(['build', '1 seat, coverage cells', '1 seat', '2 seats', '4 seats', 'gold unspent at the end (4 seats)'],
     m.names.map((n) => [n, label(m.coverage[n]), ...SEAT_COUNTS.map((c) => label(m.bySeats[n][c])), m.bySeats[n][4].goldEnd])), '');
@@ -108,7 +125,10 @@ export function buildReport() {
       return [n, r.perSeat.map((s) => s.kills).join(' / '), r.perSeat.map((s) => s.lumberEnd).join(' / '),
         ratio(r.perSeat.map((s) => s.kills)).toFixed(2), ratio(r.perSeat.map((s) => s.lumberEnd)).toFixed(2)];
     })), '');
-  push('## Table 3: lives left after late waves (zones, one seat, normal)', '');
+  push('## Table 3: licensed four-seat teams (zones, normal, gifts on)', '');
+  push(table(['team (seats I-IV)', 'result', 'kills I / II / III / IV', 'gold unspent'],
+    Object.entries(TEAMS).map(([name, members]) => [`${name}: ${members.join(' ')}`, label(team[name]), team[name].perSeat.map((s) => s.kills).join(' / '), team[name].goldEnd])), '');
+  push('## Table 4: lives left after late waves (zones, one seat, normal)', '');
   const checkpoints = [20, 25, 30, 35, 40];
   push(table(['build', ...checkpoints.map((w) => `after ${w}`)],
     m.names.map((n) => [n, ...checkpoints.map((w) => livesLeftAfter(m.bySeats[n][1], w))])), '');

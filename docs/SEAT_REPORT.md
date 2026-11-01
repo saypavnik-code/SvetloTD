@@ -27,6 +27,9 @@ seat or economy data. Browser smoke: not run. This report measures; the bars it 
 5. **Late-game bar.** The best catalogued build (arrow, one seat) is defeated in wave 40; after wave 30 it has 6 lives left (bar: at least 3).
 6. **Unspent gold.** The build rules stop at 24 towers of the second tier, so the best build ends with 17347 gold in the purse: a defeat in wave 40 is not a ceiling, and builds with more cells are not measured.
 7. **Hard (1 life).** arrow w7, cannon_arrow w7, magic_slow w17, balanced w12: one leak ends the run, so the catalogued builds describe a floor, not what a careful player does.
+8. **Licensed teams.** The default four-seat team (fire, earth, nature, water; 6 cells each, gifts from a finished seat) ends at w23; four Wardens end at w40,
+   four Pyromancers at w31. The mixed team is 17 waves behind the best mono team (limit 10): the arrow line returns more damage per gold than
+   the other lines and the support builder adds no damage, so mixing builders costs the team waves instead of rewarding it.
 
 ## Table 1: defeat wave by layout and seat count (normal)
 
@@ -46,7 +49,17 @@ seat or economy data. Browser smoke: not run. This report measures; the bars it 
 | magic_slow | 91 / 80 / 86 / 75 | 23 / 21 / 21 / 23 | 1.21 | 1.10 |
 | balanced | 88 / 99 / 100 / 103 | 21 / 29 / 28 / 30 | 1.17 | 1.43 |
 
-## Table 3: lives left after late waves (zones, one seat, normal)
+## Table 3: licensed four-seat teams (zones, normal, gifts on)
+
+| team (seats I-IV) | result | kills I / II / III / IV | gold unspent |
+| --- | --- | --- | --- |
+| default: fire earth nature water | w23 | 80 / 24 / 72 / 15 | 253 |
+| no_support: fire earth nature nature | w27 | 60 / 34 / 78 / 58 | 2319 |
+| two_water: fire nature water water | w27 | 100 / 52 / 34 / 41 | 2448 |
+| mono_magic: fire fire fire fire | w31 | 75 / 71 / 71 / 59 | 5345 |
+| mono_arrow: nature nature nature nature | w40 | 105 / 97 / 97 / 97 | 17292 |
+
+## Table 4: lives left after late waves (zones, one seat, normal)
 
 | build | after 20 | after 25 | after 30 | after 35 | after 40 |
 | --- | --- | --- | --- | --- | --- |
