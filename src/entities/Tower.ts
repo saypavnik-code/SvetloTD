@@ -16,6 +16,8 @@ export enum TargetPriority { FIRST, LAST, STRONGEST, WEAKEST, NEAREST }
 
 const TARGET_TICK = 200;
 const BODY_SIZE   = 34;
+/** Half the side of the stone pad under a tower at rest (the owner mark of ui/SeatOverlay follows it). */
+export const PAD_HALF = BODY_SIZE / 2 + 4;
 
 export interface TowerBuff {
   type:      'attack_speed';

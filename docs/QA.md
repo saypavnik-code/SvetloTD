@@ -368,7 +368,7 @@ No game number and no screen changed. Browser smoke: not run.
 
 ## v0.24.0 handoff: activation block and owner queue
 
-From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0, v0.25.0, v0.26.0, v0.27.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
+From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0, v0.25.0, v0.26.0, v0.27.0, v0.28.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
 refuses any untracked file except sibling patch files), then run the block of the v0.22.1 handoff (Step 2): it skips applied versions, runs `--dry-run` and then
 `--commit --push --self-delete` for each patch in version order, and stops at the first failure.
 
@@ -385,11 +385,11 @@ cd /workspaces/SvetloTD && (
 git log --oneline -4 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
 ```
 
-Expected after the whole chain: 160 unit tests, 160 pass, 0 fail, 0 TODO (after v0.24.0 alone: 153, 152 pass, 1 TODO, the open mixed-team finding; after v0.25.0: 154; after v0.26.0: 157); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
+Expected after the whole chain: 162 unit tests, 162 pass, 0 fail, 0 TODO (after v0.24.0 alone: 153, 152 pass, 1 TODO, the open mixed-team finding; after v0.25.0: 154; after v0.26.0: 157; after v0.27.0: 160); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
 touched file and writes `.git/svetlo-patch/<version>_report.txt`; a push that fails after the commit is reported and must be finished by hand (`git push origin main`), never by rerunning the patch.
 
 Owner queue: browser run of waves 1-40, victory, defeat, pause and restart (never executed since v0.2.1); the checklists of v0.20.0-v0.22.0; look at a few waves of a one-seat game and
-confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.28.0, the rest of art pass 3 (`ROADMAP.md`, "Next sprint").
+confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.29.0, browser scenarios for victory, pause and targeting (`ROADMAP.md`, "Next sprint").
 
 ## v0.25.0 builder-line rebalance: owner checklist
 
@@ -423,3 +423,13 @@ Look at both once in your browser. Browser smoke by hand is still open for victo
 - The tool reads private fields of `GameScene` (`_economy`, `_waveManager`, `_buildSystem`, `_gameOver`, `_tutorialActive`, `_waveSeed`) and the pixel positions of the Play, tutorial, retry and
   menu buttons: after a change to those, update the top of `smoke.mjs`.
 - `tests/scenes.test.mjs` (2 tests) creates MenuScene three times on a stand-in whose destroyed objects throw; `tests/data.test.mjs` has one more test (Russian wave names). 160 unit tests in all.
+
+## v0.28.0 owner marks on the tower pads: owner checklist
+
+Visible change, multi-seat games only (`?seats=2` or `?seats=4`; a one-seat game is unchanged). Browser smoke `seats` passes with it.
+
+- Every tower stands on a pad with a rim in the colour of its seat (blue, amber, red, green for seats I-IV) and one to four small pips in the top-left corner of the pad (seat I one pip, seat IV four).
+  The old single dot is gone. Place one tower per seat (Z, X, C, V pick the seat) and look: the four rims should read at a glance, the pips tell the seat when colours are hard to tell apart.
+- A sold tower loses its mark in the same frame; a tower of another seat keeps its own colour after the active seat changes.
+- `tests/seatoverlay.test.mjs` (2 tests, a recording Graphics stand-in) fails on the old dot. 162 unit tests in all.
+- The nine-slice panel and button frames of the old plan were dropped on purpose (`ROADMAP.md`, v0.28.0 bullet).

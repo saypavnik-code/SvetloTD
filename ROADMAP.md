@@ -2,7 +2,7 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.27.0)
+## Current state (v0.28.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
 - Browser: `scripts/browser_smoke/smoke.mjs` (v0.27.0) drives the built game in headless Chromium: menu, game, towers, waves, four seats, defeat, retry, back to the menu, expert, and a whole
@@ -123,6 +123,11 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   @sparticuz/chromium 153.0.0, outside the gates) has five scenarios and passes: `basic`, `cycle`, `seats`, `expert`, `full` (40 waves through the real keyboard and mouse, defeated by the wave-40 boss as
   the simulation predicts, zero console errors). The software renderer of a headless browser runs the game at 4 frames per second, so the tool switches drawing off while it simulates (57 fps).
   Not covered: victory, pause/resume, targeting priorities, sound, touch, the look of the art beyond what the screenshots show.
+- v0.28.0 owner marks on the tower pads (track step B7, part 2): in a multi-seat game every tower pad gets a rim in the colour of its seat and one to four pips in its corner (the seat can be
+  told by count as well as by colour; blue, amber, red and green are not safe for every eye), instead of one 4 px dot. `PAD_HALF` is exported from `entities/Tower.ts`; `tests/seatoverlay.test.mjs`
+  (a recording Graphics stand-in) fails on the old dot. Judged on a `smoke.mjs seats --shots` screenshot: the four rims read at a glance. Dropped from the plan: the nine-slice panel and button
+  frames. The HUD draws its frames with bevelled Graphics that read well in the screenshots, and nine-slice textures would touch about twenty draw sites for no visible gain (decided by the assistant
+  under the owner's delegation). Left of art pass 3: menu background, projectiles and hit effects, road-edge tiles, walk-cycle frames; none is a rule or a number.
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
 
 The owner's verdict on v0.15.0: the game does not resemble Burbenog TD. In the original everything is built around a square and up to four
@@ -137,7 +142,7 @@ one anonymous player is replaced step by step. Each step is one patch with its o
 | B4 | v0.20.0 (done) | Governors (element sets) over the tower kinds, extra builder licenses, mastery research and four ultimate towers paid with lumber (this is the lumber sink); HUD moved off the field. Hero summon and a tech/aura building stay for later | The lumber TODO test is green, every kind reachable, lumber ledger conserved |
 | B5 (done) | v0.21.0 | Lives and difficulty as in the original (50 / 25 / 1 / 1, shuffled waves for expert); the lives are one team pool, no seat scaling (gold is conserved across seats) | Data tests: lives per mode, same totals for 1, 2, 4 seats, seeded order |
 | B6 (done) | v0.23.0 to v0.26.0 (seats in the harness, route fairness, late-game bar, licensed teams, line rebalance, ultimates and expert orders) | Harness knows seats; re-measure and rebalance; late-game bar for waves 21-40; boss per seat. Left over: a second builder license bought with lumber and a build that reacts to a leak are not in the harness | New acceptance bars, regenerated reports |
-| B7 | v0.22.0 (part 1 done; the rest later) | Art pass 3 on the square map: citadel base and spawn portals, builder emblems, damage and armor icons are done; seat-coloured pads, panel frames are open | Screenshots of menu, empty, built and boss field |
+| B7 | v0.22.0 and v0.28.0 (parts 1-2 done; the rest later) | Art pass 3 on the square map: citadel base and spawn portals, builder emblems, damage and armor icons, seat marks on the pads are done; nine-slice frames dropped; menu background, projectiles and hit effects, road-edge tiles are open | Screenshots of menu, empty, built and boss field |
 | B8 | later | Real co-op over the network: authoritative simulation, reconnect, replays (P3 below) | Soak and desync tests |
 
 Open design questions (the assistant proposes, the owner decides): the exact road layout of the original (a screenshot would settle it);
@@ -221,7 +226,7 @@ it visits every seat; one boss per seat would multiply the HP against a gold tot
 - [ ] Replace prototypes with authored 2D sprite atlases, 2-4 animation states each.
 - [x] v0.14.0 art pass 2: sprites for the 10 tower kinds, 5 enemies and the hero, drawn by `ui/SpriteViews`.
 - [x] v0.22.0 art pass 3, part 1: citadel base, spawn portals, builder emblems, damage and armor icons (`docs/ART.md`).
-- [ ] Art pass 3, the rest: seat-coloured pads, nine-slice panel and button frames, menu background, projectiles and hit effects, road-edge tiles,
+- [ ] Art pass 3, the rest (seat marks done in v0.28.0, nine-slice frames dropped): menu background, projectiles and hit effects, road-edge tiles,
   walk-cycle frames. Regenerate with `python3 scripts/generate_ui_art.py` and `python3 scripts/generate_sprite_art.py` (the PNGs are committed).
 - [ ] SFX mixing/ducking, captions, color-blind modes, reduced-motion option.
 - [ ] Hero depth and active abilities; wave modifiers with comprehensible telegraphs.
@@ -250,14 +255,14 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.28.0 art pass 3, the rest (Burbenog track, step B7 part 2)
-- Done: B1-B6 (square map, four seats, gifts, builders and ultimates, lives and difficulties, harness and rebalance); B7 part 1 (v0.22.0).
-- Objective: the square map looks like four players share it: seat-coloured build pads and a nine-slice panel and button frame set, so the HUD stops being flat rectangles. Priority: P2: no
-  rule changes, but it is the first thing a new player sees, and the only part of the track the owner can judge by eye.
-- Scope (proposal): `scripts/generate_ui_art.py` (Pillow, deterministic) adds `pad_seat_0..3.png` (the cell marker in the seat colour, 40x40) and `panel_9.png`, `button_9.png` (nine-slice);
-  `BuildSystem` and the HUD use them; fallbacks stay for a missing texture. Not in scope: menu background, projectiles and hit effects, road-edge tiles (the later part of B7).
-- Acceptance: all gates (the PNG count and sizes in `validate_game.py` grow), `tests/art.test.mjs` for the new files, screenshots of menu, empty, built and boss field from `smoke.mjs --shots` (the assistant looks at them; the
-  owner's eye on a real screen is still the final word).
+## Next sprint (recommended): v0.29.0 browser smoke: victory, pause, targeting (quality, no game change)
+- Done: B1-B6; B7 parts 1-2 (v0.22.0, v0.28.0); the headless smoke (v0.27.0) with five scenarios.
+- Objective: the three flows the smoke does not reach become scenarios, because a bug in them is as invisible to the unit tests as the black screen of v0.27.0 was: (1) victory: play wave 40 to the
+  end and see the victory modal, retry and menu from it; (2) pause: P or Esc stops the simulation, the pause modal's resume and menu buttons work, the speed buttons keep their state; (3) targeting:
+  select a tower, cycle the priority, the tower shoots by the new rule. Priority: P1: the owner has never confirmed a browser run, and these are the screens a player meets most.
+- Scope (proposal): `scenario victory` jumps the wave manager to wave 40 and kills what spawns (private fields, listed at the top of `smoke.mjs`), `pause`, `targeting`; each fails on any console error
+  as the others do; fix what they find in the same patch with a unit test that fails on the old code. Not in scope: sound, touch, new art.
+- Acceptance: all gates; the new scenarios pass on the fixed build and the ones that find a defect fail on a build without the fix; `docs/QA.md` lists them.
 - Owner action still pending: a human run for victory, pause/resume, sound and feel (the headless smoke covers the rest, `docs/QA.md`); the checklists of
   v0.20.0, v0.21.0 and v0.22.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
 - Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; a build with more than 24 cells (the best build ends with 17347 gold unspent, `docs/SEAT_REPORT.md`); hero summon and a tech/aura building paid with

@@ -10,6 +10,7 @@
 import Phaser from 'phaser';
 import { COLORS, DEPTH, FONT_FAMILY, GRID_COLS, GRID_ROWS, TILE_SIZE } from '../config';
 import { GIVE_GOLD_STEP, GIVE_LUMBER_STEP, SEAT_COLORS, SEAT_NAMES, seatOfZone } from '../data/seats';
+import { PAD_HALF } from '../entities/Tower';
 import type { Tower } from '../entities/Tower';
 import { SEAT_BAR_Y } from './layout';
 import type { EconomyManager } from '../systems/EconomyManager';
@@ -121,10 +122,15 @@ export class SeatOverlay {
         });
       });
     }
+    // Owner mark of every tower (v0.28.0): a rim in the seat colour along the stone pad, and one to four pips in its corner, so that the seat
+    // can be told by count as well as by colour (blue/amber/red/green are not safe for every eye).
     this._marks.clear();
     for (const tower of this._towers()) {
-      this._marks.fillStyle(SEAT_COLORS[tower.ownerSeat], 1);
-      this._marks.fillCircle(tower.x - 14, tower.y - 14, 4);
+      const color = SEAT_COLORS[tower.ownerSeat], x = tower.x - PAD_HALF, y = tower.y - PAD_HALF, side = PAD_HALF * 2;
+      this._marks.lineStyle(3, color, 0.95);
+      this._marks.strokeRoundedRect(x + 1.5, y + 1.5, side - 3, side - 3, 4);
+      this._marks.fillStyle(color, 1);
+      for (let pip = 0; pip <= tower.ownerSeat; pip++) this._marks.fillCircle(x + 7 + pip * 6, y + 7, 2);
     }
   }
 
