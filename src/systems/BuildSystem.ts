@@ -52,8 +52,78 @@ export class BuildSystem {
     this._occupied = Array.from({length:GRID_ROWS},(_,r)=>Array.from({length:GRID_COLS},(_,c)=>MAP_DATA[r][c]!=='E'));
     this._buildGhostGraphics();
     this._bindInput();
+    this._bindTouch(); // [3b:bind-touch]
   }
 
+  // [3b:touch-build] Touch placement: a tap previews, the green button builds, the red one cancels.
+  private _touchCell: { col: number; row: number } | null = null;
+  private _touchGfx: Phaser.GameObjects.Graphics | null = null;
+  private _touchUiDown = false;
+
+  // Touch has no hover and no right button. The DOM event type decides first, wasTouch is the fallback.
+  private _isTouchPtr(ptr: Phaser.Input.Pointer): boolean {
+    const p = ptr as unknown as { wasTouch?: boolean; pointerType?: string; event?: { type?: string; pointerType?: string } };
+    const ev = p.event;
+    if (ev && typeof ev.type === 'string') return ev.type.indexOf('touch') === 0 || ev.pointerType === 'touch';
+    return p.wasTouch === true || p.pointerType === 'touch';
+  }
+
+  private _touchBar(col: number, row: number): { okX: number; noX: number; y: number; size: number } {
+    const size = 48, gap = 8;
+    const fieldW = GRID_COLS * TILE_SIZE, fieldH = GRID_ROWS * TILE_SIZE;
+    const width = size + gap + size;
+    const mid = col * TILE_SIZE + TILE_SIZE / 2;
+    const okX = Math.max(4, Math.min(fieldW - width - 4, Math.round(mid - width / 2)));
+    const above = row * TILE_SIZE - size - 6;
+    const y = above >= 4 ? above : Math.min(fieldH - size - 4, (row + 1) * TILE_SIZE + 6);
+    return { okX, noX: okX + size + gap, y, size };
+  }
+
+  private _touchHit(ptr: Phaser.Input.Pointer): 'ok' | 'no' | null {
+    const c = this._touchCell;
+    if (!c) return null;
+    const b = this._touchBar(c.col, c.row);
+    const inside = (x: number): boolean => ptr.x >= x && ptr.x <= x + b.size && ptr.y >= b.y && ptr.y <= b.y + b.size;
+    if (inside(b.okX)) return 'ok';
+    if (inside(b.noX)) return 'no';
+    return null;
+  }
+
+  private _drawTouchBar(col: number, row: number, canPlace: boolean): void {
+    if (!this._touchGfx) this._touchGfx = this._scene.add.graphics().setDepth(DEPTH.VFX + 4);
+    const g = this._touchGfx as Phaser.GameObjects.Graphics;
+    const b = this._touchBar(col, row);
+    const s = b.size;
+    g.clear().setVisible(true);
+    // Confirm: a check mark, dimmed while the cell is blocked.
+    const okA = canPlace ? 1 : 0.35;
+    g.fillStyle(0x14221a, 0.9); g.fillRoundedRect(b.okX, b.y, s, s, 10);
+    g.lineStyle(3, COLORS.success, okA); g.strokeRoundedRect(b.okX, b.y, s, s, 10);
+    g.lineStyle(5, COLORS.success, okA);
+    const ox = b.okX + s / 2, oy = b.y + s / 2;
+    g.lineBetween(ox - 11, oy, ox - 3, oy + 9); g.lineBetween(ox - 3, oy + 9, ox + 11, oy - 9);
+    // Cancel: a cross.
+    g.fillStyle(0x24161a, 0.9); g.fillRoundedRect(b.noX, b.y, s, s, 10);
+    g.lineStyle(3, COLORS.danger, 1); g.strokeRoundedRect(b.noX, b.y, s, s, 10);
+    g.lineStyle(5, COLORS.danger, 1);
+    const nx = b.noX + s / 2, ny = b.y + s / 2;
+    g.lineBetween(nx - 9, ny - 9, nx + 9, ny + 9); g.lineBetween(nx + 9, ny - 9, nx - 9, ny + 9);
+  }
+
+  private _touchPreview(col: number, row: number): void {
+    this._touchCell = { col, row };
+    const ok = this._canPlace(col, row);
+    this._drawGhost(col, row, ok);
+    this._drawTouchBar(col, row, ok);
+  }
+
+  private _hideTouchBar(): void {
+    if (this._touchGfx) this._touchGfx.setVisible(false);
+  }
+
+  private _bindTouch(): void {
+    this._scene.input.on('pointerup', () => { this._touchUiDown = false; });
+  }
   private _buildGhostGraphics(): void {
     this._ghostGfx   = this._scene.add.graphics().setDepth(DEPTH.GRID+1).setVisible(false);
     this._ghostRange = this._scene.add.graphics().setDepth(DEPTH.TOWER_BASE).setVisible(false);
@@ -76,7 +146,7 @@ export class BuildSystem {
     this._ghostRange.fillStyle(data.color,0.05); this._ghostRange.fillCircle(cx,cy,data.range);
   }
 
-  private _hideGhost(): void { this._ghostGfx.setVisible(false); this._ghostRange.setVisible(false); }
+  private _hideGhost(): void { this._ghostGfx.setVisible(false); this._ghostRange.setVisible(false); this._touchCell = null; this._hideTouchBar(); } // [3b:hide]
 
   private _bindInput(): void {
     this._scene.input.on('pointermove', (arg: unknown) => {
@@ -84,6 +154,7 @@ export class BuildSystem {
       if (!this._canInteract() || !this._pendingId) return;
       const {col,row}=this._ptrToGrid(ptr);
       if (col<0||col>=GRID_COLS||row<0||row>=GRID_ROWS) { this._hideGhost(); return; }
+      if (this._isTouchPtr(ptr)) { if (!this._touchUiDown) this._touchPreview(col, row); return; } // [3b:drag-preview]
       this._drawGhost(col, row, this._canPlace(col,row));
     });
 
@@ -93,6 +164,23 @@ export class BuildSystem {
       const {col,row}=this._ptrToGrid(ptr);
       const inGrid=col>=0&&col<GRID_COLS&&row>=0&&row<GRID_ROWS;
       if (this._pendingId) {
+        // [3b:tap-flow] finger: a tap previews the cell; the green button, or a second tap on the same cell, builds; the red button cancels
+        if (this._isTouchPtr(ptr)) {
+          const hit = this._touchHit(ptr);
+          if (hit === 'no') { this._touchUiDown = true; this.cancelPlacement(); return; }
+          if (hit === 'ok') {
+            this._touchUiDown = true;
+            const at = this._touchCell;
+            if (at && this._canPlace(at.col, at.row)) { this._touchCell = null; this._hideTouchBar(); this._place(this._pendingId, at.col, at.row); }
+            return;
+          }
+          this._touchUiDown = false;
+          if (!inGrid) return;
+          const again = this._touchCell !== null && this._touchCell.col === col && this._touchCell.row === row;
+          if (again && this._canPlace(col, row)) { this._touchCell = null; this._hideTouchBar(); this._place(this._pendingId, col, row); }
+          else this._touchPreview(col, row);
+          return;
+        }
         if (inGrid&&this._canPlace(col,row)) this._place(this._pendingId,col,row);
         return;
       }
@@ -113,7 +201,7 @@ export class BuildSystem {
     if (!this._canInteract()) return;
     if (!this._builders.canPlace(this._seats.active, id)) return;   // only a tower of the seat's own builders
     this._selectTower(null);
-    this._pendingId=id;
+    this._pendingId=id; this._touchCell=null; this._hideTouchBar(); // [3b:select]
     this._scene.input.setDefaultCursor('crosshair');
   }
 

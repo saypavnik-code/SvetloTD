@@ -325,7 +325,7 @@ export class TowerPanel {
 
     const leftArr = s.add.text(PX+PAD+60, prioY, '◀', {
       fontFamily: FONT, fontSize: '14px', color: COLORS.amberWarm_css,
-    }).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+3);
+    }).setInteractive({ useHandCursor: true, hitArea: { x: -15, y: -14, w: 44, h: 44 }, hitAreaCallback: (a: { x: number; y: number; w: number; h: number }, px: number, py: number) => px >= a.x && px <= a.x + a.w && py >= a.y && py <= a.y + a.h }).setDepth(DEPTH.PANEL+3); // [3b:prio-hit]
     leftArr.on('pointerdown', () => this._cyclePriority(-1));
     this._infoRoot.add(leftArr);
 
@@ -336,7 +336,7 @@ export class TowerPanel {
 
     const rightArr = s.add.text(PX+PW-PAD-14, prioY, '▶', {
       fontFamily: FONT, fontSize: '14px', color: COLORS.amberWarm_css,
-    }).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+3);
+    }).setInteractive({ useHandCursor: true, hitArea: { x: -15, y: -14, w: 44, h: 44 }, hitAreaCallback: (a: { x: number; y: number; w: number; h: number }, px: number, py: number) => px >= a.x && px <= a.x + a.w && py >= a.y && py <= a.y + a.h }).setDepth(DEPTH.PANEL+3); // [3b:prio-hit]
     rightArr.on('pointerdown', () => this._cyclePriority(1));
     this._infoRoot.add(rightArr);
 
@@ -434,7 +434,7 @@ export class TowerPanel {
       btn.lbl.setVisible(true).setText(`${block === null ? '⬆' : '🔒'} ${upData.name}\n${need}`);
       btn.lbl.setColor(canAfford ? COLORS.textPrimary_css : COLORS.textMuted_css);
       btn.lbl.setPosition(ux+uw/2, upgY+8);
-      btn.zone.setVisible(canAfford).setPosition(ux, upgY).setSize(uw, 36);
+      btn.zone.setVisible(canAfford).setPosition(ux, upgY - 4).setSize(uw, 44); // [3b:upg-zone] same 44 px zone the button is created with
       btn.zone.removeAllListeners('pointerdown');
       btn.zone.on('pointerdown', () => this._build.upgradeSelected(upId));
     });

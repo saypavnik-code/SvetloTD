@@ -517,7 +517,7 @@ export class GameScene extends Phaser.Scene {
 
       this._skillSlots.push({ bg, key: keyTxt, cd: cdTxt });
       if (detectInputCapabilities().hasTouch) {
-        const zone = this.add.zone(sx, sy, SLOT, SLOT)
+        const zone = this.add.zone(sx - 3, sy - 3, SLOT + 6, SLOT + 6) // [3b:skill-zone] 48 px touch target around the 42 px slot
           .setOrigin(0).setInteractive({ useHandCursor: true })
           .setDepth(DEPTH.PANEL + 4);
         zone.on('pointerdown', () => {
