@@ -862,11 +862,11 @@ export class GameScene extends Phaser.Scene {
 
   private _onTowerShotSfx = (towerId: unknown): void => {
     const id = towerId as string;
-    if (id.startsWith('arrow'))  { this._sfx?.shootArrow();  return; }
-    if (id.startsWith('cannon')) { this._sfx?.shootCannon(); return; }
-    if (id.startsWith('magic'))  { this._sfx?.shootMagic();  return; }
-    if (id.startsWith('slow'))   { this._sfx?.shootIce();    return; }
-    if (id.startsWith('acid'))   { this._sfx?.shootAcid();   return; }
+    if (id.startsWith('arrow'))                         { this._sfx?.shootArrow();  return; }
+    if (id.startsWith('cannon') || id === 'earth_ult')  { this._sfx?.shootCannon(); return; }
+    if (id.startsWith('magic')  || id === 'fire_ult')   { this._sfx?.shootMagic();  return; }
+    if (id.startsWith('slow')   || id === 'water_ult')  { this._sfx?.shootIce();    return; }
+    if (id.startsWith('acid')   || id === 'nature_ult') { this._sfx?.shootAcid();   return; }
   };
 
   private _onHeroSkillQ = (...args: unknown[]): void => {

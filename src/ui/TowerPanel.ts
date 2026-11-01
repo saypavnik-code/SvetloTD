@@ -386,7 +386,12 @@ export class TowerPanel {
     this._infoSwatch.fillRect(PX+PAD, iy, 14, 14);
 
     this._infoTitle.setText(data.name.toUpperCase());
-    this._infoLevel.setText('Ур. I');
+    const tierLabel = tower.towerId.endsWith('_ult')
+      ? 'Ур. III'
+      : tower.towerId.endsWith('_t2')
+        ? 'Ур. II'
+        : 'Ур. I';
+    this._infoLevel.setText(tierLabel);
 
     const dps = (data.damage * data.attackSpeed).toFixed(1);
     const specialLabel = ((): string => {

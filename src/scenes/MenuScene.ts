@@ -285,7 +285,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private _buildVersionTag(): void {
-    this.add.text(GAME_WIDTH - 14, GAME_HEIGHT - 10, 'v0.1.0', {
+    this.add.text(GAME_WIDTH - 14, GAME_HEIGHT - 10, 'v0.28.0', {
       fontFamily: FONT_MAIN,
       fontSize: '8px',
       color: COLORS.walnutLight_css,
