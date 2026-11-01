@@ -52,10 +52,13 @@ const EARLY_WAVES: WaveData[] = [
 // Prototype second half. Four bosses, alternating air/ground lanes, no hidden RNG.
 // Balance MUST be measured with deterministic simulations and playtests.
 const LATE_ENEMIES: EnemyId[] = ['grunt', 'runner', 'wyvern', 'golem'];
+// What the HUD shows for waves 21-40 (v0.27.0: they said "Reinforcements 34" in English next to the Russian names of waves 1-20).
+const LATE_NAMES: Partial<Record<EnemyId, string>> = { grunt: 'Гоблины', runner: 'Рой бегунов', wyvern: '⚠ Виверны', golem: 'Големы' };
 const LATE_WAVES: WaveData[] = Array.from({ length: 20 }, (_, index) => {
   const wave = index + 21;
   const isBoss = wave % 5 === 0;
   const enemyType: EnemyId = isBoss ? 'boss_goliath' : LATE_ENEMIES[index % LATE_ENEMIES.length];
+  const modifier: WaveData['modifier'] = isBoss ? 'healing' : (index % 3 === 1 ? 'fast' : null);
   return {
     wave,
     enemyType,
@@ -64,9 +67,9 @@ const LATE_WAVES: WaveData[] = Array.from({ length: 20 }, (_, index) => {
     hpMult: isBoss ? 7 + index * 1.0 : 4 + index * 0.65,
     paths: isBoss ? (index / 5 | 0) % 4 : -1,
     isBoss,
-    modifier: isBoss ? 'healing' : (index % 3 === 1 ? 'fast' : null),
+    modifier,
     bonusGold: 110 + index * 12,
-    preview: isBoss ? `Citadel guardian ${wave}` : `Reinforcements ${wave}`,
+    preview: isBoss ? `💀 БОСС: Страж цитадели${wave === 40 ? ' · финал' : ''}` : `${LATE_NAMES[enemyType]}${modifier === 'fast' ? ' · быстрые' : ''}`,
   };
 });
 // Wave shape. v0.8.0 chose the opening (candidate C of docs/BALANCE_PROPOSALS.md); v0.13.0 chose the mid game (proposal D; the owner

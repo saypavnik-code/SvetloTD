@@ -2,11 +2,12 @@
 
 Legend: [x] implementation in this patch; [ ] planned / not verified in a browser.
 
-## Current state (v0.26.0)
+## Current state (v0.27.0)
 
 - Gates run by every patch: unit tests, typecheck, game/data validation, production build, bundle budget.
-- Never executed: a browser smoke run, a real-device touch test, a platform deployment. Every item that needs
-  a browser is still open, including the two P0 items below.
+- Browser: `scripts/browser_smoke/smoke.mjs` (v0.27.0) drives the built game in headless Chromium: menu, game, towers, waves, four seats, defeat, retry, back to the menu, expert, and a whole
+  40-wave game with the simulation's best opening. Never executed: a real-device touch test, a platform deployment, and a human look at pause/resume, victory, sound and feel; every item that needs
+  a person is still open.
 - v0.3.0 and v0.4.0 fixed the confirmed defects listed in the P0 section; the defect classes are catalogued in
   `AGENTS.md` so they are checked in future changes.
 - v0.6.0 added a deterministic headless economy and wave-pressure simulation and the generated
@@ -114,6 +115,14 @@ Legend: [x] implementation in this patch; [ ] planned / not verified in a browse
   piercing deals x0.35 to fortified armor; the default mixed team buys 3 and stays at wave 27 (its wall is air). Expert (insane, 1 life) over 12 seeds: arrow 6-8, magic_slow 6-20, balanced 6-12 against
   7 in the data order: the first leak ends the run and the rule lists do not react to a leak, so it is a floor, not a bar. Tests: gold and lumber ledger with ultimates, no regression, seeded replay.
   No game source file and no game number changed. Not measured: a second builder license bought with lumber, a hero that plays, a build that reacts to a leak, real players.
+- v0.27.0 first browser smoke since v0.12.0 that goes past wave 1, and two defects it found. (1) After a defeat the button "В меню" left a black screen: `MenuScene.create()` reset `_dust` but not
+  `_difficultyGfx` and `_difficultyLbl` (filled since v0.21.0), so the second creation of the scene called `setColor` on destroyed labels and the scene never started (fixed; `tests/scenes.test.mjs`
+  creates the scene three times on a stand-in whose destroyed objects throw, and fails on the old code; the browser scenario `cycle` fails on a build without the fix with Phaser's `glTexture` error).
+  (2) Waves 21-40 were announced in English ("Reinforcements 34", "Citadel guardian 25") next to the Russian names of waves 1-20: now "Гоблины", "Рой бегунов", "⚠ Виверны", "Големы" (+ " · быстрые") and
+  "💀 БОСС: Страж цитадели" (wave 40: " · финал"); a data test requires Russian text and no Latin letters in all 40 previews. The smoke tool (`scripts/browser_smoke/`, pinned puppeteer-core 25.13.0 and
+  @sparticuz/chromium 153.0.0, outside the gates) has five scenarios and passes: `basic`, `cycle`, `seats`, `expert`, `full` (40 waves through the real keyboard and mouse, defeated by the wave-40 boss as
+  the simulation predicts, zero console errors). The software renderer of a headless browser runs the game at 4 frames per second, so the tool switches drawing off while it simulates (57 fps).
+  Not covered: victory, pause/resume, targeting priorities, sound, touch, the look of the art beyond what the screenshots show.
 ## Product direction: Burbenog-style square, up to four seats (owner decision 2026-10-16)
 
 The owner's verdict on v0.15.0: the game does not resemble Burbenog TD. In the original everything is built around a square and up to four
@@ -186,7 +195,7 @@ it visits every seat; one boss per seat would multiply the HP against a gold tot
 - [x] Difficulty multipliers wired into enemy HP and speed.
 - [x] 40-wave data declarations with provisional acts 5-8.
 - [x] Runtime-loadable deterministic terrain textures and 12 optional prototype sprite PNGs.
-- [ ] Browser smoke run: 1-40, victory/defeat, pause/resume, restart, targeting.
+- [x] Browser smoke run (v0.27.0, headless): 1-40, defeat, restart, back to the menu, four seats, expert. [ ] Still open: victory, pause/resume, targeting.
 - [ ] Record baseline bugs and fix after first game session.
 
 ## P1 - product/quality gate
@@ -233,7 +242,7 @@ until the corresponding tasks are tested and accepted.
 
 ## After v0.2.1 migration
 
-- [ ] Browser E2E: defeat/retry, victory/retry, modal interactions and 40-wave run.
+- [x] Browser E2E: defeat/retry and a 40-wave run (v0.27.0). [ ] Victory/retry and modal interactions.
 - [ ] Responsive, accessible touch UX (not merely user-agent detection).
 - [ ] Verify VK Play SDK contract before implementing ads, save data or leaderboards.
 - [ ] Decide whether opt-in persistent meta bonuses belong in balanced multiplayer.
@@ -241,15 +250,15 @@ until the corresponding tasks are tested and accepted.
 - [ ] Validate GitHub Pages and Vibe deploy smoke tests in the target environment.
 - [x] Economy-simulation tests before rebalancing 21-40 (v0.6.0); benchmark tests remain open.
 
-## Next sprint (recommended): v0.27.0 art pass 3, the rest (Burbenog track, step B7 part 2)
+## Next sprint (recommended): v0.28.0 art pass 3, the rest (Burbenog track, step B7 part 2)
 - Done: B1-B6 (square map, four seats, gifts, builders and ultimates, lives and difficulties, harness and rebalance); B7 part 1 (v0.22.0).
 - Objective: the square map looks like four players share it: seat-coloured build pads and a nine-slice panel and button frame set, so the HUD stops being flat rectangles. Priority: P2: no
   rule changes, but it is the first thing a new player sees, and the only part of the track the owner can judge by eye.
 - Scope (proposal): `scripts/generate_ui_art.py` (Pillow, deterministic) adds `pad_seat_0..3.png` (the cell marker in the seat colour, 40x40) and `panel_9.png`, `button_9.png` (nine-slice);
   `BuildSystem` and the HUD use them; fallbacks stay for a missing texture. Not in scope: menu background, projectiles and hit effects, road-edge tiles (the later part of B7).
-- Acceptance: all gates (the PNG count and sizes in `validate_game.py` grow), `tests/art.test.mjs` for the new files, screenshots of menu, empty, built and boss field from the owner (the browser
-  smoke has never been run: this patch is the reason to do it).
-- Owner action still pending: browser smoke run of 1-40, victory/defeat, pause/resume and restart (not executed since v0.2.1); the checklists of
+- Acceptance: all gates (the PNG count and sizes in `validate_game.py` grow), `tests/art.test.mjs` for the new files, screenshots of menu, empty, built and boss field from `smoke.mjs --shots` (the assistant looks at them; the
+  owner's eye on a real screen is still the final word).
+- Owner action still pending: a human run for victory, pause/resume, sound and feel (the headless smoke covers the rest, `docs/QA.md`); the checklists of
   v0.20.0, v0.21.0 and v0.22.0 in `docs/QA.md` (menu difficulty row, `?builders=fire`, `?seats=4`); say whether a lone player should keep every builder.
 - Secondary candidates: a menu choice for seats, builders and shared income instead of URL parameters; a build with more than 24 cells (the best build ends with 17347 gold unspent, `docs/SEAT_REPORT.md`); hero summon and a tech/aura building paid with
   lumber; a real roster for the light and shadow builders; the margin around the field (the field now touches the canvas edge at 720 px); official Phaser type declarations in a dedicated patch; decide whether cannon splash may hit flying enemies (currently

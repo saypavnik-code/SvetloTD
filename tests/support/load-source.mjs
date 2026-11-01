@@ -8,7 +8,12 @@ import ts from 'typescript';
 // Run from the repository root (the npm scripts do): paths are confined to it.
 const cache = new Map();
 const root = process.cwd();
-const phaser = { Events: { EventEmitter } };
+// `Scene` is only a base class for the scene modules a test loads; a test supplies the `add`, `cameras`... surface itself (tests/scenes.test.mjs).
+const phaser = {
+  Events: { EventEmitter },
+  Scene: class Scene { constructor(config) { this.config = config; } },
+  Math: { Between: (min) => min, FloatBetween: (min) => min },   // deterministic: the lowest value
+};
 
 export function loadSource(filename) {
   const absolute = resolve(filename.endsWith('.ts') ? filename : filename + '.ts');

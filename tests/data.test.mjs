@@ -53,3 +53,14 @@ test('tower definitions are consistent: upgrades exist, specials are well formed
     assert(game.TOWER_DEFS[id], `buildable tower ${id} is undefined`);
   }
 });
+
+// Found by the first browser run (v0.27.0): the HUD showed "Reinforcements 34" and "Citadel guardian 25" for waves 21-40.
+test('every wave announces itself in Russian, like the interface around it', () => {
+  const { WAVES } = loadModules('src/data/waves.ts');
+  assert.equal(WAVES.length, 40);
+  for (const wave of WAVES) {
+    assert(/[А-Яа-яЁё]/.test(wave.preview), `wave ${wave.wave}: "${wave.preview}" has no Russian text`);
+    assert(!/[A-Za-z]/.test(wave.preview), `wave ${wave.wave}: "${wave.preview}" contains Latin letters`);
+    if (wave.isBoss) assert(wave.preview.includes('БОСС') || wave.preview.includes('ФИНАЛ'), `wave ${wave.wave}: a boss wave says so`);
+  }
+});

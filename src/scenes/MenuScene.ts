@@ -26,6 +26,9 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this._dust = [];
+    // Phaser reuses this instance: the lists of objects of the previous run are destroyed and must not be refreshed again.
+    this._difficultyGfx = [];
+    this._difficultyLbl = [];
     this._glowT = 0;
     this.cameras.main.setBackgroundColor(COLORS.bgDark);
 

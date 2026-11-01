@@ -368,7 +368,7 @@ No game number and no screen changed. Browser smoke: not run.
 
 ## v0.24.0 handoff: activation block and owner queue
 
-From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0, v0.25.0, v0.26.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
+From the owner's HEAD with v0.22.1 applied the chain is v0.23.0, v0.24.0, v0.25.0, v0.26.0, v0.27.0. Clean the working directory first (Step 1 of the v0.22.1 handoff above: the preflight
 refuses any untracked file except sibling patch files), then run the block of the v0.22.1 handoff (Step 2): it skips applied versions, runs `--dry-run` and then
 `--commit --push --self-delete` for each patch in version order, and stops at the first failure.
 
@@ -385,11 +385,11 @@ cd /workspaces/SvetloTD && (
 git log --oneline -4 && npm run test:unit 2>&1 | grep -E "^# (tests|pass|fail|todo)"
 ```
 
-Expected after the whole chain: 157 unit tests, 157 pass, 0 fail, 0 TODO (after v0.24.0 alone: 153, 152 pass, 1 TODO, the open mixed-team finding; after v0.25.0: 154); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
+Expected after the whole chain: 160 unit tests, 160 pass, 0 fail, 0 TODO (after v0.24.0 alone: 153, 152 pass, 1 TODO, the open mixed-team finding; after v0.25.0: 154; after v0.26.0: 157); `git log` shows one commit per version; the patch files are gone from the root. A failed run restores every
 touched file and writes `.git/svetlo-patch/<version>_report.txt`; a push that fails after the commit is reported and must be finished by hand (`git push origin main`), never by rerunning the patch.
 
 Owner queue: browser run of waves 1-40, victory, defeat, pause and restart (never executed since v0.2.1); the checklists of v0.20.0-v0.22.0; look at a few waves of a one-seat game and
-confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.27.0, the rest of art pass 3 (`ROADMAP.md`, "Next sprint").
+confirm that every wave starts on a different corner; the decision whether a lone player keeps every builder. Next: v0.28.0, the rest of art pass 3 (`ROADMAP.md`, "Next sprint").
 
 ## v0.25.0 builder-line rebalance: owner checklist
 
@@ -408,3 +408,18 @@ Nothing visible changed: no game source file was touched (tests, scripts and doc
 - `docs/SEAT_REPORT.md` has findings 9-10 and tables 4-6 (ultimates, expert seeds, late-game lives). `tests/seatsim.test.mjs` has 16 tests (3 new: the ultimate ledger, no regression, seeded replay).
 - To replay an expert run in the browser, open the game with `?seed=5` on the expert difficulty; the harness plays the same shuffle for the same seed (`waveSeed: 5`).
 - Expert is a floor in the report (catalogued builds end at wave 6-20 with 1 life); judge the real difficulty by playing it.
+
+## v0.27.0 browser smoke and two fixes: owner checklist
+
+Visible changes: (1) after a defeat the button "В меню" works (it left a black screen since v0.21.0; "Играть снова" always worked); (2) waves 21-40 have Russian names in the wave banner.
+Look at both once in your browser. Browser smoke by hand is still open for victory, pause/resume and sound.
+
+- Smoke tool (not a gate), from the repository root: `npm run build`, then once `(cd scripts/browser_smoke && npm ci)` (about 110 MB, ignored by git), then
+  `node scripts/browser_smoke/smoke.mjs` for all five scenarios or `... smoke.mjs cycle full --shots out` for chosen ones with screenshots in `out/`.
+  Exit code 0 only if every scenario passes. Times with the software renderer: basic 1 min, cycle 2 min, seats 2.5 min, expert 30 s, full 9 min.
+- What each scenario proves: `basic` two towers, bounties, no life lost; `cycle` defeat, retry, defeat, menu, new game (fails on a build without the MenuScene fix); `seats` four seats with one tower each,
+  waves go on; `expert` the URL seed is the shuffle seed, a one-life game ends; `full` a whole game by keyboard and mouse reaches wave 40 and is defeated there, as `docs/SEAT_REPORT.md` says.
+  Every scenario also fails on any console error, page error, failed request or HTTP status 400 and above.
+- The tool reads private fields of `GameScene` (`_economy`, `_waveManager`, `_buildSystem`, `_gameOver`, `_tutorialActive`, `_waveSeed`) and the pixel positions of the Play, tutorial, retry and
+  menu buttons: after a change to those, update the top of `smoke.mjs`.
+- `tests/scenes.test.mjs` (2 tests) creates MenuScene three times on a stand-in whose destroyed objects throw; `tests/data.test.mjs` has one more test (Russian wave names). 160 unit tests in all.

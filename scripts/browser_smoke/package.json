@@ -1,0 +1,11 @@
+{
+  "name": "svetlogorsk-td-browser-smoke",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Headless-Chromium smoke test of the built game (v0.27.0). Not part of the gates: run `npm ci` here once, then `node scripts/browser_smoke/smoke.mjs` from the repository root.",
+  "type": "module",
+  "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
+    "puppeteer-core": "25.13.0"
+  }
+}

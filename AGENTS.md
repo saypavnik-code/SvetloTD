@@ -51,6 +51,8 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
   difficulty or economy data changes (a test compares it). A finding that needs an owner decision is a TODO test.
 - `simulate({ seats: 2|4, placement: 'zones' })` plays the shared screen (v0.23.0); `docs/SEAT_REPORT.md` (`node scripts/seat_report.mjs --write`, compared by
   `tests/seatsim.test.mjs`) holds the seat, layout and late-game bars. Compare seat counts only on the same cells (`placement: 'zones'`): the old `coverage` list is not rotation-symmetric. `team: [...]` plays licensed seats (v0.24.0), `ultimates: true` buys mastery and ultimates, `waveSeed: n` plays the seeded expert shuffle (v0.26.0).
+- Browser smoke (v0.27.0, not a gate): `npm run build`, `(cd scripts/browser_smoke && npm ci)` once, then `node scripts/browser_smoke/smoke.mjs [basic cycle seats expert full] [--shots dir]` from the root.
+  Headless Chromium, no display. Run it after any change to a scene, the HUD, `main.ts` or a texture; it found two defects that 160 unit tests did not. Scenes and field names it drives are listed at its top.
 - Kill bounty, lumber yield and leak lives are paid by the real `EnemyOutcomes`: a harness builds it right after
   `WaveManager` and registers only its own bookkeeping after that, instead of copying the scene's handlers.
 - Real rendering can be checked headlessly in the assistant's sandbox: `@sparticuz/chromium` + `puppeteer-core` (not project
@@ -110,6 +112,9 @@ No unrequested refactors, unverified fixes, or mass dependency upgrades.
     side column and place it on show.
 18. A remainder that always lands on the first element (v0.23.0: enemies were dealt to the routes from route 0 every wave, so route 0 got 111 and route 3 got 86). Where work is dealt
     out round by round, the starting point turns with the round; a test counts what the real system dealt, per route and per seat.
+19. State kept in fields of an object the framework reuses (v0.27.0: Phaser reuses the scene instance, `MenuScene.create()` emptied `_dust` but not the lists of difficulty buttons, so the
+    second menu called `setColor` on destroyed labels and the game stayed on a black screen). `create()` / `init()` rebuilds every list it fills; `tests/scenes.test.mjs` creates a scene twice
+    on a stand-in whose destroyed objects throw. A test that only reads source text cannot see this class: run the second life of a scene.
 
 ## Resuming in a new session
 
