@@ -160,6 +160,15 @@ export class GameScene extends Phaser.Scene {
     // Boss warning text (hidden until a boss wave starts)
     const fw = GRID_COLS * TILE_SIZE;
     const fh = GRID_ROWS * TILE_SIZE;
+    // HD battlefield edge AO vignette
+    const _aoGfx = this.add.graphics().setDepth(DEPTH.PATH_DECORATION);
+    for (let _ring = 0; _ring < 4; _ring++) {
+      const _pad = _ring * 6;
+      _aoGfx.lineStyle(6, 0x0e0a07, (4 - _ring) * 0.055);
+      _aoGfx.strokeRect(_pad + 3, _pad + 3, fw - _pad * 2 - 6, fh - _pad * 2 - 6);
+    }
+    _aoGfx.lineStyle(1.5, COLORS.amberWarm, 0.28);
+    _aoGfx.strokeRect(1, 1, fw - 2, fh - 2);
     this._bossWarning = this.add.text(fw / 2, fh / 2, '⚠ ВОЛНА БОССА', {
       fontFamily: FONT, fontSize: '22px',
       color: COLORS.danger_css, fontStyle: 'bold',
@@ -1028,7 +1037,7 @@ export class GameScene extends Phaser.Scene {
     // RMB — move hero (field only; cancel build/selection first)
     this.input.on('pointerdown', (ptr: any) => {
       if (this._isPaused || this._gameOver || this._tutorialActive) return;
-      if (!ptr.rightButtonDown()) return;
+      if (!ptr.rightButtonDown() || Boolean(this.input.activePointer?.wasTouch && this.input.pointer2?.isDown) /* Mobile touch ergonomics: two-finger tap acts as right-click */) return;
 
       const wx = ptr.worldX;
       const wy = ptr.worldY;

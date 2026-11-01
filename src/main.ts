@@ -25,6 +25,8 @@ document.addEventListener('visibilitychange', () => {
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
+  // HD antialias and touch input configuration
+  antialias: true,
   width: GAME_WIDTH, height: GAME_HEIGHT,
   parent: 'game-container',
   backgroundColor: '#E8E2D6',

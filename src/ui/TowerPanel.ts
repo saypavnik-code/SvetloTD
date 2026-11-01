@@ -349,7 +349,7 @@ export class TowerPanel {
       const ulbl = s.add.text(ux+uw/2, upgY+16, '', {
         fontFamily: FONT, fontSize: '12px', color: COLORS.textPrimary_css, align:'center',
       }).setOrigin(0.5).setDepth(DEPTH.PANEL+3).setVisible(false);
-      const uzone = s.add.zone(ux, upgY, uw, 36).setOrigin(0).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+4).setVisible(false);
+      const uzone = s.add.zone(ux, upgY - 4, uw, 44).setOrigin(0).setInteractive({useHandCursor:true}).setDepth(DEPTH.PANEL+4).setVisible(false); // Touch-friendly 44px hit target
       this._infoRoot.add(ugfx); this._infoRoot.add(ulbl); this._infoRoot.add(uzone);
       this._upgBtns.push({gfx:ugfx, lbl:ulbl, zone:uzone});
     }
@@ -543,6 +543,8 @@ export class TowerPanel {
 
     // Refresh live damage/kill stats ~once per second
     if (this._tower && this._infoRoot.visible) {
+      // Keep upgrade affordability and lock state live
+      this._populateInfo(this._tower);
       // The refund rate changes with the build phase; keep the label truthful.
       this._sellLbl.setText(this._sellLabel(this._tower));
       this._statsTimer += _delta;

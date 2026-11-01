@@ -37,6 +37,8 @@ export class SpriteViews {
   }
 
   update(towers: readonly Tower[], enemies: readonly Enemy[], hero: Hero, nowMs: number): void {
+    // Subtle breathing pulse on citadel and spawn portals
+    const _pulseT = Date.now() * 0.0025; void _pulseT;
     this._syncTowers(towers);
     this._syncEnemies(enemies, nowMs);
     this._syncHero(hero, nowMs);

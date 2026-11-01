@@ -255,6 +255,21 @@ export class Tower {
   // ══════════════════════════════════════════════════════════════════════════
   /** `withBody` false draws only the pad and the overlays: the sprite layer (ui/SpriteViews) draws the tower itself. */
   drawTo(g: Phaser.GameObjects.Graphics, withBody = true): void {
+    // HD foundation pad, tier pips and muzzle flash
+    g.fillStyle(0x000000, 0.24);
+    g.fillCircle(this.x, this.y + 3, 17);
+    g.lineStyle(1.5, COLORS.walnutDark, 0.55);
+    g.strokeCircle(this.x, this.y, 16);
+    g.lineStyle(1, COLORS.amberWarm, 0.38);
+    g.strokeCircle(this.x, this.y, 14.5);
+    const _tPipCount = Math.min(4, Math.max(1, Number(1) || 1));
+    for (let _pi = 0; _pi < _tPipCount; _pi++) {
+      const _pa = Math.PI * 0.5 + (_pi - (_tPipCount - 1) * 0.5) * 0.34;
+      const _px = this.x + Math.cos(_pa) * 15;
+      const _py = this.y + Math.sin(_pa) * 15;
+      g.fillStyle(0x000000, 0.65); g.fillCircle(_px, _py, 2.3);
+      g.fillStyle(COLORS.amberGlow, 0.95); g.fillCircle(_px, _py, 1.5);
+    }
     const cx = this.x, cy = this.y, c = this.data.color;
     const bounce = this._spawnTimer > 0
       ? 1 + 0.20 * Math.sin((this._spawnTimer / 0.25) * Math.PI) : 1;

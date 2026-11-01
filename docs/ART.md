@@ -33,3 +33,14 @@ that no two silhouettes overlap by 85% or more. The palette is `COLORS` in `src/
 Projectiles and hit effects, road-edge tiles, nine-slice panel and button frames, seat-coloured pads, lighting (Light2D), vignette, bloom and screen shake
 (the last four need a browser check and a separate UI camera), walk-cycle frames. Known flaw of older sprites (watchtower, ultimate towers): the soft glow is cut by the canvas
 edge and shows as a faint rectangle; fixing it changes existing PNGs, so it belongs to its own patch.
+
+## HD Procedural Pipeline & Combat VFX (v0.28.0)
+
+- **Dependencies**: `python3 -m pip install -r scripts/requirements.txt` (`pillow>=10.0.0`).
+- **Outline & Glow Isolation**: `outlined()` thresholds alpha at `> 180` so soft radial glows (`alpha <= 168`) and contact shadows (`shadow_base()`) stay smooth.
+- **Supersampled UI & Tiles**: medallions are rendered at 4x with cardinal rivets and Lanczos downsampling; terrain tiles (`grass_a..d`, `path_a..c`) use 2x supersampled seamless wraparound.
+- **Gameplay Render Layers**:
+  - `Projectile`: luminous halo, white-hot core, comet trail streak, dual shockwave ring, and 8 radial sparks.
+  - `Enemy`: dark 1px health bar frame, top specular sheen, boss golden bezel, ground AO contact ellipse, and status aura rings.
+  - `Tower`: stone/amber foundation pad rim, tier pips (`I..IV`), and muzzle flash glow.
+  - `Hero`: dual harmonic command aura rings and directional footlight.

@@ -177,6 +177,15 @@ export class Hero {
 
   /** `withBody` false skips the placeholder triangle: ui/SpriteViews draws the hero sprite. */
   drawTo(g: Phaser.GameObjects.Graphics, withBody = true): void {
+    // HD hero dual command aura rings
+    g.fillStyle(0x000000, 0.26);
+    g.fillEllipse(this.x, this.y + 8, 28, 11);
+    g.fillStyle(COLORS.amberGlow, 0.10);
+    g.fillCircle(this.x, this.y, 22);
+    g.lineStyle(1.4, COLORS.amberGlow, 0.55);
+    g.strokeCircle(this.x, this.y, 19);
+    g.lineStyle(1.0, COLORS.amberWarm, 0.35);
+    g.strokeCircle(this.x, this.y, 24);
     const cx = this.x;
     const cy = this.y;
 

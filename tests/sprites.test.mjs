@@ -92,3 +92,17 @@ test('GameScene hands the bodies to the sprite layer and releases it on shutdown
     assert(scene.includes(call), `GameScene lost ${call}`);
   }
 });
+
+// HD combat VFX and requirements invariants
+test('HD combat VFX layers and requirements.txt are present', async () => {
+  const fsMod = await import('node:fs');
+  const req = fsMod.readFileSync('scripts/requirements.txt', 'utf8');
+  assert.ok(req.toLowerCase().includes('pillow'), 'scripts/requirements.txt must list pillow');
+
+  const proj = fsMod.readFileSync('src/entities/Projectile.ts', 'utf8');
+  assert.ok(proj.includes('Soft luminous halo'), 'Projectile must render luminous halo');
+  assert.ok(proj.includes('Inner shockwave ring'), 'Projectile splash must render inner shockwave ring');
+
+  const enemy = fsMod.readFileSync('src/entities/Enemy.ts', 'utf8');
+  assert.ok(enemy.includes('Specular sheen'), 'Enemy healthbar must render specular sheen');
+});

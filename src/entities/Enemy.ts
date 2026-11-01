@@ -237,6 +237,13 @@ export class Enemy implements Poolable {
     // Dying animation — shrink + white flash, then hidden
     if (this._isDying) {
       if (!withBody) return;
+      // HD ground AO and status rings
+      g.fillStyle(0x000000, 0.22);
+      g.fillEllipse(this.x, this.y + this.radius * 0.55, this.radius * 2.1, this.radius * 0.8);
+      if (this.radius >= 14 || this.maxHp >= 450) {
+        g.lineStyle(1.5, COLORS.amberGlow, 0.55);
+        g.strokeCircle(this.x, this.y, this.radius * 1.32);
+      }
       const t     = this._dyingTimer / Enemy.DYING_DURATION;   // 1→0
       const scale = t;
       const r     = this.radius * scale;
@@ -305,6 +312,11 @@ export class Enemy implements Poolable {
     const barX   = this.x - barW / 2;
     const barY   = this.y - this.radius - 8;
     // Dark 1px frame so the bar stays readable on bright terrain
+    // Boss golden bezel around health bar
+    if (this.radius >= 14 || this.maxHp >= 450) {
+      g.lineStyle(1.4, COLORS.amberGlow, 0.92);
+      g.strokeRect(barX - 2, barY - 2, barW + 4, 7);
+    }
     g.fillStyle(0x000000, 0.4); g.fillRect(barX - 1, barY - 1, barW + 2, 5);
     g.fillStyle(COLORS.walnutDark, 0.45); g.fillRect(barX, barY, barW, 3);
     const col = ratio>0.6 ? COLORS.success : ratio>0.3 ? COLORS.amberWarm : COLORS.danger;
