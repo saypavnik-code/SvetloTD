@@ -36,7 +36,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH,
     min: { width: 640, height: 360 }, max: { width: GAME_WIDTH, height: GAME_HEIGHT },
   },
-  render: { antialias: false, antialiasGL: false, pixelArt: false, roundPixels: true, premultipliedAlpha: false },
+  render: { antialias: true, antialiasGL: true, pixelArt: false, roundPixels: false, premultipliedAlpha: false },
   banner: import.meta.env.DEV
     ? { hidePhaser: false, text: '#2E1A12', background: ['#F0EEE9', '#F5A623'] }
     : false,
